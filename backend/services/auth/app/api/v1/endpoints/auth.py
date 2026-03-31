@@ -1,0 +1,157 @@
+from fastapi import APIRouter, Depends, Request
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import HTTPException, status
+
+from app.core.config import settings
+from app.core.db import get_db
+from app.core.jwt_deps import get_current_user_id
+from app.services.auth_service import AuthService
+
+
+router = APIRouter()
+service = AuthService()
+
+
+class RegisterRequest(BaseModel):
+    email: str
+    password: str
+    full_name: str
+
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class RefreshRequest(BaseModel):
+    refresh_token: str
+
+
+class OnboardingCompleteRequest(BaseModel):
+    niche: list[str]
+    primary_format: str
+    posting_frequency: str
+    channel_tone: str
+    country: str
+
+
+@router.get("/auth/health")
+async def health() -> dict:
+    return service.health()
+
+
+@router.get("/auth/me")
+async def auth_me(
+    db: AsyncSession = Depends(get_db),
+    user_id=Depends(get_current_user_id),
+) -> dict:
+    return await service.me(db, user_id)
+
+
+@router.post("/auth/register")
+async def register(payload: RegisterRequest, request: Request, db: AsyncSession = Depends(get_db)) -> dict:
+    return await service.register(
+        db,
+        payload.model_dump(),
+        ip_address=(request.client.host if request.client else None),
+        user_agent=request.headers.get("user-agent"),
+    )
+
+
+@router.post("/auth/login")
+async def login(payload: LoginRequest, request: Request, db: AsyncSession = Depends(get_db)) -> dict:
+    return await service.login(
+        db,
+        payload.model_dump(),
+        ip_address=(request.client.host if request.client else None),
+        user_agent=request.headers.get("user-agent"),
+    )
+
+
+@router.post("/auth/token/refresh")
+async def refresh_token(payload: RefreshRequest, db: AsyncSession = Depends(get_db)) -> dict:
+    return await service.refresh_token(db, payload.refresh_token)
+
+
+@router.get("/auth/google/oauth-url")
+async def google_oauth_url(
+    credentials: HTTPAuthorizationCredentials | None = Depends(HTTPBearer(auto_error=False)),
+) -> dict:
+    user_id = None
+    if credentials:
+        try:
+            from app.core.jwt_deps import decode_access_token
+            payload = decode_access_token(credentials.credentials)
+            import uuid
+            user_id = uuid.UUID(payload["sub"])
+        except Exception:
+            pass
+    return service.google_oauth_build_url(user_id=user_id)
+
+
+@router.get("/auth/google/callback")
+async def google_oauth_callback(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    code: str | None = None,
+    state: str | None = None,
+    error: str | None = None,
+):
+    return await service.google_oauth_callback(
+        db,
+        code=code,
+        state=state,
+        oauth_error=error,
+        ip_address=(request.client.host if request.client else None),
+        user_agent=request.headers.get("user-agent"),
+    )
+
+
+@router.get("/auth/youtube/oauth-url")
+async def youtube_oauth_url(
+    credentials: HTTPAuthorizationCredentials | None = Depends(HTTPBearer(auto_error=False)),
+) -> dict:
+    """Alias for Google OAuth (includes YouTube readonly scope)."""
+    if not settings.enable_youtube_oauth:
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail={"code": "NOT_IMPLEMENTED", "message": "YouTube OAuth alias disabled.", "details": {}},
+        )
+    user_id = None
+    if credentials:
+        try:
+            from app.core.jwt_deps import decode_access_token
+            payload = decode_access_token(credentials.credentials)
+            import uuid
+            user_id = uuid.UUID(payload["sub"])
+        except Exception:
+            pass
+    return service.google_oauth_build_url(user_id=user_id)
+
+
+@router.post("/auth/youtube/callback")
+async def youtube_callback() -> dict:
+    raise HTTPException(
+        status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
+        detail={"code": "USE_GET", "message": "Use GET /auth/google/callback after Google redirects.", "details": {}},
+    )
+
+
+@router.patch("/auth/onboarding/complete")
+async def complete_onboarding(
+    payload: OnboardingCompleteRequest,
+    db: AsyncSession = Depends(get_db),
+    user_id=Depends(get_current_user_id),
+) -> dict:
+    return await service.complete_onboarding(db, user_id, payload.model_dump())
+
+
+@router.post("/auth/sync/channel")
+async def sync_channel(
+    db: AsyncSession = Depends(get_db),
+    user_id=Depends(get_current_user_id),
+) -> dict:
+    """Manually trigger a YouTube channel metadata sync."""
+    return await service.sync_channel(db, user_id)

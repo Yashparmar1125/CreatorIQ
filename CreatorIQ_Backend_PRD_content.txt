@@ -1,0 +1,1471 @@
+BACKEND ENGINEERING
+Product Requirements
+CreatorIQ
+Server, API, Data & ML Engineering Specification
+Document
+Backend PRD — CreatorIQ Platform
+Version
+1.0 — Initial Release
+Primary Stack
+Python (FastAPI)  |  PostgreSQL  |  Redis  |  Kafka  |  AWS
+ML Stack
+PyTorch  |  HuggingFace  |  scikit-learn  |  InfluxDB
+Audience
+Backend Engineering, ML Engineering, DevOps, Architecture
+Date
+March 2025
+Status
+Draft — Under Review
+1. Purpose & Scope
+This document is the authoritative backend engineering specification for CreatorIQ. It covers every server-side concern: system architecture, service decomposition, REST API contracts (all endpoints with request/response schemas), database design, ML pipeline design, external integration contracts, security model, infrastructure, error handling strategy, and performance SLAs.
+This document is written for the backend and ML engineering teams. It must be read alongside the Frontend PRD (v1.0) to understand the full product context. All API endpoint contracts defined here are the source of truth — the frontend PRD references these, not the other way around.
+Scope — What This Document Covers
+System architecture: service decomposition, component interaction diagram
+Technology stack selection and justification
+Complete REST API specification: 25+ endpoints with schemas, status codes, and error envelopes
+Database schema: all tables, columns, types, indexes, and relationships
+ML pipeline: data ingestion, feature engineering, model specs, serving infrastructure
+External integrations: YouTube Data API, YouTube Analytics API, Google Trends
+Authentication and authorization model: JWT, OAuth 2.0, RBAC
+Infrastructure: AWS services, containerization, CI/CD
+Security requirements: OWASP compliance, data encryption, secrets management
+Performance SLAs and scaling strategy
+Error handling, logging, and observability
+Backend definition of done and testing requirements
+2. System Architecture
+2.1 Architecture Pattern
+CreatorIQ uses a modular monolith architecture for the MVP (v1.0), designed to extract into microservices at v2.0. The backend is split into five logical service domains — each deployed as a separate process but within a single AWS ECS cluster. They communicate via internal HTTP (synchronous) and Kafka topics (asynchronous).
+This approach avoids the operational complexity of full microservices at MVP scale, while enforcing domain boundaries that enable clean extraction later. Each service domain owns its database schema and must not directly read from another domain's tables.
+2.2 Service Domains
+Service Domain
+Port
+Responsibility
+DB Schema
+API Gateway
+8000
+Request routing, rate limiting, auth middleware, CORS
+—
+Auth Service
+8001
+YouTube OAuth, JWT issue/refresh, user management
+users, oauth_tokens, sessions
+Channel Service
+8002
+Channel ingestion, metrics refresh, audience data
+channels, metrics, audience_snapshots
+Trend Service
+8003
+Trend ingestion pipeline, scoring engine, trend CRUD
+trends, trend_signals, saved_trends
+Strategy Service
+8004
+AI content generation, brief management, title/tag/script generation
+strategy_sessions, briefs, generated_content
+Planner Service
+8005
+Content calendar, slot management, posting time engine
+planner_slots, posting_time_data
+Analytics Service
+8006
+Performance aggregation, AI summary generation, benchmark data
+analytics_snapshots, benchmarks, ai_summaries
+ML Service
+8007
+Model inference endpoint for trend prediction, CTR scoring
+(read-only access to trend_signals + channel metrics)
+2.3 Data Flow — Request Lifecycle
+Every client request follows this path:
+Client sends HTTPS request to the API Gateway (CloudFront + ALB)
+API Gateway middleware: validates JWT, checks rate limit, routes to target service
+Target service processes request; queries its own PostgreSQL schema
+If data is stale or absent, service may: (a) call ML Service for prediction, (b) fetch from Redis cache, or (c) trigger async Kafka job for background refresh
+Service returns JSON response in standard envelope to API Gateway
+API Gateway forwards response to client
+2.4 Async Processing — Kafka Topics
+Topic
+Producer
+Consumer / Action
+channel.metrics.refresh
+Channel Service scheduler
+Channel Service worker: fetches fresh YouTube Analytics data
+trend.signal.ingest
+Ingestion Cron (Google Trends + YT Data API)
+Trend Service: normalizes, scores, and persists trend signals
+trend.score.update
+Trend Service
+ML Service: re-runs prediction model on updated signals
+strategy.generate.request
+Strategy Service
+Strategy Worker: calls LLM API, returns generated content
+notification.dispatch
+Any service
+Notification Worker: sends email/push via SES + FCM
+analytics.summary.request
+Analytics Service scheduler
+Analytics Worker: calls LLM API for AI performance summary
+3. Technology Stack
+Layer
+Technology
+Justification
+API Framework
+FastAPI (Python 3.12)
+Async-first, automatic OpenAPI docs, Pydantic v2 validation, fastest Python framework for I/O-heavy workloads
+API Validation
+Pydantic v2
+Schema-driven request/response validation, serialization, and documentation
+Primary Database
+PostgreSQL 16
+ACID compliance, JSONB for flexible metadata, pgvector for ML embeddings, mature tooling
+ORM / Migrations
+SQLAlchemy 2.x + Alembic
+Async ORM support, type-safe queries, migration versioning
+Time-Series DB
+TimescaleDB (PostgreSQL extension)
+Efficient time-series storage and querying for trend signals and metric history
+Cache
+Redis 7 (ElastiCache)
+In-memory cache for trend feeds, session data, rate limiting counters
+Message Broker
+Apache Kafka (MSK)
+High-throughput, durable async processing for ingestion and generation pipelines
+ML Framework
+PyTorch 2.x + HuggingFace Transformers
+LSTM forecasting, BERT-based NLP classification
+ML Serving
+TorchServe (containerized)
+Model versioning, batched inference, health endpoints
+LLM Integration
+Anthropic Claude API (claude-sonnet-4-20250514)
+Content generation: ideas, titles, script outlines, AI summaries
+Object Storage
+AWS S3
+Channel thumbnails, exported reports, model artifacts
+Auth
+JWT (RS256) + OAuth 2.0
+Stateless auth, YouTube account linking
+Containerization
+Docker + AWS ECS Fargate
+Serverless container orchestration, no cluster management
+CI/CD
+GitHub Actions + AWS CodeDeploy
+Automated test, lint, build, deploy pipeline
+Secrets Management
+AWS Secrets Manager
+API keys, DB passwords, OAuth client secrets
+Observability
+Datadog (APM + Logs + Metrics)
+Distributed tracing, log aggregation, custom dashboards
+Email
+AWS SES
+Transactional emails: account, notifications, reports
+Search
+PostgreSQL Full-Text Search (v1.0); Elasticsearch (v2.0)
+Video/trend search; upgrade path defined
+4. Database Schema
+All tables use UUID primary keys (gen_random_uuid()). Timestamps use TIMESTAMPTZ (UTC). Soft deletes are used for user-facing records (deleted_at column). Foreign key constraints are enforced at the database level. Each service domain has its own PostgreSQL schema (namespace) within the same RDS instance for MVP.
+4.1 Auth / User Domain
+Table: users
+Column
+Type
+Constraints
+Notes
+id
+UUID
+PK, DEFAULT gen_random_uuid()
+Primary key
+email
+VARCHAR(320)
+UNIQUE, NOT NULL
+Lowercase-normalized on insert
+email_verified
+BOOLEAN
+DEFAULT false
+Set true on email confirmation
+password_hash
+TEXT
+NULLABLE
+Null for OAuth-only accounts
+full_name
+VARCHAR(255)
+NOT NULL
+avatar_url
+TEXT
+NULLABLE
+S3 URL
+plan_tier
+ENUM('free','pro','agency')
+DEFAULT 'free'
+plan_expires_at
+TIMESTAMPTZ
+NULLABLE
+Null for free tier
+timezone
+VARCHAR(64)
+DEFAULT 'UTC'
+IANA timezone string
+locale
+VARCHAR(10)
+DEFAULT 'en-US'
+onboarding_completed
+BOOLEAN
+DEFAULT false
+created_at
+TIMESTAMPTZ
+DEFAULT now()
+updated_at
+TIMESTAMPTZ
+DEFAULT now()
+Auto-updated via trigger
+deleted_at
+TIMESTAMPTZ
+NULLABLE
+Soft delete
+Table: oauth_tokens
+Column
+Type
+Constraints
+Notes
+id
+UUID
+PK
+user_id
+UUID
+FK users.id, NOT NULL
+channel_id
+UUID
+FK channels.id, NULLABLE
+Linked after channel ingestion
+provider
+ENUM('youtube')
+NOT NULL
+Extensible for future OAuth providers
+access_token_enc
+TEXT
+NOT NULL
+AES-256-GCM encrypted at rest
+refresh_token_enc
+TEXT
+NOT NULL
+AES-256-GCM encrypted at rest
+token_expiry
+TIMESTAMPTZ
+NOT NULL
+Schedule refresh 5 min before expiry
+scopes
+TEXT[]
+NOT NULL
+Array of granted OAuth scopes
+revoked
+BOOLEAN
+DEFAULT false
+created_at
+TIMESTAMPTZ
+DEFAULT now()
+updated_at
+TIMESTAMPTZ
+DEFAULT now()
+4.2 Channel Domain
+Table: channels
+Column
+Type
+Constraints
+Notes
+id
+UUID
+PK
+user_id
+UUID
+FK users.id, NOT NULL
+Owner
+youtube_channel_id
+VARCHAR(64)
+UNIQUE, NOT NULL
+YT channel ID (e.g. UCxxxxxx)
+name
+VARCHAR(255)
+NOT NULL
+handle
+VARCHAR(100)
+NULLABLE
+@handle
+thumbnail_url
+TEXT
+NULLABLE
+subscriber_count
+BIGINT
+DEFAULT 0
+Updated on each metric refresh
+video_count
+INTEGER
+DEFAULT 0
+niches
+VARCHAR(64)[]
+NOT NULL
+Array, 1–3 values
+content_formats
+ENUM[]
+NOT NULL
+long_form, shorts, both
+tone
+ENUM(...)
+DEFAULT 'mixed'
+educational, entertaining, authoritative, conversational, mixed
+metrics_last_refreshed
+TIMESTAMPTZ
+NULLABLE
+UTC timestamp of last successful refresh
+is_primary
+BOOLEAN
+DEFAULT false
+One primary channel per user
+created_at / updated_at / deleted_at
+TIMESTAMPTZ
+Standard
+Table: channel_metrics (TimescaleDB hypertable, partitioned by recorded_at)
+Column
+Type
+Constraints
+Notes
+id
+UUID
+PK
+channel_id
+UUID
+FK channels.id, INDEX
+recorded_at
+TIMESTAMPTZ
+NOT NULL, INDEX
+Partition key for TimescaleDB
+period
+ENUM('day','week','month')
+NOT NULL
+Granularity of this snapshot
+views
+BIGINT
+NOT NULL
+watch_time_minutes
+BIGINT
+NOT NULL
+subscribers_gained
+INTEGER
+NOT NULL
+subscribers_lost
+INTEGER
+NOT NULL
+estimated_revenue_usd
+NUMERIC(12,4)
+NULLABLE
+Null if not monetized
+avg_view_duration_secs
+INTEGER
+NULLABLE
+avg_ctr
+NUMERIC(5,4)
+NULLABLE
+0.0000–1.0000
+impressions
+BIGINT
+NULLABLE
+4.3 Trend Domain
+Table: trends
+Column
+Type
+Constraints
+Notes
+id
+UUID
+PK
+topic
+VARCHAR(500)
+NOT NULL
+Normalized topic string
+topic_slug
+VARCHAR(500)
+UNIQUE, NOT NULL
+URL-safe slug
+niches
+VARCHAR(64)[]
+NOT NULL, INDEX (GIN)
+Array, allows GIN index search
+tvs_score
+NUMERIC(5,2)
+NOT NULL
+Trend Velocity Score 0–100
+prediction_confidence
+NUMERIC(4,3)
+NOT NULL
+0.000–1.000
+peak_window_start
+DATE
+NOT NULL
+Predicted ideal publish start
+peak_window_end
+DATE
+NOT NULL
+Predicted ideal publish end
+status
+ENUM(...)
+NOT NULL
+emerging, peaking, peaked, declining
+sentiment
+ENUM(...)
+DEFAULT 'neutral'
+positive, neutral, negative, mixed
+supported_formats
+ENUM[]
+NOT NULL
+long_form, shorts, both
+top_keywords
+TEXT[]
+NOT NULL
+Normalized keyword cluster
+description
+TEXT
+NULLABLE
+AI-generated analysis (cached)
+data_sources
+VARCHAR(64)[]
+NOT NULL
+google_trends, youtube_trending, etc.
+scored_at
+TIMESTAMPTZ
+NOT NULL
+Last TVS computation time
+created_at / updated_at
+TIMESTAMPTZ
+Standard
+Table: trend_signals (TimescaleDB hypertable)
+Column
+Type
+Constraints
+Notes
+id
+UUID
+PK
+trend_id
+UUID
+FK trends.id, INDEX
+signal_source
+ENUM(...)
+NOT NULL
+google_trends, youtube_data, cross_platform
+recorded_at
+TIMESTAMPTZ
+NOT NULL, INDEX
+Partition key
+relative_interest
+NUMERIC(5,2)
+NOT NULL
+0–100 normalized interest score
+search_volume_est
+INTEGER
+NULLABLE
+Estimated monthly search volume
+region
+VARCHAR(10)
+DEFAULT 'GLOBAL'
+ISO country code or GLOBAL
+4.4 Strategy Domain
+Table: strategy_sessions
+Column
+Type
+Constraints
+Notes
+id
+UUID
+PK
+user_id
+UUID
+FK users.id, INDEX
+channel_id
+UUID
+FK channels.id, INDEX
+trend_id
+UUID
+FK trends.id, NULLABLE
+If session was triggered from a trend
+input_topic
+VARCHAR(500)
+NOT NULL
+User-provided or trend topic
+input_config
+JSONB
+NOT NULL
+niche, format, tone, audienceAge
+status
+ENUM(...)
+NOT NULL
+pending, generating, complete, failed
+llm_model_version
+VARCHAR(64)
+NOT NULL
+Track LLM model used for reproducibility
+llm_prompt_hash
+VARCHAR(64)
+NULLABLE
+SHA-256 of prompt template version
+token_usage
+INTEGER
+NULLABLE
+Total LLM tokens consumed
+created_at / updated_at
+TIMESTAMPTZ
+Standard
+Table: generated_content
+Column
+Type
+Constraints
+Notes
+id
+UUID
+PK
+session_id
+UUID
+FK strategy_sessions.id, INDEX
+content_type
+ENUM(...)
+NOT NULL
+idea, title, tag_set, script_outline, thumbnail_brief
+content
+JSONB
+NOT NULL
+Structured content payload (schema per type)
+predicted_ctr_score
+NUMERIC(4,3)
+NULLABLE
+0–1; set by ML scoring step
+performance_score
+NUMERIC(5,2)
+NULLABLE
+0–100 overall predicted performance
+selected
+BOOLEAN
+DEFAULT false
+User selected this item
+user_feedback
+ENUM(...)
+NULLABLE
+thumbs_up, thumbs_down — for model retraining
+created_at
+TIMESTAMPTZ
+DEFAULT now()
+4.5 Planner Domain
+Table: planner_slots
+Column
+Type
+Constraints
+Notes
+id
+UUID
+PK
+channel_id
+UUID
+FK channels.id, INDEX
+user_id
+UUID
+FK users.id
+scheduled_at
+TIMESTAMPTZ
+NOT NULL, INDEX
+Target publish datetime
+topic
+VARCHAR(500)
+NOT NULL
+strategy_session_id
+UUID
+FK strategy_sessions.id, NULLABLE
+If linked to a generated brief
+trend_id
+UUID
+FK trends.id, NULLABLE
+If linked to a trend
+status
+ENUM(...)
+NOT NULL
+not_started, in_progress, scripted, ready, published, skipped
+notes
+TEXT
+NULLABLE
+trend_window_alert_sent
+BOOLEAN
+DEFAULT false
+Has posting-window notification been sent
+created_at / updated_at / deleted_at
+TIMESTAMPTZ
+Standard
+4.6 Key Database Indexes
+Index
+Type
+Purpose
+channel_metrics(channel_id, recorded_at)
+BTREE composite
+Time-range queries for dashboard KPIs
+trends(niches)
+GIN (array)
+Filter trends by niche
+trends(tvs_score, status)
+BTREE composite
+Sort/filter trend feed by score + status
+trend_signals(trend_id, recorded_at)
+BTREE composite
+Fetch signal history for a trend
+planner_slots(channel_id, scheduled_at)
+BTREE composite
+Calendar range queries
+generated_content(session_id, content_type)
+BTREE composite
+Fetch content by type for a session
+users(email)
+UNIQUE BTREE
+Login lookup
+oauth_tokens(user_id, provider)
+BTREE composite
+Token lookup by user + provider
+5. REST API Specification
+5.1 API Standards
+All endpoints conform to the following standards without exception:
+Base URL: https://api.creatoriq.app/v1
+Content-Type: application/json on all requests and responses
+Authentication: Bearer token in Authorization header (JWT, RS256)
+Every response uses the standard envelope:
+// Response Envelope
+// Success envelope
+{ "data": <payload>, "meta": { "request_id": "uuid", "timestamp": "ISO8601" } }
+// Error envelope
+{ "error": { "code": "ERROR_CODE", "message": "Human-readable message",
+             "details": {} }, "meta": { "request_id": "uuid" } }
+Pagination: cursor-based. All list endpoints accept cursor and limit (max 100) query params. Response includes next_cursor and total_count in meta.
+Versioning: URL path versioning (/v1/). Breaking changes require new version; additive changes (new fields) are non-breaking.
+Rate limiting: per user, per endpoint group. Headers: X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset
+5.2 Standard Error Codes
+Error Code
+HTTP Status
+Meaning
+UNAUTHORIZED
+401
+Missing or invalid JWT
+FORBIDDEN
+403
+Valid JWT but insufficient permissions (e.g. plan gate)
+NOT_FOUND
+404
+Resource does not exist or is not accessible to user
+VALIDATION_ERROR
+422
+Request body/params failed Pydantic validation; details field contains field errors
+RATE_LIMITED
+429
+Rate limit exceeded; Retry-After header included
+EXTERNAL_API_ERROR
+502
+Upstream API (YouTube, Google Trends) returned an error
+GENERATION_TIMEOUT
+504
+LLM generation exceeded 15-second timeout
+INTERNAL_ERROR
+500
+Unexpected server error; full details logged, not exposed
+OAUTH_REVOKED
+401
+YouTube OAuth token has been revoked by user
+QUOTA_EXCEEDED
+402
+Plan-level feature quota exceeded (e.g. brief limit)
+5.3 Authentication Endpoints
+POST /auth/register
+Creates a new user account with email + password.
+// POST /auth/register
+// Request Body
+{ "email": "string (required)",
+  "password": "string (required, min 8 chars)",
+  "full_name": "string (required)" }
+// Response 201
+{ "data": { "user": UserObject, "access_token": "JWT", "refresh_token": "string" } }
+POST /auth/login
+// POST /auth/login
+// Request Body
+{ "email": "string", "password": "string" }
+// Response 200
+{ "data": { "user": UserObject, "access_token": "JWT (15min expiry)",
+            "refresh_token": "string (90-day expiry, rotated on use)" } }
+POST /auth/token/refresh
+// POST /auth/token/refresh
+// Request Body
+{ "refresh_token": "string" }
+// Response 200
+{ "data": { "access_token": "JWT", "refresh_token": "string (rotated)" } }
+// Errors: 401 UNAUTHORIZED (invalid/expired), 401 TOKEN_REUSE (rotation violation)
+GET /auth/youtube/oauth-url
+// GET /auth/youtube/oauth-url
+// Query: channel_id (optional, for re-auth of existing channel)
+// Response 200
+{ "data": { "url": "https://accounts.google.com/o/oauth2/v2/auth?..." } }
+// URL includes: client_id, redirect_uri, scope, state (CSRF token), access_type=offline
+POST /auth/youtube/callback
+// POST /auth/youtube/callback
+// Request Body
+{ "code": "string (OAuth authorization code)",
+  "state": "string (CSRF token, validated server-side)" }
+// Response 200
+{ "data": { "channel": ChannelObject, "is_new_channel": boolean } }
+// Side effects:
+// 1. Exchange code for access_token + refresh_token via Google Token API
+// 2. Encrypt and store tokens in oauth_tokens table
+// 3. Fetch channel profile from YouTube Data API (channels.list)
+// 4. Create or update channel record
+// 5. Enqueue channel.metrics.refresh Kafka event
+5.4 Channel Endpoints
+GET /channels
+// GET /channels
+// Auth: required
+// Response 200
+{ "data": { "channels": ChannelObject[] } }
+// Returns all channels for authenticated user (max 10 Pro+, 1 Free)
+GET /channels/:channel_id/metrics
+// GET /channels/:channel_id/metrics
+// Query params:
+// start_date: ISO date string (required)
+// end_date:   ISO date string (required, max range 365 days)
+// period:     'day' | 'week' | 'month' (default: 'day')
+// Response 200
+{ "data": {
+    "summary": { "views": int, "watch_time_hours": float, "subscribers_net": int,
+                 "avg_ctr": float, "estimated_revenue_usd": float|null },
+    "deltas": { "views_delta_pct": float, "subscribers_delta_pct": float, ... },
+    "sparklines": { "views": number[], "subscribers": number[], "ctr": number[] },
+    "time_series": [ { "date": "ISO", "views": int, "watch_time_minutes": int, ... } ]
+  }
+}
+5.5 Trend Endpoints
+GET /trends
+// GET /trends
+// Query params:
+// niches:      string[] (comma-separated niche slugs, optional)
+// tvs_min:     number 0-100 (default: 0)
+// tvs_max:     number 0-100 (default: 100)
+// status:      'emerging'|'peaking'|'peaked'|'declining' (optional)
+// window:      'now'|'7d'|'14d'|'all' (default: 'all')
+// confidence:  'high'|'medium'|'all' (default: 'all')
+// cursor:      string (pagination cursor)
+// limit:       int 1-100 (default: 20)
+// Response 200
+{ "data": { "trends": TrendSummary[] },
+  "meta": { "next_cursor": string|null, "total_count": int } }
+// TrendSummary: { id, topic, niches, tvs_score, prediction_confidence,
+//               peak_window_start, peak_window_end, status, supported_formats,
+//               top_keywords[0..4], sparkline: number[7], is_saved: bool }
+GET /trends/:trend_id
+// GET /trends/:trend_id
+// Response 200
+{ "data": {
+    "trend": TrendDetail,
+    "signal_history": [ { "date": ISO, "relative_interest": float } ]  // 90 days
+    "forecast": [ { "date": ISO, "forecast_interest": float,
+                    "confidence_low": float, "confidence_high": float } ]  // 30 days
+    "keyword_cluster": [ { "keyword": str, "search_volume": int,
+                           "competition": "low"|"medium"|"high" } ]
+    "competitor_videos": [ { "title": str, "views": int, "published_at": ISO,
+                             "channel_name": str, "thumbnail_url": str } ]  // top 5
+  }
+}
+POST /trends/:trend_id/save  |  DELETE /trends/:trend_id/save
+// Trend Save/Unsave
+// POST: Save a trend to user's bookmarks
+// DELETE: Remove saved bookmark
+// Both return 200 { data: { saved: boolean } }
+5.6 Strategy Endpoints
+POST /strategy/sessions
+// POST /strategy/sessions
+// Request Body:
+{ "channel_id": "UUID (required)",
+  "topic": "string (required, 3-200 chars)",
+  "trend_id": "UUID (optional)",
+  "config": {
+      "niche": "string (required)",
+      "format": "long_form"|"shorts"|"either" (required),
+      "tone": "educational"|"entertaining"|"authoritative"|"conversational" (required),
+      "audience_age_min": int (optional, default 13),
+      "audience_age_max": int (optional, default 65)
+  }
+}
+// Response 202 Accepted (generation is async via Kafka)
+{ "data": { "session_id": "UUID", "status": "pending",
+            "estimated_seconds": 8 } }
+// Client polls GET /strategy/sessions/:id until status = 'complete' | 'failed'
+GET /strategy/sessions/:session_id
+// GET /strategy/sessions/:session_id
+// Response 200
+{ "data": {
+    "session": StrategySessionObject,
+    "ideas": IdeaItem[]   // populated when status = complete
+  }
+}
+// IdeaItem: { id, title, description, predicted_performance_score,
+//            format_tag, estimated_length_minutes }
+POST /strategy/sessions/:session_id/titles
+// POST /strategy/sessions/:session_id/titles
+// Request Body: { idea_id: UUID }
+// Response 200 (synchronous — uses Redis cache if same idea_id already generated)
+{ "data": { "titles": [
+    { "id": UUID, "text": string, "predicted_ctr_score": float,
+      "char_count": int, "seo_score": float, "keyword_density": float }
+  ] } }
+POST /strategy/sessions/:session_id/tags
+// POST /strategy/sessions/:session_id/tags
+// Request Body: { idea_id: UUID, title_id: UUID }
+// Response 200
+{ "data": { "tags": [
+    { "tag": string, "search_volume_est": int,
+      "competition": "low"|"medium"|"high" }
+  ],
+  "total_char_count": int  // YouTube limit: 500
+} }
+POST /strategy/sessions/:session_id/script
+// POST /strategy/sessions/:session_id/script
+// Request Body: { idea_id: UUID, title_id: UUID }
+// PRO+ plan only — returns 403 FORBIDDEN for free tier
+// Response 202 (async, ~8-10 seconds)
+{ "data": { "script_job_id": UUID, "status": "pending" } }
+// Poll GET /strategy/sessions/:session_id/script/:script_job_id
+// Response when complete:
+{ "data": { "outline": [
+    { "section": "Hook", "duration_seconds": 30,
+      "bullet_points": string[], "suggested_b_roll": string }
+  ] } }
+5.7 Planner Endpoints
+GET /planner/slots
+// GET /planner/slots
+// Query: channel_id (required), start_date, end_date (ISO dates, required)
+// Response 200
+{ "data": { "slots": PlannerSlot[],
+            "optimal_times": { "Mon": ["18:00","20:00"], ... }  // heatmap top slots
+  } }
+POST /planner/slots  |  PATCH /planner/slots/:id  |  DELETE /planner/slots/:id
+// Planner CRUD
+// POST Request Body:
+{ "channel_id": UUID, "scheduled_at": ISO datetime, "topic": string,
+  "status": SlotStatus, "strategy_session_id": UUID|null,
+  "trend_id": UUID|null, "notes": string|null }
+// PATCH: partial update of any mutable fields
+// DELETE: soft-delete (sets deleted_at). Returns 204 No Content.
+// POST/PATCH: Returns 200/201 with full slot object
+5.8 Analytics Endpoints
+GET /analytics/videos
+// GET /analytics/videos
+// Query: channel_id, start_date, end_date, sort (views|ctr|watch_time|published_at),
+//        order (asc|desc), cursor, limit
+// Response 200
+{ "data": { "videos": [
+    { "video_id": string, "title": string, "thumbnail_url": string,
+      "published_at": ISO, "views": int, "avg_ctr": float,
+      "avg_watch_duration_secs": int, "subscribers_gained": int,
+      "performance_badge": "exceeds"|"meets"|"below" }
+  ] },
+  "meta": { "next_cursor": string|null, "total_count": int }
+}
+GET /analytics/summary
+// GET /analytics/summary
+// Query: channel_id, start_date, end_date
+// AI summary is cached per (channel_id, date_range); regenerated if > 24 hours old
+// Response 200
+{ "data": {
+    "ai_summary": "string (3-5 sentences)",
+    "recommendations": [
+      { "priority": "high"|"medium", "action": string,
+        "estimated_impact": string, "tool_link": string }
+    ],
+    "summary_generated_at": ISO
+  }
+}
+GET /analytics/benchmarks
+// GET /analytics/benchmarks
+// Query: channel_id, niche
+// Response 200 — anonymized aggregated platform benchmarks
+{ "data": {
+    "niche": string,
+    "benchmarks": {
+      "avg_ctr":           { "p25": float, "p50": float, "p75": float, "p90": float },
+      "avg_watch_time_pct":{ "p25": float, "p50": float, "p75": float, "p90": float },
+      "sub_growth_monthly":{ "p25": float, "p50": float, "p75": float, "p90": float }
+    },
+    "channel_percentile": { "avg_ctr": float, "avg_watch_time_pct": float }
+  }
+}
+6. ML Pipeline Specification
+6.1 Pipeline Overview
+The ML pipeline consists of three independent subsystems: (1) the Data Ingestion Pipeline, (2) the Trend Prediction Engine, and (3) the Content Scoring Engine. Each subsystem runs on its own schedule and produces outputs consumed by the API layer.
+6.2 Data Ingestion Pipeline
+6.2.1 Google Trends Ingestion
+Scheduled cron: every 60 minutes. Uses pytrends library (unofficial) with SerpAPI as failover.
+For each niche in the platform's active niche list, fetch interest-over-time for top 50 keywords
+Fetch related queries (rising) to surface emerging keyword clusters
+Normalize interest scores (0–100) relative to peak within the time window
+De-duplicate signals against existing trend_signals records (idempotent writes)
+Publish to Kafka topic: trend.signal.ingest
+Rate Limit Risk
+Google Trends has aggressive rate limits on unofficial access (pytrends). Use SerpAPI (paid) as primary source for production to ensure reliability.
+Implement exponential backoff with jitter on all Google Trends requests. Circuit breaker pattern: disable ingestion for 30 minutes after 5 consecutive failures.
+Distribute requests across multiple SerpAPI API keys to stay within per-key limits.
+6.2.2 YouTube Data API Ingestion
+Scheduled cron: every 6 hours. Uses official YouTube Data API v3 (quota cost: ~100 units per run).
+Fetch trending videos by region and category (videos.list, chart=mostPopular)
+Extract topics from video titles and descriptions using NLP preprocessing step
+Match extracted topics to existing trends or create new trend candidates
+Track cross-signal convergence: when a topic appears on both Google Trends and YouTube trending, TVS boost applied
+Quota management: cache responses in Redis (TTL: 6 hours) to avoid redundant quota consumption
+6.3 Trend Prediction Engine
+6.3.1 TVS (Trend Velocity Score) Computation
+The TVS is recomputed every 2 hours for all active trends. It is a weighted composite of five signals:
+Signal Component
+Weight
+Calculation
+Search Volume Acceleration
+0.35
+Week-over-week growth rate of normalized interest score (Google Trends)
+Cross-Platform Convergence
+0.25
+Presence and growth across multiple data sources (Google + YouTube = max boost)
+Historical Peak Lag Pattern
+0.20
+Comparison against historical patterns for similar topics; measures how far pre-peak we are
+Niche-Relative Score
+0.15
+Topic's relative growth vs niche baseline (isolates niche-specific virality)
+Keyword Cluster Breadth
+0.05
+Number of distinct related keywords showing simultaneous growth
+6.3.2 LSTM Forecasting Model
+Predicts the interest trajectory for each trend over the next 30 days, generating a confidence interval.
+Property
+Specification
+Architecture
+Bidirectional LSTM, 2 layers, hidden size 128, dropout 0.2
+Input Features
+90-day normalized interest time series + niche encoding (one-hot) + day-of-week + seasonality features
+Output
+30-day point forecast + 80% and 95% prediction intervals
+Training Data
+3 years of Google Trends data across all supported niches; ~50,000 trend trajectories
+Training Schedule
+Full retrain: monthly. Incremental fine-tune: weekly on last 30 days of new data.
+Evaluation Metric
+MASE (Mean Absolute Scaled Error) on held-out 10% test set. Target: MASE < 0.85.
+Serving
+TorchServe endpoint: POST /ml/trend-forecast. Batched: up to 64 trends per request. P99 latency < 800ms.
+Model Registry
+MLflow on AWS S3. Automated promotion: new model promoted to production if MASE improvement > 2%.
+6.3.3 NLP Classification Model
+Classifies trend topics for niche, sentiment, and virality potential.
+Base model: distilbert-base-uncased (HuggingFace), fine-tuned on a labeled dataset of 20,000 YouTube trend topics
+Classification heads: Niche (multi-label, 24 classes), Sentiment (4-class), Format suitability (long_form/shorts/both)
+Input: raw topic string + top 5 related keywords (concatenated)
+Output: classification labels + confidence scores per label
+Inference: synchronous, integrated into trend ingestion pipeline. P99 latency < 200ms.
+Retraining: triggered when > 5,000 new labeled examples accumulate in the feedback table
+6.4 Content Scoring Engine
+Runs after LLM generation to score generated titles and ideas for predicted performance.
+6.4.1 CTR Prediction Model
+Model type: XGBoost classifier trained on historical YouTube CTR data from anonymized channel analytics
+Features: title length, power word presence, number format presence, question format, sentiment polarity, keyword overlap with trending topics, emoji presence
+Output: predicted CTR score 0.0–1.0 (normalized to platform average)
+Training: monthly retrain on last 6 months of actual CTR outcomes from consenting Pro+ users
+6.4.2 Idea Performance Score
+Composite score: 0.4 * trend_tvs_score + 0.3 * ctr_predicted_score + 0.2 * niche_demand_gap_score + 0.1 * format_match_score
+niche_demand_gap_score: measures how underserved this topic is in the creator's niche based on view-to-search-volume ratio
+7. LLM Integration — Content Generation
+7.1 Provider & Model
+Primary provider: Anthropic Claude API. Model: claude-sonnet-4-20250514. All generation calls route through a centralized LLM gateway service (src/services/llm_gateway.py) that handles: retry logic, cost tracking, prompt versioning, and fallback to claude-haiku-4-5-20251001 for timeout scenarios.
+7.2 Generation Tasks & Prompt Architecture
+Task
+Model
+Max Tokens
+Prompt Strategy
+Video Ideas (5-10)
+claude-sonnet-4-20250514
+1200
+System: creator persona + niche. User: topic + config. Structured JSON output.
+Title Variants (3-5)
+claude-sonnet-4-20250514
+400
+System: CTR optimization rules. User: idea + keyword context. JSON array output.
+Script Outline
+claude-sonnet-4-20250514
+2000
+System: content format guide. User: idea + title + audience. Structured JSON outline.
+AI Analytics Summary
+claude-sonnet-4-20250514
+600
+System: data analyst persona. User: channel metrics JSON. Plain text output.
+Trend Description
+claude-haiku-4-5-20251001
+300
+System: trend analyst. User: topic + signals. Cached for 24h per trend.
+Thumbnail Brief
+claude-haiku-4-5-20251001
+250
+System: YouTube thumbnail expert. User: idea + niche. JSON output.
+7.3 Prompt Engineering Requirements
+All prompts stored as versioned templates in src/prompts/ directory (YAML format with version field)
+Template variables injected at runtime: never concatenate user-controlled strings directly into prompts (prompt injection prevention)
+All generation tasks request JSON output and must include a JSON schema in the prompt
+Include chain-of-thought instructions for idea generation to improve output quality
+System prompts always include: channel niche, creator tone, audience demographics — ensure personalization in every generation
+Prompt Versioning Rule
+Every prompt template file must include a version field (e.g. v1.2). When a prompt is modified, the version must be incremented.
+The llm_model_version and llm_prompt_hash fields on strategy_sessions record exactly which model + prompt combination produced each generation.
+This enables reproducibility analysis and A/B testing of prompt improvements.
+7.4 LLM Error Handling
+Timeout: 15 seconds. On timeout, return status 'failed' with error code GENERATION_TIMEOUT.
+Rate limit from Anthropic API: implement token bucket algorithm. Queue excess requests with max queue depth of 100.
+Malformed JSON response: retry up to 2 times with an explicit JSON repair instruction added to the prompt.
+Content filter refusal: detect refusal patterns, mark session as 'failed', log for manual review.
+8. External Integration Contracts
+8.1 YouTube Data API v3
+API Method
+Quota Cost
+Usage
+channels.list (id,snippet,statistics)
+1 unit per call
+Channel profile ingestion on OAuth connect and daily refresh
+videos.list (chart=mostPopular)
+1 unit per call
+Trending video ingestion (every 6 hours)
+search.list (type=video)
+100 units per call
+MINIMIZE USE — only for competitor video lookup in trend detail
+videoCategories.list
+1 unit per call
+Static cache — fetch once, update weekly
+Daily quota: 10,000 units per project (default). Apply for increased quota for production.
+Quota strategy: cache all responses aggressively. Use ETags for conditional requests where supported.
+Error handling: 403 quotaExceeded → pause all YT Data API calls, alert on-call engineer, serve from cache.
+8.2 YouTube Analytics API
+Report Type
+Metrics Fetched
+Channel-level metrics
+views, estimatedMinutesWatched, subscribersGained, subscribersLost, estimatedRevenue, averageViewDuration, annotationClickThroughRate, impressions
+Video-level metrics
+As above, per videoId — fetched for last 50 published videos
+Audience demographics
+ageGroup + gender breakdown (uses reports endpoint)
+Audience activity
+viewerPercentage by hour + dayOfWeek (for posting time recommendations)
+Refresh schedule: channel-level daily; video-level every 48 hours (YouTube data is delayed 48-72h)
+OAuth scope required: https://www.googleapis.com/auth/yt-analytics.readonly
+Data retention: store raw snapshots in channel_metrics table for up to 2 years
+8.3 Google Trends (via SerpAPI)
+Endpoint: https://serpapi.com/search.json?engine=google_trends
+Auth: API key stored in AWS Secrets Manager, injected at runtime
+Rate limit: 100 searches/hour on standard plan. Enforce client-side bucket.
+Failover: if SerpAPI fails, fall back to pytrends with 30-minute cooldown to avoid IP blocks
+Data normalization: all relative interest values normalized to 0–100 scale (Google's native format)
+9. Authentication, Authorization & Security
+9.1 JWT Architecture
+Algorithm: RS256 (asymmetric). Public key distributed to all services via internal JWKS endpoint.
+Access token expiry: 15 minutes. Refresh token expiry: 90 days (rotated on every use — refresh token rotation).
+Access token payload: { sub: user_id, email, plan_tier, channels: [channel_id], iat, exp }
+Refresh token: opaque random string (256-bit), stored as bcrypt hash in sessions table. One active session per device.
+Token reuse detection: if a revoked refresh token is presented, immediately revoke ALL sessions for that user and alert.
+9.2 OAuth 2.0 Security
+PKCE (Proof Key for Code Exchange): required for all YouTube OAuth flows
+State parameter: CSRF protection — state = HMAC-SHA256(session_id + timestamp), validated on callback
+Token storage: OAuth access and refresh tokens stored AES-256-GCM encrypted in the database. Encryption key stored in AWS Secrets Manager. Never logged.
+Scope minimization: request only required scopes. Current required scopes: youtube.readonly, yt-analytics.readonly
+9.3 Authorization — RBAC
+Resource
+Free Tier
+Pro Tier
+Agency Tier
+Connected channels
+1
+3
+10
+Strategy sessions / month
+5
+Unlimited
+Unlimited
+Saved briefs
+10
+50
+Unlimited
+Trend feed access
+Top 50 results
+Full
+Full + cross-channel
+Script outline generation
+No
+Yes
+Yes
+Title optimizer
+No
+Yes
+Yes
+Analytics export (CSV/PDF)
+No
+Yes
+Yes
+API access
+No
+No
+Yes
+Multi-user seats
+1
+1
+5
+Plan tier is read from the JWT payload. Gated endpoints check plan_tier and return 403 FORBIDDEN with error code PLAN_UPGRADE_REQUIRED if access is denied.
+9.4 OWASP Top 10 Mitigation
+OWASP Risk
+Mitigation Implementation
+A01 Broken Access Control
+Row-level security: all DB queries filter by user_id or channel_id. No shared resource IDs. Middleware validates resource ownership before handler execution.
+A02 Cryptographic Failures
+TLS 1.3 only. AES-256-GCM for tokens at rest. RS256 for JWTs. Bcrypt (cost 12) for passwords. No MD5/SHA-1 anywhere.
+A03 Injection
+Pydantic v2 validates all inputs. SQLAlchemy ORM with parameterized queries only. Never raw SQL string formatting. LLM prompts use template variables, not string concat.
+A04 Insecure Design
+Threat modeling completed before implementation. Security review required for all new API endpoints before merge.
+A05 Security Misconfiguration
+Infrastructure as Code (Terraform) for all AWS resources. Security groups: default-deny. No public S3 buckets. CORS: whitelist only.
+A06 Vulnerable Components
+Dependabot enabled. OWASP Dependency-Check in CI pipeline. Automatic PR for security patches within 48 hours.
+A07 Auth Failures
+Rate limit: 5 failed login attempts → 15-minute lockout. Refresh token rotation + reuse detection. Account lockout alerts via email.
+A09 Logging/Monitoring
+Structured JSON logging (never log sensitive data: tokens, passwords, PII). Datadog alerts on anomalous error rates, latency spikes, and auth failures.
+9.5 Data Privacy
+GDPR: users can export all their data (GET /users/me/export) and request deletion (DELETE /users/me). Deletion cascade: all user data deleted within 30 days; analytics data anonymized.
+CCPA: privacy policy must disclose data collection. No data sold to third parties.
+YouTube data retention: YouTube API policies prohibit storing raw API data beyond what is necessary. Channel metrics snapshots are owned by the creator and deleted on channel disconnect.
+LLM data: do not send user PII to LLM APIs. Prompts must contain only content context, never email addresses, real names, or financial data.
+10. Infrastructure & DevOps
+10.1 AWS Architecture
+AWS Service
+Configuration
+Purpose
+ECS Fargate
+8 task definitions (one per service domain). Auto-scaling: 1–10 tasks per service based on CPU 70% threshold.
+Container orchestration
+RDS PostgreSQL
+db.r7g.large, Multi-AZ, 500GB gp3, automated backups 35-day retention
+Primary database
+ElastiCache Redis
+cache.r7g.large, cluster mode with 2 shards, 2 replicas per shard
+Cache + session store
+MSK (Kafka)
+kafka.m5.large, 3 brokers, 2 AZs, 7-day retention, TLS encryption
+Async messaging
+Application Load Balancer
+HTTPS only, TLS 1.3, HTTP/2, WAF enabled
+Ingress + SSL termination
+CloudFront
+CDN for static assets, API caching for public endpoints (trend feed)
+Performance + DDoS protection
+S3
+Separate buckets: assets (public), exports (signed URLs, 24h expiry), ML models (private)
+Object storage
+ECR
+Private container registry, image scan on push, lifecycle policy: keep last 10 tags
+Container images
+Secrets Manager
+Rotation enabled for DB passwords (30-day). Manual rotation for API keys.
+Secrets
+CloudWatch + Datadog
+CloudWatch for AWS-level metrics; Datadog agent in all containers for APM + log forwarding
+Observability
+AWS WAF
+Rules: rate limiting, SQL injection, XSS, known bad IPs (AWS managed rule groups)
+API security
+10.2 CI/CD Pipeline
+All code merged to main branch triggers the full pipeline. Feature branches run unit + integration tests only (no deploy).
+Trigger: GitHub push to main or PR to main
+Stage 1 — Quality Gate: ESLint + Black + mypy type checking. Fail fast if any lint error.
+Stage 2 — Unit Tests: pytest with coverage report. Fail if coverage < 80% on changed files.
+Stage 3 — Integration Tests: Docker Compose spins up PostgreSQL + Redis + Kafka. Run API integration test suite.
+Stage 4 — Security Scan: OWASP Dependency-Check + Bandit (Python SAST) + Semgrep.
+Stage 5 — Build: Docker build and push to ECR. Image tagged with git SHA.
+Stage 6 — Deploy to Staging: ECS task definition update, rolling deployment (25% at a time, 30-second health check interval).
+Stage 7 — Smoke Tests: Playwright E2E smoke suite against staging environment.
+Stage 8 — Deploy to Production: Manual approval gate (require 1 engineer approval). Same rolling deployment as staging.
+11. Performance SLAs & Scaling
+11.1 API Latency Targets
+Endpoint Group
+P50 Target
+P95 Target
+P99 Target
+Auth (login, token refresh)
+< 80ms
+< 200ms
+< 500ms
+Channel metrics (cached)
+< 100ms
+< 300ms
+< 600ms
+Trend feed (cached)
+< 80ms
+< 200ms
+< 400ms
+Trend detail (cached)
+< 100ms
+< 250ms
+< 500ms
+Strategy session initiation
+< 300ms
+< 800ms
+< 1500ms
+Strategy generation (async poll)
+8s median
+12s P95
+15s max (timeout)
+Planner CRUD operations
+< 120ms
+< 300ms
+< 600ms
+Analytics queries (date range < 90d)
+< 500ms
+< 1200ms
+< 2500ms
+ML inference (trend forecast)
+< 300ms
+< 700ms
+< 1000ms
+11.2 Caching Strategy
+Data
+Cache TTL
+Invalidation Trigger
+Trend feed (per niche filter combo)
+10 minutes
+Trend service ingestion job writes new scores
+Trend detail + signal history
+30 minutes
+Score update event from ML pipeline
+Channel metrics summary (per channel + date range)
+5 minutes
+Successful channel_metrics.refresh job
+Best posting times (per channel)
+24 hours
+New audience activity data ingested
+AI analytics summary (per channel + date range)
+24 hours
+Date range changes (cache key includes dates)
+Generated titles/tags (per idea_id)
+Session lifetime (8 hours)
+User-initiated regeneration
+Niche benchmark data
+7 days
+Scheduled weekly recalculation
+YouTube OAuth access token (decrypted)
+13 minutes (< 15-min JWT expiry)
+Token refresh cycle
+11.3 Database Query Optimization
+All queries against time-series tables (channel_metrics, trend_signals) must use date range filters matching TimescaleDB partition boundaries
+Avoid N+1 queries: use SQLAlchemy selectinload or joinedload for related records
+Slow query threshold: log all queries > 100ms. Alert on-call if P95 query time exceeds 500ms.
+Connection pooling: PgBouncer in front of RDS, pool size 20 per service instance
+Read replicas: analytics queries routed to read replica; write queries to primary
+12. Error Handling, Logging & Observability
+12.1 Structured Logging
+All services emit structured JSON logs. Log levels: DEBUG (dev only), INFO, WARNING, ERROR, CRITICAL. Logs forwarded to Datadog via the container agent.
+// Structured Log Format
+// Required fields on every log line:
+{
+  "timestamp": "2025-03-18T10:23:45.123Z",
+  "level": "INFO",
+  "service": "trend-service",
+  "request_id": "uuid",
+  "user_id": "uuid|null",
+  "message": "Trend feed served from cache",
+  "duration_ms": 45,
+  "extra": { ... }  // any additional context
+}
+// NEVER log: passwords, tokens, full OAuth codes, PII (email, name in most contexts)
+12.2 Alerting Policy
+Alert Condition
+Severity
+Response SLA
+API error rate > 1% over 5 minutes
+P1 Critical
+Page on-call engineer immediately
+P99 latency > 3x SLA for any endpoint group
+P2 High
+Notify team within 15 minutes
+YouTube API quota > 80% consumed
+P2 High
+Notify team, throttle non-essential API calls
+Kafka consumer lag > 10,000 messages
+P2 High
+Investigate pipeline processing delays
+RDS CPU > 80% for 10 minutes
+P2 High
+Scale read replica, investigate slow queries
+ML model prediction accuracy drop > 5%
+P3 Medium
+Data science team investigation within 4 hours
+Failed OAuth token refresh for any channel
+P3 Medium
+Notify affected user via email
+Ingestion pipeline missed 2+ consecutive runs
+P2 High
+Notify team, check SerpAPI/pytrends health
+13. Testing Requirements
+13.1 Unit Tests (pytest)
+Coverage target: 85% line coverage across all service modules
+All Pydantic schemas: test valid inputs, invalid inputs, edge cases (empty strings, boundary values, null fields)
+All business logic functions: pure functions only — no DB or external API calls in unit tests
+ML feature engineering: test all feature extraction functions with known inputs and expected outputs
+TVS computation: test all weight combinations and boundary scores
+13.2 Integration Tests
+Use pytest with Docker Compose: real PostgreSQL 16 + TimescaleDB + Redis + Kafka (Confluent Platform image)
+All API endpoints: test complete request-response cycle including auth, DB writes, and cache interaction
+OAuth flow: mock Google OAuth server (responses.py library) — test happy path, revoked token, and code replay attack
+Kafka producers and consumers: test message format, partition assignment, and consumer group offset management
+Database migrations: run full Alembic migration chain from scratch as part of CI
+13.3 Load Tests (k6)
+Trend feed endpoint: 500 concurrent users, 60-second sustained load. Pass criteria: P95 < 200ms, error rate < 0.1%
+Strategy session creation: 50 concurrent users. Pass criteria: P95 initiation < 800ms, generation completion P95 < 12s
+Analytics queries (90-day range): 100 concurrent users. Pass criteria: P95 < 2500ms
+Load tests run weekly against staging environment via scheduled GitHub Actions workflow
+14. Backend Folder Structure
+Path
+Contents
+src/
+Root source directory for all backend Python code
+src/api/
+FastAPI router definitions. One file per service domain: auth.py, channels.py, trends.py, strategy.py, planner.py, analytics.py
+src/models/
+SQLAlchemy ORM models. One file per domain. Also contains Pydantic request/response schemas.
+src/services/
+Business logic layer. No direct DB access — calls repository layer. One file per service domain.
+src/repositories/
+Data access layer. All SQLAlchemy queries here. Returns domain objects, not raw DB rows.
+src/workers/
+Kafka consumer workers: trend_ingestion_worker.py, strategy_worker.py, analytics_worker.py, notification_worker.py
+src/ml/
+ML pipeline code: feature_engineering.py, lstm_trainer.py, nlp_classifier.py, scoring_engine.py, tvs_calculator.py
+src/integrations/
+External API clients: youtube_data_client.py, youtube_analytics_client.py, google_trends_client.py, anthropic_client.py
+src/prompts/
+LLM prompt templates (YAML). Versioned. One file per generation task.
+src/core/
+Cross-cutting: config.py (Pydantic Settings), database.py (connection pool), redis_client.py, kafka_producer.py, security.py (JWT), exceptions.py
+src/middleware/
+FastAPI middleware: auth_middleware.py, rate_limit_middleware.py, logging_middleware.py, error_handler.py
+migrations/
+Alembic migration files. Never modify old migrations — always create new ones.
+tests/unit/
+Unit tests. Mirrors src/ structure.
+tests/integration/
+Integration tests. Docker Compose config at tests/docker-compose.test.yml.
+tests/load/
+k6 load test scripts.
+infra/
+Terraform modules: vpc.tf, ecs.tf, rds.tf, elasticache.tf, msk.tf, s3.tf, iam.tf
+.github/workflows/
+CI/CD pipeline YAML files.
+15. Backend Definition of Done
+An endpoint, worker, or ML pipeline component is eligible for code review and merge only when all of the following criteria are satisfied:
+15.1 Code Quality
+Black formatter + isort pass with zero changes
+mypy strict mode: zero type errors. No use of Any type except in integration boundaries with external APIs.
+Bandit security scan: zero HIGH or MEDIUM severity findings
+No raw SQL strings anywhere — only SQLAlchemy ORM or Core expressions
+No hardcoded secrets, URLs, or environment-specific values in code
+15.2 API Contract
+Endpoint matches the request/response schema defined in this PRD exactly
+All four standard error cases handled: validation error (422), not found (404), unauthorized (401), forbidden (403)
+Rate limiting applied via middleware
+OpenAPI schema auto-generated by FastAPI is accurate and complete
+15.3 Testing
+Unit tests: all new functions have unit test coverage; overall coverage remains >= 85%
+Integration tests: at least one happy-path and one error-path integration test per endpoint
+All existing tests pass — no regressions
+15.4 Security
+Resource ownership validated: user cannot access another user's channels, sessions, or slots
+No sensitive data (tokens, passwords, PII) logged
+Input validated via Pydantic schema before any business logic executes
+15.5 Observability
+Structured log emitted on request completion with duration_ms, user_id, and endpoint
+Custom Datadog metric emitted for any business-critical operation (e.g. strategy session created, trend scored)
+Errors logged at ERROR level with full exception traceback
+15.6 Documentation
+Docstring on every public function and class (Google docstring format)
+Any non-obvious design decision documented with a comment referencing this PRD section
+CHANGELOG.md updated with a brief description of the change
+16. Open Questions & Decisions Pending
+#
+Question
+Owner
+Due
+1
+Should strategy generation be synchronous (SSE streaming) or async polling? Streaming provides better UX but requires SSE infrastructure. Decision affects API contract.
+Arch + Product
+Sprint 1
+2
+What Google Cloud Project will own the YouTube API quota? Who is the billing owner? Quota increase request must be submitted to Google before first public user.
+Engineering Lead
+Week 1
+3
+pgvector extension for storing content embeddings (for similarity search in v2.0) — should we provision RDS with pgvector support from day one?
+Architecture
+Sprint 1
+4
+ML model training infrastructure: managed service (AWS SageMaker) vs self-hosted (EC2 spot instances)? Cost vs operational complexity tradeoff.
+ML Engineering
+Sprint 2
+5
+Benchmark data (Section 5.8.3): how is this data collected? We need a plan for aggregating anonymized channel data before this endpoint can be built.
+Product + Engineering
+Sprint 2
+6
+GDPR Data Processing Agreement with Anthropic — is this in place? We cannot send any EU user data to the Claude API without a DPA.
+Legal + Engineering
+Week 2
+Appendix A: Glossary
+Term
+Definition
+TVS
+Trend Velocity Score — composite 0-100 metric quantifying acceleration of a topic across data sources.
+TimescaleDB
+PostgreSQL extension optimized for time-series data via automatic partitioning (hypertables) and compression.
+PKCE
+Proof Key for Code Exchange — OAuth 2.0 security extension that prevents authorization code interception attacks.
+Pydantic v2
+Python data validation library using Python type annotations. v2 is 5–50x faster than v1 for serialization.
+TorchServe
+PyTorch's production model serving framework. Handles model versioning, batching, and health endpoints.
+MLflow
+Open-source ML lifecycle platform for experiment tracking, model registry, and deployment.
+MSK
+Amazon Managed Streaming for Apache Kafka — fully managed Kafka service on AWS.
+PgBouncer
+Lightweight PostgreSQL connection pooler. Reduces connection overhead between application and database.
+MASE
+Mean Absolute Scaled Error — scale-independent metric for evaluating time-series forecast accuracy.
+Cursor Pagination
+Pagination method using an opaque cursor value instead of page numbers; more efficient for large datasets and consistent under real-time data changes.
+RBAC
+Role-Based Access Control — authorization model where permissions are tied to a user's role or plan tier.
+Appendix B: Environment Variables Reference
+// Environment Variables
+# Database
+DATABASE_URL=postgresql+asyncpg://user:pass@host:5432/creatoriq
+REDIS_URL=redis://host:6379/0
+# Kafka
+KAFKA_BOOTSTRAP_SERVERS=host:9092
+KAFKA_SECURITY_PROTOCOL=SASL_SSL
+# External APIs (loaded from AWS Secrets Manager at runtime)
+YOUTUBE_CLIENT_ID=...
+YOUTUBE_CLIENT_SECRET=...
+SERPAPI_API_KEY=...
+ANTHROPIC_API_KEY=...
+# JWT
+JWT_PRIVATE_KEY_PATH=/run/secrets/jwt_private_key
+JWT_PUBLIC_KEY_PATH=/run/secrets/jwt_public_key
+# Encryption
+OAUTH_TOKEN_ENCRYPTION_KEY_ARN=arn:aws:secretsmanager:...
+# Feature flags
+ENABLE_STREAMING_GENERATION=false
+ML_SERVICE_URL=http://ml-service:8007
+# Environment
+ENVIRONMENT=production  # development | staging | production
+LOG_LEVEL=INFO
+DATADOG_API_KEY=...

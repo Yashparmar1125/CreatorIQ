@@ -1,0 +1,144 @@
+name: creatoriq-backend
+
+services:
+  api-gateway:
+    build: ./services/api-gateway
+    container_name: ciq-api-gateway
+    env_file:
+      - ./.env
+    volumes:
+      - ./secrets:/run/secrets:ro
+    ports:
+      - "8000:8000"
+    depends_on:
+      - auth
+      - channel
+      - trend
+      - strategy
+      - planner
+      - analytics
+      - ml
+    networks:
+      - creatoriq-net
+
+  auth:
+    build: ./services/auth
+    container_name: ciq-auth
+    env_file:
+      - ./.env
+    volumes:
+      - ./secrets:/run/secrets:ro
+    ports:
+      - "8001:8001"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - creatoriq-net
+
+  channel:
+    build: ./services/channel
+    container_name: ciq-channel
+    env_file:
+      - ./.env
+    ports:
+      - "8002:8002"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - creatoriq-net
+
+  trend:
+    build: ./services/trend
+    container_name: ciq-trend
+    env_file:
+      - ./.env
+    ports:
+      - "8003:8003"
+    depends_on:
+      - postgres
+      - redis
+      - ml
+    networks:
+      - creatoriq-net
+
+  strategy:
+    build: ./services/strategy
+    container_name: ciq-strategy
+    env_file:
+      - ./.env
+    ports:
+      - "8004:8004"
+    depends_on:
+      - postgres
+      - redis
+      - ml
+    networks:
+      - creatoriq-net
+
+  planner:
+    build: ./services/planner
+    container_name: ciq-planner
+    env_file:
+      - ./.env
+    ports:
+      - "8005:8005"
+    depends_on:
+      - postgres
+    networks:
+      - creatoriq-net
+
+  analytics:
+    build: ./services/analytics
+    container_name: ciq-analytics
+    env_file:
+      - ./.env
+    ports:
+      - "8006:8006"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - creatoriq-net
+
+  ml:
+    build: ./services/ml
+    container_name: ciq-ml
+    env_file:
+      - ./.env
+    ports:
+      - "8007:8007"
+    depends_on:
+      - postgres
+    networks:
+      - creatoriq-net
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: ciq-postgres
+    environment:
+      POSTGRES_DB: creatoriq
+      POSTGRES_USER: creatoriq
+      POSTGRES_PASSWORD: creatoriq
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - creatoriq-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: ciq-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - creatoriq-net
+
+volumes:
+  postgres_data:
+
+networks:
+  creatoriq-net:
+    driver: bridge

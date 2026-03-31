@@ -1,0 +1,1008 @@
+FRONTEND PRODUCT REQUIREMENTS
+CreatorIQ
+UI/UX & Engineering Specification
+Document
+Frontend PRD — CreatorIQ Platform
+Version
+1.0 — Initial Release
+Stack
+React 18 + TypeScript  |  Tailwind CSS  |  Zustand  |  React Query
+Audience
+Frontend Engineering, Design, QA, Product
+Date
+March 2025
+1. Purpose & Scope
+This document defines the complete frontend requirements for CreatorIQ — an AI-driven YouTube content intelligence platform. It is the single source of truth for the frontend engineering and design teams, covering information architecture, screen-by-screen UI specifications, component library standards, design system tokens, interaction patterns, accessibility requirements, and performance budgets.
+This PRD translates the product vision from the main CreatorIQ PRD (v1.0) into actionable, implementable frontend specifications. Every screen, state, component, and interaction required to build the MVP (v1.0) is documented here. v1.1+ features are called out explicitly where they affect architecture decisions.
+What This Document Covers
+Design system: tokens, typography, color, spacing, motion
+Application information architecture and navigation model
+Screen-by-screen UI specifications with states (empty, loading, error, populated)
+Component library: all reusable components with props and behavior
+Form specifications with validation rules
+Responsive breakpoints and layout behavior
+Accessibility standards (WCAG 2.1 AA)
+Frontend performance budgets
+API integration contract (what frontend expects from backend)
+Developer handoff checklist
+2. Technology Stack
+Category
+Technology
+Rationale
+Framework
+React 18 + TypeScript 5.x
+Concurrent features, strict typing, large ecosystem
+Build Tool
+Vite 5.x
+Fast HMR, optimized production bundles
+Styling
+Tailwind CSS 3.x + CSS Modules for complex components
+Utility-first speed; encapsulation where needed
+State (Client)
+Zustand
+Lightweight, boilerplate-free global state
+State (Server)
+TanStack React Query v5
+Caching, background refetch, optimistic updates
+Routing
+React Router v6
+Nested routes, lazy loading, data loaders
+Charts
+Recharts + Visx (D3-based)
+Recharts for standard; Visx for custom visualizations
+Forms
+React Hook Form + Zod
+Performance-first; schema-driven validation
+Animation
+Framer Motion
+Declarative spring animations, layout animations
+Testing
+Vitest + React Testing Library + Playwright
+Unit, integration, and E2E coverage
+Icons
+Lucide React
+Consistent, tree-shakeable icon set
+Date/Time
+date-fns
+Lightweight, immutable date utilities
+Linting
+ESLint + Prettier + Husky
+Enforced code quality on commit
+3. Design System
+3.1 Color Tokens
+All colors must be defined as CSS custom properties on :root and referenced exclusively through Tailwind's config extension. Never use hardcoded hex values in component code.
+Token Name
+Hex Value
+Tailwind Class
+Usage
+--color-brand-900
+#0F2D57
+brand-900
+Primary headings, nav background
+--color-brand-700
+#1A56A8
+brand-700
+Primary CTAs, links, active states
+--color-brand-100
+#EAF1FB
+brand-100
+Section backgrounds, callouts
+--color-accent-500
+#E8650A
+accent-500
+Highlights, badges, trend alerts
+--color-success-600
+#1A7A4A
+success-600
+Positive delta, success states
+--color-error-600
+#C0392B
+error-600
+Error states, negative metrics
+--color-warning-600
+#B8860B
+warning-600
+Warnings, medium confidence
+--color-neutral-900
+#1A1A2E
+neutral-900
+Body text
+--color-neutral-600
+#444444
+neutral-600
+Secondary text
+--color-neutral-200
+#E8ECF2
+neutral-200
+Dividers, borders
+--color-neutral-50
+#F5F7FA
+neutral-50
+Page background
+--color-white
+#FFFFFF
+white
+Card surfaces, inputs
+Dark mode: a separate token set must be defined under the .dark class. All component colors must reference tokens; dark mode is activated by toggling the .dark class on the <html> element (v1.1 scope, but the architecture must support it from day one).
+3.2 Typography Scale
+Primary typeface: Sora (Google Fonts — display, headings). Secondary typeface: DM Sans (body, UI text). Monospace: JetBrains Mono (code, metrics, counters).
+Token
+Size
+Weight
+Line Height
+Usage
+text-display
+48px / 3rem
+700 (Bold)
+1.15
+Hero titles, empty states
+text-h1
+32px / 2rem
+700
+1.25
+Page titles
+text-h2
+24px / 1.5rem
+600
+1.3
+Section headers
+text-h3
+20px / 1.25rem
+600
+1.35
+Card titles, subsections
+text-body-lg
+16px / 1rem
+400
+1.6
+Primary body copy
+text-body
+14px / 0.875rem
+400
+1.6
+Secondary body, descriptions
+text-label
+12px / 0.75rem
+600 (SemiBold)
+1.4
+Form labels, table headers
+text-caption
+11px / 0.6875rem
+400
+1.4
+Timestamps, footnotes
+text-metric
+28px / 1.75rem
+700
+1.2
+KPI numbers, big stats (JetBrains Mono)
+3.3 Spacing Scale
+Spacing uses an 8px base grid. All margin, padding, and gap values must be multiples of 4px. The following named tokens map to Tailwind spacing classes.
+Token
+px Value
+Tailwind
+Common Usage
+space-1
+4px
+p-1 / m-1
+Icon padding, chip spacing
+space-2
+8px
+p-2 / m-2
+Tight internal component padding
+space-3
+12px
+p-3 / m-3
+Badge padding, compact rows
+space-4
+16px
+p-4 / m-4
+Default card padding, form field gaps
+space-6
+24px
+p-6 / m-6
+Card internal padding (standard)
+space-8
+32px
+p-8 / m-8
+Section inner padding
+space-12
+48px
+p-12 / m-12
+Between major sections
+space-16
+64px
+p-16 / m-16
+Page-level vertical rhythm
+3.4 Elevation & Shadows
+shadow-sm: 0 1px 3px rgba(0,0,0,0.08) — Cards at rest, input fields
+shadow-md: 0 4px 12px rgba(0,0,0,0.12) — Cards on hover, dropdowns
+shadow-lg: 0 8px 24px rgba(0,0,0,0.16) — Modals, popovers, tooltips
+shadow-xl: 0 16px 48px rgba(0,0,0,0.20) — Drawer overlays, full-screen modals
+3.5 Border Radius
+rounded-sm: 4px — Badges, tags, chips
+rounded: 8px — Inputs, buttons (default)
+rounded-lg: 12px — Cards, panels
+rounded-xl: 16px — Modals, drawers, large containers
+rounded-full: 9999px — Avatars, toggle switches, pill badges
+3.6 Motion & Animation
+All animations must use Framer Motion. CSS transitions are permitted only for simple hover color/opacity changes.
+Duration Token
+Value
+Usage
+duration-instant
+80ms
+Button press feedback, checkbox toggle
+duration-fast
+150ms
+Tooltip appear, badge color change
+duration-normal
+250ms
+Card hover elevation, drawer slide
+duration-slow
+400ms
+Page transition, modal entry
+duration-deliberate
+600ms
+Onboarding reveals, empty state animations
+Spring config (Framer Motion): { type: 'spring', stiffness: 300, damping: 30 } for interactive elements. Easing: [0.4, 0, 0.2, 1] (Material ease-in-out) for layout transitions. Respect prefers-reduced-motion: all motion must be disabled when the OS setting is active.
+4. Information Architecture & Navigation
+4.1 Application Layout
+The application uses a persistent sidebar + top bar layout on desktop. On mobile (< 768px), the sidebar collapses to a bottom navigation bar.
+Layout Zone
+Specification
+Sidebar
+Width: 240px (expanded), 64px (collapsed). Fixed position. Contains: logo, primary nav items, channel switcher, user avatar + plan badge, collapse toggle.
+Top Bar
+Height: 64px. Fixed position. Contains: page title (dynamic), global search (Cmd+K), notification bell, help button.
+Main Content
+Fills remaining viewport. Max-width: 1440px centered. Padding: 32px horizontal, 32px top. Scrollable.
+Right Panel (contextual)
+Width: 320px. Slides in from right on demand (e.g., trend detail, video idea preview). Does not push main content.
+Notification Toast
+Bottom-right. Stack up to 3. Auto-dismiss 4s (errors persist until dismissed).
+4.2 Primary Navigation Structure
+Route
+Page Name
+Icon
+Access Level
+/dashboard
+Dashboard — Home
+LayoutDashboard
+All plans
+/trends
+Trend Discovery
+TrendingUp
+All plans
+/trends/:id
+Trend Detail
+(nested)
+All plans
+/strategy
+Content Strategy
+Lightbulb
+All plans
+/strategy/ideas
+Idea Generator
+Sparkles
+All plans
+/strategy/titles
+Title Optimizer
+Type
+Pro+
+/strategy/scripts
+Script Outlines
+FileText
+Pro+
+/planner
+Content Planner
+Calendar
+All plans
+/analytics
+Performance Analytics
+BarChart2
+All plans
+/analytics/videos
+Video Deep Dive
+Video
+All plans
+/channels
+Channel Manager
+Youtube
+Pro+ (multi)
+/settings
+Settings
+Settings
+All plans
+/onboarding
+Onboarding Flow
+(no nav)
+First login
+4.3 Responsive Breakpoints
+Breakpoint
+Viewport Width
+Layout Behavior
+sm
+≥ 640px
+Single-column stacking; cards full-width
+md
+≥ 768px
+Bottom nav replaces sidebar; 2-column grids unlock
+lg
+≥ 1024px
+Full sidebar appears (collapsed by default); 3-column grids
+xl
+≥ 1280px
+Sidebar expanded by default; right panel available
+2xl
+≥ 1536px
+Maximum content width capped at 1440px; wider gutters
+5. Screen-by-Screen Specifications
+5.1 Onboarding Flow
+A multi-step wizard shown once on first login. Uses a full-screen overlay layout (no sidebar). Progress shown via step indicators at top. Users can skip all steps except YouTube OAuth (required).
+Step
+Name
+Screen Content & Actions
+1
+Welcome
+Animated logo reveal. Headline: 'Your AI content strategist.' Sub: '3 steps to unlock your growth.' CTA: 'Get Started'. Skip link bottom-right.
+2
+Connect YouTube
+OAuth consent screen trigger. Show YouTube logo + permissions list. CTA: 'Connect YouTube Channel'. On success: show channel avatar + name confirmation. Error: retry button + manual skip option.
+3
+Set Your Niche
+Multi-select chips for 24 predefined niches (Tech, Gaming, Finance, Fitness, etc.) + free-text 'Other'. Minimum 1 selection required. Max 3.
+4
+Content Preferences
+Preferred format (checkboxes: Long-form, Shorts, Both). Upload frequency target (dropdown: Daily / 2-3x/week / Weekly / 2-3x/month). Tone (radio: Educational / Entertaining / Mixed).
+5
+Ready
+Celebration animation (confetti or pulse). 'Your dashboard is ready.' Personalized summary of setup. CTA: 'Go to Dashboard'.
+Onboarding States to Implement
+Loading state during OAuth redirect (full-screen spinner with 'Connecting to YouTube...' message)
+Error state if OAuth fails (error card with retry + support link)
+Returning user: if user has disconnected channel, show re-connect banner on dashboard (not full onboarding)
+5.2 Dashboard — Home
+The main landing page after login. Provides a high-level snapshot of channel health, active trends, and today's recommended actions.
+Property
+Detail
+Page Title
+Dashboard
+Route
+/dashboard
+Layout
+2-column on xl+; single column on lg and below
+Default Data Range
+Last 28 days (user-configurable via date picker in top-right)
+Refresh
+Auto-refresh every 5 minutes; manual refresh button top-right
+5.2.1 KPI Summary Strip
+A horizontal row of 4 metric cards pinned below the top bar. Each card shows: metric name, current value (large number), delta vs previous period (% with up/down arrow, color-coded), and a sparkline chart (7-day trend).
+Metric Card
+Data Source
+Delta Color Logic
+Total Views
+YouTube Analytics API — views
+Green if positive, Red if negative
+Subscribers
+YouTube Analytics API — subscribersGained - subscribersLost
+Green if net positive, Red if net negative
+Avg. CTR
+YouTube Analytics API — annotationClickThroughRate
+Green if ≥ channel average, Red if below
+Watch Time (hours)
+YouTube Analytics API — estimatedMinutesWatched / 60
+Green if positive, Red if negative
+5.2.2 Trend Alert Banner
+Appears when the trend prediction engine has identified 1+ trends in the creator's niche with TVS > 75. Displays: trend name, TVS badge, 'Ideal publish window' countdown, and a 'Create Content' CTA. Dismissible per trend. Max 3 banners shown; 'View all' link if more.
+5.2.3 Recommended Actions Panel
+AI-generated list of 3–5 prioritized actions for today. Each action has: priority badge (High/Medium), action text, estimated impact, and a direct link to the relevant tool. Order is sorted by predicted impact score.
+5.2.4 Recent Videos Performance Table
+Shows last 10 published videos. Columns: thumbnail + title, publish date, views, CTR, avg. watch time, subscriber delta. Sortable by any column. Row click navigates to video deep dive. Inline performance badge (Exceeds / Meets / Below average).
+5.2.5 Upcoming Content Planner Widget
+Compact 7-day calendar view showing scheduled video slots. Each slot shows: topic label, trend window indicator (if applicable), color-coded readiness state (Draft / Scripted / Ready). 'View Full Calendar' link to /planner.
+Dashboard Empty State
+Shown when no YouTube channel is connected
+Full-width illustration with headline: 'Connect your channel to unlock insights'
+Single CTA button: 'Connect YouTube Channel' — triggers OAuth flow
+5.3 Trend Discovery
+The primary trend intelligence interface. Displays the full trend feed filtered by the creator's niche, with tools for exploration, saving, and acting on trends.
+Property
+Detail
+Page Title
+Trend Discovery
+Route
+/trends
+Layout
+Left: filter sidebar (240px fixed). Right: trend feed (fluid). Right panel: trend detail on selection.
+Data Freshness
+Trend feed last-updated timestamp shown in top bar. Pull-to-refresh on mobile.
+5.3.1 Filter Sidebar
+Niche filter: multi-select checkboxes (pre-populated from user's selected niches, all others available)
+TVS range: dual-handle range slider (0–100). Default: 50–100
+Format filter: toggle chips (Long-form, Shorts, Both)
+Time window: radio buttons (Emerging now / Peaking in 7 days / Peaking in 14 days / All)
+Prediction confidence: toggle chips (High ≥75% / Medium 50–74% / All)
+'Reset Filters' link at bottom
+5.3.2 Trend Feed
+Paginated list of trend cards (20 per page, infinite scroll). Each TrendCard contains:
+Trend topic title (max 2 lines, truncated)
+Niche tag(s) — colored chips
+TVS badge — color: green ≥75, orange 50–74, gray < 50
+Trend velocity sparkline (7-day search volume trajectory)
+Ideal publish window: '3–10 days from now' label
+Prediction confidence: percentage with info tooltip explaining methodology
+Top 3 related keywords shown as small tags
+Action buttons: 'Save Trend' (bookmark icon) + 'Create Content' (redirect to strategy generator pre-filled with trend)
+5.3.3 Trend Detail Panel (Right Panel)
+Opens on card click. 320px right panel with:
+Full trend analysis: extended description, why this is trending, supporting data sources
+Historical search volume chart (90-day line chart via Recharts, with forecast region shown as shaded area)
+Top competitor videos on this topic: title, views, publish date, channel
+Keyword cluster: expandable list of all related keywords with search volume and competition level
+'Generate Ideas for This Trend' CTA — navigates to strategy generator
+5.4 Content Strategy Generator
+The AI-powered content ideation workspace. A wizard-style interface that takes a topic or trend as input and outputs a full content brief including video ideas, titles, tags, and script outline.
+Property
+Detail
+Route
+/strategy/ideas
+Layout
+Full-width single panel with progressive disclosure (step reveals on completion)
+Session Model
+Each generation session is saved as a 'Brief' accessible in history. Max 50 saved briefs per user.
+5.4.1 Input Panel
+Users configure their generation session before triggering the AI:
+Trend input: either auto-populated from a 'Create Content' CTA (from trend card) or manual text input with autocomplete suggestions
+Niche: pre-filled from profile; editable dropdown
+Format: toggle (Long-form / Shorts / Either)
+Tone: radio (Educational / Entertaining / Authoritative / Conversational)
+Audience age range: slider (13–65+)
+'Generate' button: primary CTA. Disabled until required fields are filled.
+5.4.2 Generation Loading State
+While the AI generates content (≤10 seconds SLA): show animated progress indicator with rotating messages ('Analyzing trends...', 'Crafting ideas...', 'Optimizing titles...'). Do not use a generic spinner. Show estimated time remaining.
+5.4.3 Ideas Output Panel
+Displays 5–10 video idea cards. Each IdeaCard shows:
+Idea title (bold, large)
+One-sentence description of the video concept
+Predicted performance score (0–100) with color-coded ring chart
+Format tag + estimated length
+Action buttons: 'Select This Idea' (expands to title/tag generation), 'Save', 'Dismiss'
+5.4.4 Title Optimizer (Pro+)
+Activated when user selects an idea. Shows 3–5 title variants in a comparison table:
+Title text (editable inline)
+Predicted CTR score — prominently displayed
+SEO strength indicator (keyword density, length compliance)
+'Use This Title' button on each row
+'Regenerate Titles' button regenerates variants without regenerating ideas
+5.4.5 Tags & Keywords Panel
+Below title selection. Shows 15–20 recommended tags as removable chips. Each chip: tag text + search volume badge. User can remove chips or add custom tags. 'Copy All Tags' button.
+5.4.6 Script Outline Panel (Pro+)
+Accordion-style structured outline with sections: Hook (0–30s), Problem Setup, Main Content (3–5 segments with bullet points), Call to Action. Each section is editable inline. 'Export to Google Docs' and 'Copy as Markdown' buttons at bottom.
+5.5 Content Planner
+An interactive calendar with AI-recommended scheduling. The main view is a monthly calendar; a list view is available for bulk management.
+Property
+Detail
+Route
+/planner
+Default View
+Monthly calendar
+Views Available
+Month / Week / List
+Calendar Library
+react-big-calendar or custom implementation using date-fns
+5.5.1 Calendar Grid
+Each day cell shows: scheduled video slots (if any), optimal posting time badge (if no slot scheduled)
+Color coding: Green = scheduled + ready; Yellow = scheduled + in progress; Gray = scheduled + not started; Red = overdue
+Click empty day: opens 'Schedule Content' drawer
+Click existing slot: opens slot editor
+Drag-and-drop to reschedule (desktop only)
+5.5.2 Schedule Content Drawer
+Right-side drawer (400px). Contains:
+Date + time picker (time pre-filled with AI-recommended optimal slot)
+Video idea: search/select from saved ideas OR free text
+Status: dropdown (Not Started / In Progress / Scripted / Ready to Upload)
+Trend link: optional association to a trend from the feed
+Notes: multi-line text field
+'Schedule' CTA and 'Cancel' button
+5.5.3 Best Posting Time Heatmap
+Accessible via 'View Optimal Times' toggle above calendar. Overlays a color-coded heatmap on the calendar grid showing audience activity levels by time-of-day and day-of-week. Color scale: dark blue (low activity) → bright yellow (peak activity). Source: YouTube Analytics audience activity data.
+5.6 Performance Analytics
+A comprehensive analytics dashboard providing deep insight into channel and video performance with AI-powered commentary.
+Property
+Detail
+Route
+/analytics
+Date Range Picker
+Presets: Last 7 days, 28 days, 90 days, 12 months, Custom range
+Comparison Mode
+Toggle to compare two date ranges side-by-side (delta mode)
+Export
+'Export CSV' and 'Export PDF Report' buttons in top-right
+5.6.1 Growth Overview Charts
+Subscribers over time: area chart with daily granularity. Annotate major events (viral videos) with vertical markers.
+Views over time: bar chart with trend line overlay.
+Revenue estimate: area chart (shown only if monetization data is available via API).
+5.6.2 Engagement Metrics Panel
+CTR by video: horizontal bar chart sorted descending. Color: above-average bars in brand blue, below-average in gray.
+Watch time distribution: violin or box plot showing spread across all videos in date range.
+Audience retention comparison: overlaid line charts for top 3 and bottom 3 performing videos.
+5.6.3 AI Performance Summary
+A card containing an AI-generated plain-language analysis (3–5 sentences). Updated on each date range change. Shows: what worked, what underperformed, top 2 actionable recommendations. Each recommendation links to the relevant tool (strategy generator, planner).
+5.6.4 Video Performance Table
+Sortable table of all published videos in date range. Columns: thumbnail, title, publish date, views, CTR, avg. watch duration, subscriber delta, performance badge (Exceeds / Meets / Below). Row click navigates to /analytics/videos/:videoId.
+5.6.5 Benchmark Comparison
+A panel showing the creator's key metrics vs niche average and top 10th percentile benchmarks. Displayed as a horizontal bar comparison chart. Benchmarks sourced from anonymized aggregated platform data.
+5.7 Settings
+A tabbed settings page accessible from the sidebar footer. Tabs: Profile, Channel, Notifications, Plan & Billing, API Access (Pro+).
+Settings Tab
+Content
+Profile
+Name, email, password change, profile photo upload, timezone selector, language (en-US default).
+Channel
+Connected channels list with OAuth status. Reconnect / Disconnect per channel. Add channel (Pro+). Niche configuration per channel.
+Notifications
+Toggle matrix: Email / In-app / Browser push per notification type (trend alert, performance report, posting reminder, product updates).
+Plan & Billing
+Current plan card with features. Upgrade CTA. Billing history table. Cancel subscription link (with retention flow).
+API Access
+API key display (masked, copyable). Regenerate key button. Rate limit display. Documentation link.
+6. Component Library
+All components must be built as typed React functional components with documented props. Components are organized in the src/components/ directory using the Atomic Design pattern: atoms > molecules > organisms > templates.
+6.1 Atoms
+Component
+Location / Usage
+Specification
+Button
+CTAs, form submissions
+Variants: primary, secondary, ghost, destructive. Sizes: sm, md, lg. Props: loading (boolean — shows spinner + disables), disabled, leftIcon, rightIcon, fullWidth.
+Badge
+Status labels, tier indicators
+Variants: solid, outline, subtle. Colors: brand, success, error, warning, neutral. Sizes: sm, md.
+Input
+Form text fields
+Props: label, placeholder, error (string), helperText, leftAdornment, rightAdornment, size (sm/md/lg), disabled, required.
+Textarea
+Multi-line input
+Props: rows, maxLength (with live character counter), autoResize (boolean — grows with content).
+Select
+Dropdown single-select
+Built on Radix UI Select. Props: options [{value, label}], placeholder, error, disabled, searchable.
+MultiSelect
+Multi-option selection
+Custom component. Renders selected values as removable chips. Props: options, maxSelections, placeholder.
+Toggle
+Boolean switch
+Animated switch with accessible label. Props: checked, onChange, disabled, label, labelPosition.
+Checkbox
+Multi-choice forms
+Radix Checkbox. Props: checked, indeterminate, onChange, label, disabled.
+RadioGroup
+Single-choice forms
+Radix RadioGroup. Props: options [{value, label}], value, onChange, orientation (horizontal / vertical).
+Slider
+Range inputs
+Props: min, max, step, value, onChange, dual (boolean for range slider), showTooltip.
+Avatar
+User / channel photos
+Sizes: xs (24px), sm (32px), md (40px), lg (56px), xl (80px). Fallback: initials on colored background.
+Tooltip
+Contextual info
+Radix Tooltip. Props: content, side (top/right/bottom/left), delay.
+Spinner
+Loading states
+Sizes: sm (16px), md (24px), lg (40px). Inherits color from parent.
+Skeleton
+Content placeholders
+Props: width, height, variant (text / circular / rectangular). Animate with pulse.
+Divider
+Section separation
+Props: orientation (horizontal / vertical), spacing.
+Tag / Chip
+Keyword tags, niche chips
+Props: label, onRemove (optional — adds X button), color, size.
+6.2 Molecules
+Component
+Location / Usage
+Specification
+TrendCard
+Trend Discovery feed
+Props: trend (TrendData type), onSave, onCreateContent, isBookmarked. See §5.3.2 for full spec.
+MetricCard
+KPI strip, analytics panels
+Props: label, value, delta (number), deltaType (positive/negative/neutral), sparklineData, format (number/percent/currency).
+IdeaCard
+Strategy generator output
+Props: idea (IdeaData type), onSelect, onSave, onDismiss. Shows predicted performance score ring.
+VideoRow
+Performance tables
+Props: video (VideoData type), columns (configurable), onClick, performanceBadge.
+ProgressStepper
+Onboarding wizard
+Props: steps (Step[]), currentStep, onStepClick (for completed steps). Linear horizontal stepper.
+FilterPanel
+Sidebar filter groups
+Props: filters (FilterConfig[]), activeFilters, onChange, onReset. Renders correct input type per filter.
+DateRangePicker
+Analytics date controls
+Props: value {start, end}, onChange, presets, maxRange.
+SearchBar
+Global Cmd+K search
+Props: onSearch, placeholder, results (SearchResult[]), onSelect. Includes keyboard navigation.
+NotificationToast
+System feedback
+Props: type (success/error/warning/info), title, message, duration, onDismiss.
+EmptyState
+Zero-data screens
+Props: illustration, title, description, action ({label, onClick}).
+ConfirmDialog
+Destructive action confirmation
+Props: title, description, confirmLabel, cancelLabel, onConfirm, onCancel, isDestructive.
+PlanGateBanner
+Pro+ feature upsell
+Shown when free-tier user accesses gated feature. Props: featureName, upgradeUrl.
+6.3 Chart Components
+Component
+Location / Usage
+Specification
+SparklineChart
+Metric cards, trend cards
+Props: data (number[]), width, height, color. Minimal, no axes.
+AreaChart
+Views/subscribers over time
+Built on Recharts. Props: data, xKey, yKeys, colors, annotations (vertical markers).
+BarChart
+CTR comparison, video views
+Recharts BarChart. Props: data, xKey, yKey, color, averageLine.
+LineChart
+Audience retention, trend forecast
+Recharts LineChart. Props: data, lines (key, color, dashed?), forecastRegion.
+HeatmapGrid
+Posting time heatmap
+Custom Visx implementation. Props: data (24×7 activity matrix), colorScale.
+DonutChart
+Performance score ring on IdeaCard
+Custom SVG. Props: percentage, color, size.
+BenchmarkBar
+Niche benchmark comparison
+Custom horizontal bar comparison. Props: metric, userValue, avgValue, topValue.
+7. State Management Architecture
+7.1 Global State (Zustand Stores)
+Store
+Responsibilities
+authStore
+User authentication state, access token, refresh token, user profile object (id, name, email, plan tier). Persisted to localStorage.
+channelStore
+Currently active channel, list of connected channels, niche config, OAuth token per channel.
+uiStore
+Sidebar collapsed/expanded, active right panel, active modal, global notification queue.
+strategySessionStore
+Current active strategy generation session: inputs, generated ideas, selected idea, generated titles. Not persisted — cleared on page leave.
+plannerStore
+Calendar view mode, active date range, optimistic slot updates (before server confirmation).
+7.2 Server State (React Query)
+All API data fetching must use React Query. Define query keys as constants in src/lib/queryKeys.ts. Set sensible staleTime and gcTime per query to minimize redundant API calls.
+Query
+staleTime
+gcTime
+Refetch Trigger
+channel metrics (KPIs)
+5 min
+30 min
+Page focus + 5min interval
+trend feed
+10 min
+60 min
+Page focus
+trend detail
+30 min
+2 hours
+Manual
+video list
+5 min
+30 min
+Page focus
+content planner slots
+1 min
+10 min
+Mutation success
+strategy session output
+Infinity (static)
+Session end
+Manual regenerate
+user settings
+30 min
+24 hours
+Mutation success
+8. Form Specifications & Validation
+8.1 Validation Rules (Zod Schemas)
+Field
+Rule
+Error Message
+Email
+Valid email format, required
+Enter a valid email address
+Password (new)
+Min 8 chars, 1 uppercase, 1 number, 1 special char
+Password must be at least 8 characters with uppercase, number, and special character
+Channel niche
+Min 1 selection, max 3
+Select between 1 and 3 niches
+Video title (optimizer)
+Max 100 chars (warn at 70)
+Title is too long. YouTube truncates after 70 characters.
+Tags input
+Max 500 chars total across all tags
+Total tag characters exceed YouTube's 500-character limit
+Scheduled post date
+Cannot be in the past
+Schedule a date in the future
+Strategy topic input
+Min 3 chars, max 200 chars
+Enter a topic between 3 and 200 characters
+8.2 Validation UX Rules
+Validate on blur (not on every keystroke) for performance and UX.
+Show inline error below the field in error-600 color. Error icon (AlertCircle) prepended to message.
+On form submit: run full validation, scroll to first error, focus first invalid field.
+Success confirmation: show success toast (NotificationToast, type: success, 3s auto-dismiss) — never navigate away on success unless explicitly specified.
+Destructive actions (disconnect channel, cancel plan): always require ConfirmDialog before submission.
+9. API Integration Contract
+9.1 Base Configuration
+All API calls go through a centralized Axios instance (src/lib/apiClient.ts). This client handles: JWT auth header injection, token refresh on 401, request/response logging in development, global error toasting for 500-level errors.
+Base URL: loaded from VITE_API_BASE_URL environment variable. Never hardcode URLs.
+9.2 Expected API Endpoints (Frontend Contract)
+These are the endpoints the frontend team is designing against. Backend team must implement to this contract. All responses must include a standard envelope: { data, error, meta }.
+Method
+Endpoint
+Request
+Response (data field)
+GET
+/channel/metrics
+query: { startDate, endDate, channelId }
+{ views, subscribers, ctr, watchTimeHours, deltas, sparklines }
+GET
+/trends
+query: { niche[], tvs_min, tvs_max, window, confidence, page, limit }
+{ trends: TrendItem[], total, page }
+GET
+/trends/:id
+—
+{ trend: TrendDetail, keywords, competitorVideos, historicalData }
+POST
+/strategy/generate
+body: { topic, niche, format, tone, audienceAge }
+{ sessionId, ideas: IdeaItem[] }
+POST
+/strategy/titles
+body: { sessionId, ideaId }
+{ titles: TitleVariant[] }
+POST
+/strategy/tags
+body: { sessionId, ideaId, titleId }
+{ tags: TagItem[], totalChars }
+POST
+/strategy/script
+body: { sessionId, ideaId, titleId }
+{ outline: ScriptSection[] }
+GET
+/planner/slots
+query: { channelId, startDate, endDate }
+{ slots: PlannerSlot[] }
+POST
+/planner/slots
+body: { channelId, date, time, topic, status }
+{ slot: PlannerSlot }
+PATCH
+/planner/slots/:id
+body: partial PlannerSlot
+{ slot: PlannerSlot }
+DELETE
+/planner/slots/:id
+—
+{ success: boolean }
+GET
+/analytics/videos
+query: { channelId, startDate, endDate, sort, page }
+{ videos: VideoAnalytics[], total }
+GET
+/analytics/summary
+query: { channelId, startDate, endDate }
+{ aiSummary: string, recommendations: Action[] }
+GET
+/auth/youtube/oauth-url
+—
+{ url: string }
+POST
+/auth/youtube/callback
+body: { code }
+{ channel: ChannelProfile, token: string }
+9.3 Loading & Error State Handling
+Every data-fetching component must handle all four states explicitly. No component may render data without handling the loading and error paths.
+State
+Required UI Treatment
+Loading
+Show Skeleton components matching the shape of the loaded content. Never show a blank white area.
+Error (API 4xx)
+Show inline ErrorCard with specific message from API error.message. Provide retry action where applicable.
+Error (API 5xx)
+Show generic error toast. Log to error tracking. Provide retry action.
+Empty
+Show EmptyState component with contextual illustration and action CTA. Never show empty tables or blank panels.
+Populated
+Render content with Framer Motion fade-in (duration: 250ms, opacity 0→1).
+10. Accessibility Requirements (WCAG 2.1 AA)
+Every shipped screen must meet WCAG 2.1 Level AA. The following requirements are non-negotiable and will be included in the QA sign-off checklist.
+Requirement
+Implementation Specification
+Color Contrast
+All text must meet 4.5:1 contrast ratio against its background. Large text (18pt+): 3:1 minimum. Use Figma Contrast Checker or axe DevTools to verify.
+Keyboard Navigation
+Full application must be navigable via keyboard alone. Tab order must be logical and match visual order. No keyboard traps.
+Focus Indicators
+Visible focus ring on all interactive elements. Use brand-700 outline (2px solid) — never remove outlines without a visible alternative.
+ARIA Labels
+All icon buttons must have aria-label. All form inputs must have associated <label> elements (not just placeholder text).
+Screen Reader Support
+Charts must include a <table> summary or aria-describedby text alternative. Use role='status' for live metric updates.
+Reduced Motion
+All Framer Motion animations must check useReducedMotion() hook and disable transitions when true.
+Touch Targets
+Minimum touch target size: 44×44px on all interactive elements (buttons, links, form controls).
+Error Identification
+Form errors must be communicated via text (not color alone) and linked to the invalid field via aria-describedby.
+11. Performance Budgets
+Performance is a product requirement, not an afterthought. The following budgets must pass in Lighthouse CI on every PR merge to main, on a simulated 4G mobile connection.
+Metric
+Target
+Measurement Tool
+Lighthouse Performance Score
+≥ 85
+Lighthouse CI in GitHub Actions
+First Contentful Paint (FCP)
+≤ 1.5s
+Lighthouse / Web Vitals
+Largest Contentful Paint (LCP)
+≤ 2.5s
+Lighthouse / Web Vitals
+Cumulative Layout Shift (CLS)
+≤ 0.1
+Lighthouse / Web Vitals
+Time to Interactive (TTI)
+≤ 3.5s
+Lighthouse
+Total JS Bundle (initial load)
+≤ 250KB gzipped
+webpack-bundle-analyzer / Vite stats
+Total CSS (initial load)
+≤ 30KB gzipped
+Vite build output
+API-dependent page hydration
+≤ 2s (P95)
+Datadog RUM
+11.1 Performance Strategies (Required)
+Route-level code splitting: every route must be lazy-loaded via React.lazy() + Suspense
+Image optimization: all images served in WebP format with explicit width/height attributes to prevent CLS
+Chart libraries: Recharts and Visx must be in separate lazy-loaded chunks
+Font loading: use font-display: swap for Google Fonts; preload critical font files
+React Query caching: prevent redundant API calls; implement optimistic updates for planner mutations
+Memoization: use React.memo and useMemo on expensive chart renders and large list items
+12. Testing Requirements
+12.1 Unit & Integration Tests (Vitest + RTL)
+Coverage target: 80% line coverage across all non-trivial components. Tests must be co-located with source files (ComponentName.test.tsx).
+All atom and molecule components: render tests, interaction tests, accessibility checks (jest-axe)
+All Zustand stores: action and selector unit tests
+All React Query hooks: mock API tests with MSW (Mock Service Worker)
+Form validation: test all Zod schemas against valid, invalid, and edge-case inputs
+Utility functions in src/lib/: 100% unit test coverage
+12.2 End-to-End Tests (Playwright)
+Critical user journeys must have E2E tests. These run against a staging environment with seeded test data.
+Onboarding flow: complete 5-step wizard including OAuth mock
+Trend discovery: filter application, trend card interaction, right panel open
+Strategy generation: full session (input → generate → select idea → titles → tags)
+Content planner: create slot, drag-and-drop reschedule, delete slot
+Analytics: date range change, export CSV
+Settings: connect channel, update notifications, change password
+13. Folder Structure Convention
+All frontend code lives in the src/ directory. The following structure is mandatory and must not be deviated from without a team RFC (Request for Comments).
+Directory
+Contents
+src/components/
+Reusable components only. Organized as /atoms, /molecules, /organisms
+src/pages/
+Route-level page components. One file per route. Thin — orchestrate, don't implement.
+src/features/
+Feature-specific components and logic. Organized by feature: /trends, /strategy, /planner, /analytics.
+src/stores/
+Zustand store definitions. One file per store.
+src/hooks/
+Custom React hooks (useChannelMetrics, useTrendFeed, etc.). Not feature-specific.
+src/lib/
+Utility functions, apiClient.ts, queryKeys.ts, constants.ts.
+src/types/
+TypeScript type definitions and interfaces. Shared across the app.
+src/assets/
+Static images, illustrations, and SVG icons not from Lucide.
+src/styles/
+Global CSS, Tailwind config extensions, CSS custom properties (:root tokens).
+tests/e2e/
+Playwright E2E test files. Mirrors src/pages/ structure.
+14. Developer Handoff & Definition of Done
+A screen or component is considered 'done' and eligible for code review only when ALL of the following criteria are met:
+14.1 Design Compliance
+All design tokens used (no hardcoded colors, fonts, or spacing values)
+All four states implemented: loading (skeleton), empty, error, populated
+Matches Figma designs at all three breakpoints: mobile (375px), tablet (768px), desktop (1280px)
+Hover, focus, and active states visible and correct
+14.2 Code Quality
+TypeScript: zero 'any' types; all props are fully typed
+No inline styles — Tailwind classes or CSS modules only
+No hardcoded API URLs or environment values in component code
+All useEffect dependencies are correct (no missing or unnecessary dependencies)
+React Query used for all data fetching — no raw useEffect fetches
+14.3 Accessibility
+jest-axe passes with zero accessibility violations in unit tests
+Full keyboard navigation works
+Color contrast verified with axe DevTools browser extension
+All icon buttons have aria-label
+14.4 Performance
+Lighthouse score ≥ 85 on the affected page (verify in staging)
+No unnecessary re-renders (verified with React DevTools Profiler)
+No blocking resources in Critical Rendering Path
+14.5 Testing
+Unit tests written and passing for all new components
+E2E test written for any new critical user journey
+Coverage remains at or above 80% for the feature module
+14.6 Documentation
+JSDoc comments on all exported components and hooks
+Component added to Storybook (MVP+ — v1.1 scope but story file must be created)
+Any non-obvious implementation decisions documented in a code comment
+15. Open Questions & Decisions Pending
+#
+Question
+Owner
+Due
+1
+Should the strategy generator use streaming API responses (SSE) for a more engaging real-time generation feel, or wait for full response?
+Engineering + Product
+Sprint 1
+2
+What is the exact Figma component library being used — custom design system or an existing base like shadcn/ui?
+Design Lead
+Sprint 1
+3
+Are we building the charts as static renders or fully interactive (hover tooltips, drill-down)? This significantly affects chart library selection.
+Product
+Sprint 1
+4
+What is the exact OAuth redirect URI for YouTube integration? Must be registered in Google Cloud Console before any frontend work on onboarding.
+Backend + DevOps
+Week 1
+5
+Drag-and-drop on the content planner: should it update the server immediately (with optimistic rollback) or require an explicit 'Save' action?
+Product
+Sprint 2
+6
+What analytics events does the growth team need? A full event tracking spec (Mixpanel / Segment) must be finalized before frontend instrumentation.
+Growth + Engineering
+Sprint 2
+Appendix A: Glossary
+Term
+Definition
+TVS
+Trend Velocity Score — composite 0-100 metric indicating how fast a topic is accelerating across data sources.
+OAuth
+Open Authorization — protocol used to grant CreatorIQ access to YouTube account data.
+React Query
+TanStack React Query — server state management library for data fetching, caching, and synchronization.
+Skeleton
+Placeholder UI shown while content is loading, matching the shape of the expected content.
+Atomic Design
+Component architecture pattern: atoms (smallest) → molecules → organisms → templates → pages.
+MSW
+Mock Service Worker — API mocking library used in frontend testing environments.
+CLS
+Cumulative Layout Shift — Core Web Vital measuring visual stability during page load.
+LCP
+Largest Contentful Paint — Core Web Vital measuring load performance of the main content.
+RTL
+React Testing Library — testing utilities that encourage testing component behavior from the user's perspective.
