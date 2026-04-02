@@ -6,7 +6,7 @@ from fastapi import HTTPException, status
 
 from app.core.config import settings
 from app.core.db import get_db
-from app.core.jwt_deps import get_current_user_id
+from app.core.jwt_deps import get_current_user_id, require_internal_token
 from app.services.auth_service import AuthService
 
 
@@ -155,3 +155,11 @@ async def sync_channel(
 ) -> dict:
     """Manually trigger a YouTube channel metadata sync."""
     return await service.sync_channel(db, user_id)
+
+
+@router.get("/internal/auth/youtube/tokens")
+async def get_internal_youtube_tokens(
+    _: None = Depends(require_internal_token),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    return await service.get_internal_youtube_tokens(db)

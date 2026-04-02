@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     jwt_public_key_path: str = "/run/secrets/jwt_public.pem"
     access_token_ttl_minutes: int = 15
 
+    aes_encryption_key: str = ""
+
+
     refresh_token_ttl_days: int = 90
     refresh_token_pepper: str = "change-me"
 

@@ -89,6 +89,21 @@ async def analytics_benchmarks(
     )
 
 
+@router.get("/analytics/dashboard")
+async def analytics_dashboard(
+    user: UserContext = Depends(get_user_context),
+    allowed: set[uuid.UUID] = Depends(parse_allowed_channel_ids),
+    db: AsyncSession = Depends(get_db),
+    channel_id: str = Query(...),
+) -> dict:
+    return await service.analytics_dashboard(
+        db,
+        user,
+        channel_id=uuid.UUID(channel_id),
+        allowed_channels=allowed,
+    )
+
+
 @router.post("/internal/analytics/rebuild-summary")
 async def rebuild_summary(
     body: RebuildSummaryBody,

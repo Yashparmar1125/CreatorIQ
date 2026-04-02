@@ -38,3 +38,15 @@ async def get_current_user_id(credentials: HTTPAuthorizationCredentials = Depend
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail={"code": "INVALID_TOKEN", "message": str(e), "details": {}},
         ) from e
+
+
+from fastapi import Header
+
+async def require_internal_token(
+    x_internal_service_token: str = Header(..., alias="X-Internal-Service-Token")
+) -> None:
+    if x_internal_service_token != settings.internal_service_token:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"code": "FORBIDDEN", "message": "Invalid internal service token.", "details": {}},
+        )

@@ -6,6 +6,7 @@ from typing import Any
 
 from jose import jwt
 import bcrypt
+from cryptography.fernet import Fernet
 
 from app.core.config import settings
 
@@ -54,4 +55,29 @@ def hash_refresh_token(refresh_token: str) -> str:
     h.update(b":")
     h.update(refresh_token.encode("utf-8"))
     return h.hexdigest()
+
+
+@lru_cache(maxsize=1)
+def _get_fernet_cipher() -> Fernet:
+    if not settings.aes_encryption_key:
+        raise ValueError("aes_encryption_key is missing in settings")
+    return Fernet(settings.aes_encryption_key.encode("utf-8"))
+
+
+def encrypt_token(token: str) -> str:
+    if not token:
+        return ""
+    cipher = _get_fernet_cipher()
+    return cipher.encrypt(token.encode("utf-8")).decode("utf-8")
+
+
+def decrypt_token(encrypted_token: str) -> str:
+    if not encrypted_token:
+        return ""
+    cipher = _get_fernet_cipher()
+    try:
+        return cipher.decrypt(encrypted_token.encode("utf-8")).decode("utf-8")
+    except Exception:
+        # Fallback for old plaintext tokens or invalid padding
+        return encrypted_token
 

@@ -143,6 +143,15 @@ class AuthRepository:
         )
         return res.scalar_one_or_none()
 
+    async def get_all_google_tokens(self, db: AsyncSession) -> list[OAuthToken]:
+        res = await db.execute(
+            select(OAuthToken).where(
+                OAuthToken.provider == OAuthProvider.youtube,
+                OAuthToken.revoked.is_(False)
+            )
+        )
+        return list(res.scalars().all())
+
     async def update_user_onboarding(
         self,
         db: AsyncSession,

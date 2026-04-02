@@ -11,7 +11,7 @@ from jose import jwt as jose_jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.security import create_access_token, generate_refresh_token, hash_password, hash_refresh_token, verify_password
+from app.core.security import create_access_token, generate_refresh_token, hash_password, hash_refresh_token, verify_password, encrypt_token, decrypt_token
 from app.models.auth_models import OAuthProvider, PlanTier, User
 from app.repositories.auth_repository import AuthRepository
 
@@ -218,8 +218,8 @@ class AuthService:
             db,
             user_id=user.id,
             provider=OAuthProvider.youtube,
-            access_token_enc=access_google,
-            refresh_token_enc=token_json.get("refresh_token"),
+            access_token_enc=encrypt_token(access_google),
+            refresh_token_enc=encrypt_token(token_json.get("refresh_token")),
             expires_at=google_expiry,
             scopes=google_scopes,
         )
@@ -304,12 +304,29 @@ class AuthService:
             )
         
         # Check if token needs refresh
-        access_token = token.access_token_enc
+        access_token = decrypt_token(token.access_token_enc)
         # For now, we assume the token is valid or will be caught by the sync method's error handling.
         # In a full production app, we would implement the refresh flow here or use a library like Authlib.
         
         await self._sync_channel_metadata(user_id, access_token)
         return {"data": {"message": "Sync successful"}, "meta": {"request_id": "local-dev"}}
+
+    async def get_internal_youtube_tokens(self, db: AsyncSession) -> dict:
+        tokens = await self.repo.get_all_google_tokens(db)
+        data = []
+        for t in tokens:
+            try:
+                dec_token = decrypt_token(t.access_token_enc)
+                if not dec_token:
+                    continue
+                data.append({
+                    "user_id": str(t.user_id),
+                    "channel_id": str(t.channel_id) if t.channel_id else None,
+                    "access_token": dec_token,
+                })
+            except Exception:
+                pass
+        return {"data": {"tokens": data}, "meta": {"request_id": "local-dev"}}
 
     async def _sync_channel_metadata(self, user_id: UUID, access_token: str) -> None:
         """Fetch YouTube channel metadata, latest video stats, and sync to Channel service."""
