@@ -36,6 +36,11 @@ export const useTrendsStore = create<TrendsState>((set, get) => ({
     try {
       const url = query ? `/trends?q=${encodeURIComponent(query.trim())}` : '/trends';
       const { data } = await api.get(url);
+
+      // debug purpose
+      console.log(`Trends Data Related to the Query ${query}: `, data);
+
+
       // The API returns { data: { trends: [...] }, meta: { ... } }
       set({ trends: data.data.trends, isLoading: false });
     } catch (err: any) {
