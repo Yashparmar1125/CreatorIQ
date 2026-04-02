@@ -31,12 +31,13 @@ async def health() -> dict:
 
 @router.get("/trends")
 async def list_trends(
+    q: str | None = Query(default=None),
     user: UserContext = Depends(get_user_context),
     db: AsyncSession = Depends(get_db),
     limit: int = Query(default=20, ge=1, le=100),
     cursor: str | None = None,
 ) -> dict:
-    return await service.list_trends(db, user, limit=limit, cursor=cursor)
+    return await service.list_trends(db, user, q=q, limit=limit, cursor=cursor)
 
 
 @router.get("/trends/{trend_id}")

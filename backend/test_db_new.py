@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 async def test_conn():
     # Use the URL from the updated .env
-    url = "postgresql+asyncpg://postgres:1125@localhost:5432/CreatorIQ"
+    url = "postgresql+asyncpg://postgres:CreatorIQ@123@creator-iq.postgres.database.azure.com:5432/postgres"
     engine = create_async_engine(url)
     try:
         async with engine.connect() as conn:

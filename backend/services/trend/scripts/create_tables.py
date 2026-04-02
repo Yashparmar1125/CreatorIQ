@@ -9,7 +9,7 @@ sys.path.append(os.getcwd())
 from app.models.base import Base
 import app.models.trend_models
 
-DATABASE_URL = "postgresql+asyncpg://postgres:1125@localhost:5432/CreatorIQ"
+DATABASE_URL = "postgresql+asyncpg://postgres:CreatorIQ@123@creator-iq.postgres.database.azure.com:5432/postgres"
 
 async def create_tables():
     engine = create_async_engine(DATABASE_URL)

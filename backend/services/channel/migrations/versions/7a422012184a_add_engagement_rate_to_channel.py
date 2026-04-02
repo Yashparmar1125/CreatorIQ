@@ -15,10 +15,18 @@ branch_labels = None
 depends_on = None
 
 
+def _column_exists(table_name: str, column_name: str) -> bool:
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    return any(column["name"] == column_name for column in inspector.get_columns(table_name))
+
+
 def upgrade() -> None:
-    op.add_column('channels', sa.Column('engagement_rate', sa.Numeric(precision=10, scale=2), nullable=True))
+    if not _column_exists("channels", "engagement_rate"):
+        op.add_column("channels", sa.Column("engagement_rate", sa.Numeric(precision=10, scale=2), nullable=True))
 
 
 def downgrade() -> None:
-    op.drop_column('channels', 'engagement_rate')
+    if _column_exists("channels", "engagement_rate"):
+        op.drop_column("channels", "engagement_rate")
 
