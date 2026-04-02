@@ -53,7 +53,7 @@ async def route_all(path: str, request: Request):
         forward_headers[k] = v
     forward_headers.update(trusted_headers)
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with httpx.AsyncClient(timeout=120.0) as client:
         upstream = await client.request(
             method=request.method,
             url=upstream_url,

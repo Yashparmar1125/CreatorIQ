@@ -1,23 +1,18 @@
-import React, { useEffect } from 'react';
+import React, { useState } from 'react';
 import { useTrendsStore } from '../../../stores/useTrendsStore';
-import { TrendingUp, PlayCircle, Zap, Search, Target, Activity, Sparkles } from 'lucide-react';
+import { TrendingUp, PlayCircle, Zap, Search, Target, Activity, Sparkles, Loader2 } from 'lucide-react';
 
 export const TrendsPage: React.FC = () => {
   const { trends, isLoading, fetchTrends, toggleSaveTrend } = useTrendsStore();
+  const [searchQuery, setSearchQuery] = useState('');
 
-  useEffect(() => {
-    fetchTrends();
-  }, [fetchTrends]);
-
-  if (isLoading && trends.length === 0) {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-10 animate-pulse">
-        {[1, 2, 3, 4].map(i => (
-          <div key={i} className="h-72 bg-white/50 rounded-[48px] border border-neutral-100 shadow-sm" />
-        ))}
-      </div>
-    );
-  }
+  const handlePredict = () => {
+    if (searchQuery.trim()) {
+      fetchTrends(searchQuery);
+    } else {
+      fetchTrends();
+    }
+  };
 
   return (
     <div className="space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-1000">
@@ -42,20 +37,70 @@ export const TrendsPage: React.FC = () => {
         </div>
         
         <div className="flex flex-wrap gap-4">
-          <div className="relative group/search">
-            <Search className="w-5 h-5 absolute left-6 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within/search:text-brand-600 transition-colors" />
+          <div className="relative group/search flex items-center">
+            <Search className={`w-5 h-5 absolute left-6 text-neutral-400 group-focus-within/search:text-brand-600 transition-colors ${isLoading ? 'opacity-0' : 'opacity-100'}`} />
+            {isLoading && <Loader2 className="w-5 h-5 absolute left-6 text-brand-600 animate-spin" />}
             <input 
               type="text" 
               placeholder="Detect breakout niches..." 
-              className="pl-16 pr-8 py-5 bg-white glass border border-white/60 rounded-[24px] text-sm font-black focus:outline-none focus:ring-8 focus:ring-brand-600/5 focus:border-brand-600 transition-all w-80 shadow-2xl shadow-neutral-200/20 placeholder:text-neutral-300"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handlePredict(); }}
+              className="pl-16 pr-[9rem] py-5 bg-white glass border border-white/60 rounded-[24px] text-sm font-black focus:outline-none focus:ring-8 focus:ring-brand-600/5 focus:border-brand-600 transition-all w-[28rem] shadow-2xl shadow-neutral-200/20 placeholder:text-neutral-300"
             />
+            <button
+               onClick={handlePredict}
+               disabled={isLoading}
+               className="absolute right-2 top-2 bottom-2 px-6 bg-brand-600 text-white rounded-[18px] text-[11px] font-black uppercase tracking-[0.15em] hover:bg-brand-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm whitespace-nowrap"
+            >
+               {isLoading ? (
+                 <>
+                   <Loader2 className="w-3 h-3 animate-spin" />
+                   Searching
+                 </>
+               ) : (
+                 'Predict =>'
+               )}
+            </button>
           </div>
         </div>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-        {trends.map((trend, i) => (
-          <div key={i} className="glass p-12 rounded-[56px] border border-white/60 premium-shadow-hover group cursor-pointer relative overflow-hidden flex flex-col min-h-[520px]">
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 animate-pulse">
+          {[1, 2, 3, 4].map(i => (
+             <div key={i} className="glass p-12 rounded-[56px] border border-white/60 shadow-xl shadow-neutral-200/20 relative overflow-hidden flex flex-col min-h-[520px]">
+                <div className="absolute top-0 right-0 p-8">
+                   <div className="w-24 h-8 bg-neutral-200/50 rounded-2xl" />
+                </div>
+                <div className="mb-12 flex-1">
+                   <div className="flex gap-2 flex-wrap mb-8">
+                      <div className="w-16 h-6 bg-neutral-200/50 rounded-full" />
+                      <div className="w-20 h-6 bg-neutral-200/50 rounded-full" />
+                   </div>
+                   <div className="w-3/4 h-12 bg-neutral-200/50 rounded-xl mb-12" />
+                   <div className="w-full h-32 bg-neutral-900/5 rounded-[32px]" />
+                </div>
+                <div className="grid grid-cols-2 gap-8 mb-10 pb-10 border-b border-neutral-100">
+                   <div className="space-y-6">
+                      <div className="w-full h-3 bg-neutral-200/50 rounded-full" />
+                      <div className="w-full h-3 bg-neutral-200/50 rounded-full" />
+                   </div>
+                   <div className="pl-6 border-l border-neutral-100 flex flex-col justify-center">
+                      <div className="w-20 h-8 bg-neutral-200/50 rounded-xl" />
+                   </div>
+                </div>
+                <div className="flex items-center justify-between">
+                   <div className="w-24 h-8 bg-neutral-200/50 rounded-xl" />
+                   <div className="w-40 h-10 bg-neutral-200/50 rounded-[24px]" />
+                </div>
+             </div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+          {trends.map((trend, i) => (
+            <div key={i} className="glass p-12 rounded-[56px] border border-white/60 premium-shadow-hover group cursor-pointer relative overflow-hidden flex flex-col min-h-[520px]">
              {/* Archetype Badge */}
              <div className="absolute top-0 right-0 p-8">
                 <div className={`px-6 py-2 rounded-2xl ${
@@ -148,7 +193,8 @@ export const TrendsPage: React.FC = () => {
              </div>
           </div>
         ))}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -133,6 +133,16 @@ class AuthRepository:
         )
         return res.scalar_one_or_none() is not None
 
+    async def get_google_token(self, db: AsyncSession, user_id: uuid.UUID) -> OAuthToken | None:
+        res = await db.execute(
+            select(OAuthToken).where(
+                OAuthToken.user_id == user_id,
+                OAuthToken.provider == OAuthProvider.youtube,
+                OAuthToken.revoked.is_(False)
+            )
+        )
+        return res.scalar_one_or_none()
+
     async def update_user_onboarding(
         self,
         db: AsyncSession,

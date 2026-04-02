@@ -19,7 +19,7 @@ interface TrendsState {
   trends: Trend[];
   isLoading: boolean;
   error: string | null;
-  fetchTrends: () => Promise<void>;
+  fetchTrends: (query?: string) => Promise<void>;
   toggleSaveTrend: (id: string) => Promise<void>;
 }
 
@@ -27,10 +27,15 @@ export const useTrendsStore = create<TrendsState>((set, get) => ({
   trends: [],
   isLoading: false,
   error: null,
-  fetchTrends: async () => {
-    set({ isLoading: true, error: null });
+  fetchTrends: async (query?: string) => {
+    if (query) {
+       set({ isLoading: true, error: null, trends: [] });
+    } else {
+       set({ isLoading: true, error: null });
+    }
     try {
-      const { data } = await api.get('/trends');
+      const url = query ? `/trends?q=${encodeURIComponent(query.trim())}` : '/trends';
+      const { data } = await api.get(url);
       // The API returns { data: { trends: [...] }, meta: { ... } }
       set({ trends: data.data.trends, isLoading: false });
     } catch (err: any) {

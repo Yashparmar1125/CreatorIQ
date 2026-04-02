@@ -8,6 +8,7 @@ from sqlalchemy import create_engine, pool
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from app.models.base import Base  # noqa: E402
+from app.core.config import settings  # noqa: E402
 import app.models.channel_models  # noqa: F401,E402
 
 config = context.config
@@ -20,8 +21,21 @@ def _sync_database_url(database_url: str) -> str:
     return database_url
 
 
+def _get_database_url() -> str:
+    raw_url = os.getenv("DATABASE_URL") or settings.database_url or config.get_main_option("sqlalchemy.url")
+
+    if raw_url.startswith("${") and raw_url.endswith("}"):
+        env_key = raw_url[2:-1]
+        raw_url = os.getenv(env_key, "")
+
+    if not raw_url:
+        raise RuntimeError("DATABASE_URL is not set. Provide it via env or app settings.")
+
+    return _sync_database_url(raw_url)
+
+
 def run_migrations_offline() -> None:
-    url = _sync_database_url(os.getenv("DATABASE_URL", config.get_main_option("sqlalchemy.url")))
+    url = _get_database_url()
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -35,7 +49,7 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
-    url = _sync_database_url(os.getenv("DATABASE_URL", config.get_main_option("sqlalchemy.url")))
+    url = _get_database_url()
     connectable = create_engine(url, poolclass=pool.NullPool)
 
     with connectable.connect() as connection:

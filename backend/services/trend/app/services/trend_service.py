@@ -54,23 +54,27 @@ class TrendService:
         db: AsyncSession,
         user: UserContext,
         *,
+        q: str | None = None,
         limit: int = 20,
         cursor: str | None = None,
     ) -> dict:
         """Advanced Intelligence: Triple-handshake with SerpApi to provide growth strategies."""
         # 1. Fetch user context (niches)
         user_niches = []
-        try:
-            async with httpx.AsyncClient(timeout=5.0) as client:
-                r = await client.get(
-                    f"{settings.channel_service_url}/internal/channels/user/{user.user_id}/context",
-                    headers={"X-Internal-Service-Token": settings.internal_service_token},
-                )
-                if r.status_code == 200:
-                    ctx = r.json().get("data", {})
-                    user_niches = ctx.get("niches", [])
-        except Exception: pass
-        if not user_niches: user_niches = ["AI", "Creator Economy", "Tech"]
+        if q:
+            user_niches = [q]
+        else:
+            try:
+                async with httpx.AsyncClient(timeout=5.0) as client:
+                    r = await client.get(
+                        f"{settings.channel_service_url}/internal/channels/user/{user.user_id}/context",
+                        headers={"X-Internal-Service-Token": settings.internal_service_token},
+                    )
+                    if r.status_code == 200:
+                        ctx = r.json().get("data", {})
+                        user_niches = ctx.get("niches", [])
+            except Exception: pass
+            if not user_niches: user_niches = ["AI", "Creator Economy", "Tech"]
 
         # 2. Parallel Triple-Signals Fetch for Top Niches (with Cache)
         from app.integrations.serpapi_client import search_google_trends

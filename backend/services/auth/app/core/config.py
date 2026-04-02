@@ -6,7 +6,7 @@ class Settings(BaseSettings):
     service_name: str = "auth"
     environment: str = "development"
 
-    database_url: str = "postgresql+asyncpg://postgres:1125@localhost:5432/CreatorIQ"
+    database_url: str = "postgresql+asyncpg://postgres:CreatorIQ%40123@creator-iq.postgres.database.azure.com:5432/postgres"
 
     jwt_issuer: str = "creatoriq-auth"
     jwt_audience: str = "creatoriq-api"

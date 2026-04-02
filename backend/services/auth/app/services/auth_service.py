@@ -297,14 +297,14 @@ class AuthService:
     async def sync_channel(self, db: AsyncSession, user_id: UUID) -> dict:
         """Manually trigger a YouTube channel sync for a user."""
         token = await self.repo.get_google_token(db, user_id)
-        if not token or not token.access_token:
+        if not token or not token.access_token_enc:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail={"code": "NO_GOOGLE_CONNECTED", "message": "No Google account connected.", "details": {}}
             )
         
         # Check if token needs refresh
-        access_token = token.access_token
+        access_token = token.access_token_enc
         # For now, we assume the token is valid or will be caught by the sync method's error handling.
         # In a full production app, we would implement the refresh flow here or use a library like Authlib.
         
