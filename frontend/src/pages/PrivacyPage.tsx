@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Shield, Database, Lock, Eye, Globe } from 'lucide-react';
+import { Database, Lock, Eye, Globe } from 'lucide-react';
 import { PublicLayout } from '../components/organisms/PublicLayout';
 
 export const PrivacyPage: React.FC = () => {

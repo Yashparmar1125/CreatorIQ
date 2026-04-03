@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useStrategyStore } from '../../../stores/useStrategyStore';
-import { Sparkles, Copy, Check, Info, Lightbulb, Target, Layout } from 'lucide-react';
+import { Sparkles, Copy, Check, Lightbulb, Target, Layout } from 'lucide-react';
 
 export const StrategyPage: React.FC = () => {
   const [topic, setTopic] = useState('');

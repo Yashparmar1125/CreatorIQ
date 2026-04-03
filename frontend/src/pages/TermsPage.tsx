@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Gavel, UserCheck, Target, Heart, AlertTriangle } from 'lucide-react';
+import { UserCheck, Target, Heart, AlertTriangle } from 'lucide-react';
 import { PublicLayout } from '../components/organisms/PublicLayout';
 
 export const TermsPage: React.FC = () => {
