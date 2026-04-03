@@ -29,17 +29,17 @@ export const TermsPage: React.FC = () => {
 
   return (
     <PublicLayout>
-      <main className="max-w-3xl mx-auto px-6 pt-48 pb-24 relative z-10">
+      <main className="max-w-3xl mx-auto px-6 pt-32 pb-16 relative z-10">
         <motion.div
            initial={{ opacity: 0, y: 20 }}
            animate={{ opacity: 1, y: 0 }}
            className="space-y-16"
         >
-          <div className="space-y-6 text-center md:text-left">
-            <h1 className="text-5xl md:text-7xl font-black tracking-[-0.04em] leading-[0.9]">
-              Platform <span className="text-neutral-300">Rules.</span>
+          <div className="space-y-4 text-center md:text-left">
+            <h1 className="text-4xl md:text-5xl font-black tracking-tight leading-tight">
+              Platform <span className="text-neutral-400">Rules.</span>
             </h1>
-            <p className="text-neutral-500 text-lg md:text-xl leading-relaxed font-bold opacity-80 max-w-2xl">
+            <p className="text-neutral-500 text-base md:text-lg leading-relaxed font-bold opacity-80 max-w-xl">
               Last updated: April 3, 2026. By using CreatorIQ, you agree to these terms. They exist to ensure a professional and safe environment for all creators.
             </p>
           </div>
@@ -51,15 +51,15 @@ export const TermsPage: React.FC = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 * i }}
-                className="p-10 rounded-[48px] bg-neutral-50/50 border border-neutral-100 hover:bg-white hover:shadow-2xl hover:shadow-neutral-900/5 transition-all group"
+                className="p-8 rounded-3xl bg-neutral-50/50 border border-neutral-100 hover:bg-white hover:shadow-xl hover:shadow-neutral-900/5 transition-all group"
               >
-                <div className="flex items-center gap-5 mb-6">
-                   <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center shadow-sm border border-neutral-100 group-hover:bg-brand-600 group-hover:text-white transition-all transform group-hover:scale-110">
+                <div className="flex items-center gap-4 mb-4">
+                   <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-sm border border-neutral-100 group-hover:bg-brand-600 group-hover:text-white transition-all transform group-hover:scale-105">
                       {section.icon}
                    </div>
-                   <h2 className="text-2xl font-black tracking-tight text-neutral-900">{section.title}</h2>
+                   <h2 className="text-xl font-bold tracking-tight text-neutral-900">{section.title}</h2>
                 </div>
-                <p className="text-neutral-500 leading-relaxed font-bold text-base opacity-70">
+                <p className="text-neutral-500 leading-relaxed font-medium text-sm opacity-80">
                   {section.content}
                 </p>
               </motion.section>

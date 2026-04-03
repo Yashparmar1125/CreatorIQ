@@ -10,23 +10,23 @@ export const LandingPage: React.FC = () => {
 
   const features = [
     {
-      title: 'Trend Analysis Engine',
-      icon: <Cpu className="w-6 h-6 text-brand-400" />,
-      desc: 'Recursive monitoring of 50M+ data points to catch peaks before they break.',
+      title: 'Viral Topic Finder',
+      icon: <Cpu className="w-5 h-5 text-brand-400" />,
+      desc: 'Spot viral trends before they go mainstream and get ahead of the curve.',
       stat: '94% Accuracy',
       color: 'bg-brand-600'
     },
     {
-      title: 'Retention Analysis',
-      icon: <Activity className="w-6 h-6 text-accent-400" />,
-      desc: 'Heatmap projections that tell you exactly when viewers click away.',
+      title: 'Audience Insights',
+      icon: <Activity className="w-5 h-5 text-accent-400" />,
+      desc: 'See exactly where your viewers stop watching and how to keep them engaged.',
       stat: '12.4x Growth',
       color: 'bg-neutral-900'
     },
     {
-      title: 'Strategic Planning',
-      icon: <Layers className="w-6 h-6 text-success-400" />,
-      desc: 'Production pipelines optimized for the YouTube algorithm cadence.',
+      title: 'Content Planner',
+      icon: <Layers className="w-5 h-5 text-success-400" />,
+      desc: 'Plan your upload schedule based on real performance data that works.',
       stat: 'Zero Friction',
       color: 'bg-success-600'
     }
@@ -35,64 +35,64 @@ export const LandingPage: React.FC = () => {
   return (
     <PublicLayout>
       {/* Hero Section */}
-      <section className="pt-64 pb-32 px-6 relative">
+      <section className="pt-48 pb-24 px-6 relative">
         <div className="max-w-7xl mx-auto">
           <div className="text-center space-y-12 max-w-4xl mx-auto">
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="inline-flex items-center gap-3 px-5 py-2 rounded-full bg-brand-50 border border-brand-100 shadow-sm"
+              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-50 border border-brand-100 shadow-sm"
             >
-              <Sparkles className="w-4 h-4 text-brand-600 fill-brand-600" />
-              <span className="text-[10px] font-black text-brand-800 uppercase tracking-widest">Now in Public Access: V2.0 Intelligence</span>
+              <Sparkles className="w-3.5 h-3.5 text-brand-600 fill-brand-600" />
+              <span className="text-[10px] font-bold text-brand-800 uppercase tracking-widest">Now in Public Access: Creator v2.0</span>
             </motion.div>
 
             <motion.h1
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1, duration: 0.8 }}
-              className="text-7xl md:text-[110px] font-black font-sora text-neutral-900 leading-[0.85] tracking-[-0.06em] py-4"
+              className="text-5xl md:text-7xl font-black font-sora text-neutral-900 leading-[1.1] tracking-[-0.04em] py-2"
             >
-              Master the <br />
-              <span className="text-neutral-300">Retention</span> Era.
+              Grow Your <br />
+              <span className="text-neutral-400">Channel</span> with AI.
             </motion.h1>
 
             <motion.p
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="text-xl md:text-2xl text-neutral-500 font-medium leading-relaxed max-w-2xl mx-auto"
+              className="text-lg md:text-xl text-neutral-500 font-medium leading-relaxed max-w-xl mx-auto"
             >
-              Scientific YouTube growth for professional creators. Turn fragmented data into 100% predictable viral blueprints.
+              The all-in-one platform for YouTube creators to find viral topics and keep viewers watching longer.
             </motion.p>
 
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="flex flex-col sm:flex-row justify-center gap-6 pt-8"
+              className="flex flex-col sm:flex-row justify-center gap-4 pt-6"
             >
-              <Link 
-                to={isAuthenticated ? "/app/dashboard" : "/signup"} 
-                className="px-12 py-7 bg-neutral-900 text-white rounded-[32px] font-black text-lg shadow-2xl shadow-neutral-900/40 hover:bg-brand-600 hover:scale-[1.05] transition-all flex items-center justify-center gap-4 group active:scale-95"
+              <Link
+                to={isAuthenticated ? "/app/dashboard" : "/signup"}
+                className="px-8 py-4.5 bg-neutral-900 text-white rounded-2xl font-bold text-base shadow-xl shadow-neutral-900/20 hover:bg-brand-600 hover:scale-[1.02] transition-all flex items-center justify-center gap-3 group active:scale-98"
               >
-                {isAuthenticated ? "Go to Dashboard" : "Optimize My Channel"}
-                <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
+                {isAuthenticated ? "Go to Dashboard" : "Start Growing Free"}
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Link>
-              <button className="px-12 py-7 bg-white text-neutral-900 border border-neutral-200 rounded-[32px] font-black text-lg hover:bg-neutral-50 flex items-center justify-center gap-4 transition-all">
-                <PlayCircle className="w-6 h-6 text-brand-600" />
-                View Features
+              <button className="px-8 py-4.5 bg-white text-neutral-900 border border-neutral-200 rounded-2xl font-bold text-base hover:bg-neutral-50 flex items-center justify-center gap-3 transition-all">
+                <PlayCircle className="w-5 h-5 text-brand-600" />
+                View Demo
               </button>
             </motion.div>
           </div>
 
           <motion.div
-            initial={{ opacity: 0, y: 100 }}
+            initial={{ opacity: 0, y: 80 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5, duration: 1 }}
-            className="mt-32 relative group"
+            className="mt-20 relative group"
           >
-            <div className="glass p-4 rounded-[64px] border border-white/60 shadow-2xl relative overflow-hidden group-hover:scale-[1.01] transition-transform duration-1000">
+            <div className="glass p-3 rounded-[40px] border border-white/60 shadow-xl relative overflow-hidden group-hover:scale-[1.005] transition-transform duration-1000">
               <img
                 src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=2426&auto=format&fit=crop"
                 className="rounded-[50px] w-full h-[700px] object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-1000"
@@ -137,8 +137,8 @@ export const LandingPage: React.FC = () => {
           {features.map((f, i) => (
             <motion.div
               key={i}
-              whileHover={{ y: -10 }}
-              className={`${f.color} p-12 rounded-[56px] text-white flex flex-col justify-between min-h-[500px] shadow-2xl shadow-neutral-900/10 relative overflow-hidden group`}
+              whileHover={{ y: -8 }}
+              className={`${f.color} p-8 rounded-3xl text-white flex flex-col justify-between min-h-[400px] shadow-xl shadow-neutral-900/5 relative overflow-hidden group`}
             >
               <div className="absolute top-[-20%] right-[-20%] w-[60%] h-[60%] bg-white/5 rounded-full blur-[80px] group-hover:bg-white/10 transition-colors" />
 
@@ -163,10 +163,10 @@ export const LandingPage: React.FC = () => {
       {/* CTA Branding Reveal */}
       <section className="py-40 relative">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="bg-neutral-900 rounded-[72px] p-16 md:p-32 text-center text-white relative overflow-hidden shadow-2xl shadow-brand-600/10">
+          <div className="bg-neutral-900 rounded-[56px] p-12 md:p-24 text-center text-white relative overflow-hidden shadow-xl shadow-brand-600/5">
             <div className="absolute inset-0 bg-brand-600/10 blur-[150px] translate-y-1/2" />
-            <div className="relative z-10 space-y-12">
-              <h2 className="text-5xl md:text-8xl font-black font-sora tracking-tighter leading-[0.85]">Join the <br /><span className="text-neutral-500">Top Creators.</span></h2>
+            <div className="relative z-10 space-y-10">
+              <h2 className="text-4xl md:text-6xl font-black font-sora tracking-tighter leading-tight">Start Growing <br /><span className="text-neutral-500">Today.</span></h2>
               <p className="text-xl md:text-2xl text-neutral-400 max-w-2xl mx-auto font-medium">Stop guessing. Start growing. The next generation of YouTube tools is here.</p>
               <div className="flex flex-col sm:flex-row justify-center gap-6 pt-10">
                 <Link to="/onboarding" className="px-12 py-7 bg-brand-600 text-white rounded-[32px] font-black text-xl hover:scale-110 active:scale-95 transition-all shadow-2xl shadow-brand-600/30">
