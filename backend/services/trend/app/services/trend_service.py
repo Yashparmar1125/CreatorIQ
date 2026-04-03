@@ -92,7 +92,8 @@ class TrendService:
             try:
                 import random
                 # Optimized: Only fetch RELATED_QUERIES to save SerpApi credits (1 call instead of 3)
-                q_res = await search_google_trends(q=niche, data_type="RELATED_QUERIES", gprop="youtube")
+                # Removed gprop="youtube" because it often returns empty lists for broad niches, triggering our mock fallback
+                q_res = await search_google_trends(q=niche, data_type="RELATED_QUERIES")
                 
                 # Safely get queries
                 rq = q_res.get("related_queries", {})

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   BarChart3, 
@@ -13,7 +13,11 @@ import {
 import { useAnalyticsStore } from '../../../stores/useAnalyticsStore';
 
 export const AnalyticsPage: React.FC = () => {
-  const { retentionData, trafficSources, audienceDemographics, loading } = useAnalyticsStore();
+  const { retentionData, trafficSources, audienceDemographics, loading, fetchAnalytics } = useAnalyticsStore();
+
+  useEffect(() => {
+    fetchAnalytics();
+  }, [fetchAnalytics]);
 
   if (loading) {
     return (

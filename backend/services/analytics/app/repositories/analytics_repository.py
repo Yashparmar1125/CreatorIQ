@@ -20,6 +20,19 @@ class AnalyticsRepository:
         )
         return res.scalar_one_or_none()
 
+    async def create_snapshot(
+        self, db: AsyncSession, channel_id: uuid.UUID, start_date: date, end_date: date, payload: dict
+    ) -> AnalyticsSnapshot:
+        snap = AnalyticsSnapshot(
+            channel_id=channel_id,
+            start_date=start_date,
+            end_date=end_date,
+            payload=payload,
+        )
+        db.add(snap)
+        await db.flush()
+        return snap
+
     async def get_summary(
         self, db: AsyncSession, channel_id: uuid.UUID, start_date: date, end_date: date
     ) -> AISummary | None:

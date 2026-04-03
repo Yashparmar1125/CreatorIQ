@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { api } from '../lib/api';
 
 interface AnalyticsState {
   retentionData: any;
@@ -35,7 +36,32 @@ export const useAnalyticsStore = create<AnalyticsState>((set) => ({
   loading: false,
   fetchAnalytics: async () => {
     set({ loading: true });
-    await new Promise(r => setTimeout(r, 1500));
-    set({ loading: false });
+    try {
+      const { data: channelData } = await api.get('/channels');
+      const channels = channelData.data?.channels || [];
+      const primary = channels.find((c: any) => c.is_primary) || channels[0];
+      
+      if (!primary?.id) {
+        set({ loading: false });
+        return;
+      }
+
+      const { data } = await api.get(`/analytics/dashboard?channel_id=${primary.id}`);
+      const payload = data.data;
+
+      console.log("Analytics Payload: ",payload);
+
+      if (payload) {
+        set({
+           retentionData: payload.retentionData,
+           trafficSources: payload.trafficSources,
+           audienceDemographics: payload.audienceDemographics,
+        });
+      }
+    } catch (e) {
+      console.error("Failed to fetch analytics", e);
+    } finally {
+      set({ loading: false });
+    }
   },
 }));

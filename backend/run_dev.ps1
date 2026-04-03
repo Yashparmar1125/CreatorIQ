@@ -4,10 +4,12 @@ $Services = @(
     @{ Name = "Channel"; Dir = "channel"; Port = 8002 },
     @{ Name = "Trend"; Dir = "trend"; Port = 8003 },
     @{ Name = "Strategy"; Dir = "strategy"; Port = 8004 },
+    @{ Name = "Planner"; Dir = "planner"; Port = 8005 },
+    @{ Name = "Analytics"; Dir = "analytics"; Port = 8006 },
     @{ Name = "ML"; Dir = "ml"; Port = 8007 }
 )
 
-$EnvName = "create"
+$EnvName = "base"
 
 Write-Host "--- CreatorIQ Service Runner (Conda) ---" -ForegroundColor Cyan
 
@@ -16,5 +18,5 @@ foreach ($Service in $Services) {
 
     Write-Host "[+] Launching $($Service.Name)..."
 
-    Start-Process powershell -ArgumentList "-NoExit -Command `"cd $Path; conda activate $EnvName; python -m uvicorn app.main:app --host 127.0.0.1 --port $($Service.Port) --reload`""
+    Start-Process powershell -ArgumentList "-NoExit -Command `"cd $Path; conda activate $EnvName; uvicorn app.main:app --host 127.0.0.1 --port $($Service.Port) --reload`""
 }
