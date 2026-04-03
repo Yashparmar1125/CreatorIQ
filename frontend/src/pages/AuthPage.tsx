@@ -1,7 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { Link, useNavigate, useLocation, useSearchParams } from 'react-router';
+import React, { useEffect } from 'react';
+import { useNavigate, useLocation, useSearchParams, Link } from 'react-router';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { useAuthStore } from '../stores/useAuthStore';
-import { Youtube, Mail, User, Lock, Loader2, Sparkles, CheckCircle2, ChevronRight } from 'lucide-react';
+import { useNotificationStore } from '../stores/useNotificationStore';
+import { Youtube, Mail, User, Lock, Loader2, Sparkles, CheckCircle2, ChevronRight, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import logo from '../assets/logo.png';
 
@@ -15,59 +19,82 @@ const OAUTH_LOGIN_ERRORS: Record<string, string> = {
   access_denied: 'Google sign-in was cancelled.',
 };
 
+const authSchema = z.object({
+  name: z.string().optional(),
+  email: z.string().email('Please enter a valid work email'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+});
+
+type AuthFormValues = z.infer<typeof authSchema>;
+
 export const AuthPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { addNotification } = useNotificationStore();
   
-  // Determine mode from path
   const isLoginPage = location.pathname === '/login';
   const mode = isLoginPage ? 'login' : 'signup';
-
-  const [email, setEmail] = useState('');
-  const [name, setName] = useState('');
-  const [password, setPassword] = useState('');
-  const [oauthRedirectError, setOauthRedirectError] = useState<string | null>(null);
 
   const loginWithPassword = useAuthStore((s) => s.loginWithPassword);
   const register = useAuthStore((s) => s.register);
   const startGoogleOAuth = useAuthStore((s) => s.startGoogleOAuth);
-  const error = useAuthStore((s) => s.error);
+  const storeError = useAuthStore((s) => s.error);
   const clearError = useAuthStore((s) => s.clearError);
   const isLoading = useAuthStore((s) => s.isLoading);
 
+  const {
+    register: registerField,
+    handleSubmit,
+    formState: { errors },
+    reset,
+    setError,
+  } = useForm<AuthFormValues>({
+    resolver: zodResolver(authSchema),
+    mode: 'onTouched',
+  });
+
   useEffect(() => {
     clearError();
-    setOauthRedirectError(null);
-  }, [mode, clearError]);
+    reset();
+  }, [mode, clearError, reset]);
 
   useEffect(() => {
     const errorCode = searchParams.get('error');
-    if (!errorCode) return;
-    setOauthRedirectError(OAUTH_LOGIN_ERRORS[errorCode] ?? errorCode.replace(/_/g, ' '));
-  }, [searchParams]);
+    if (errorCode) {
+      const message = OAUTH_LOGIN_ERRORS[errorCode] ?? errorCode.replace(/_/g, ' ');
+      addNotification('error', 'Authentication Failed', message);
+    }
+  }, [searchParams, addNotification]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onFormSubmit = async (data: AuthFormValues) => {
+    // Manual validation for Name on signup mode
+    if (mode === 'signup' && (!data.name || data.name.length < 2)) {
+      setError('name', { type: 'manual', message: 'Full name must be at least 2 characters' });
+      return;
+    }
+
     try {
       if (mode === 'login') {
-        await loginWithPassword(email, password);
+        await loginWithPassword(data.email, data.password);
+        addNotification('success', 'Welcome Back!', 'Redirecting to your dashboard...');
         const from = (location.state as { from?: { pathname?: string } })?.from?.pathname || '/app/dashboard';
         navigate(from, { replace: true });
       } else {
-        await register(name, email, password);
+        await register(data.name || '', data.email, data.password);
+        addNotification('success', 'Account Created', 'Welcome to CreatorIQ. Let\'s set up your profile.');
         navigate('/onboarding');
       }
-    } catch {
-      /* error set in store */
+    } catch (err: any) {
+       // Error handled by store and interceptor
     }
   };
 
   const handleGoogle = async () => {
     try {
       await startGoogleOAuth();
-    } catch {
-      /* error set in store */
+    } catch (err: any) {
+      addNotification('error', 'OAuth Error', 'Could not initiate Google sign-in.');
     }
   };
 
@@ -75,7 +102,7 @@ export const AuthPage: React.FC = () => {
     <div className="h-screen bg-neutral-950 flex overflow-hidden relative font-sora">
       <div className="absolute inset-0 mesh-glow opacity-20 pointer-events-none" />
 
-      {/* Left Decoration / Marketing Column */}
+      {/* Left Column: Branding/Value Prop */}
       <div className="hidden lg:flex w-1/2 p-12 flex-col justify-between relative border-r border-white/5 bg-white/2 overflow-hidden">
         <div className="absolute top-0 right-0 -mt-24 -mr-24 w-96 h-96 bg-brand-600/10 rounded-full blur-[100px] animate-breathe" />
         <div className="absolute bottom-0 left-0 -mb-24 -ml-24 w-96 h-96 bg-accent-500/10 rounded-full blur-[100px]" />
@@ -121,7 +148,6 @@ export const AuthPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Only show testimonial on taller screens to prevent scrolling on 730px height */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -147,16 +173,9 @@ export const AuthPage: React.FC = () => {
         </motion.div>
       </div>
 
-      {/* Right Column - Auth Forms */}
+      {/* Right Column: Form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8 lg:p-14 relative z-10 bg-white">
         <div className="w-full max-w-md">
-          <div className="lg:hidden mb-12 flex items-center gap-4 justify-center">
-            <div className="w-10 h-10 rounded-xl bg-neutral-900 flex items-center justify-center text-white font-bold text-xl">
-              C
-            </div>
-            <span className="font-bold text-2xl tracking-tight text-neutral-900">CreatorIQ</span>
-          </div>
-
           <AnimatePresence mode="wait">
             <motion.div
               key={mode}
@@ -174,14 +193,15 @@ export const AuthPage: React.FC = () => {
                 </p>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {(error || oauthRedirectError) && (
+              <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
+                {storeError && (
                   <motion.div 
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
-                    className="rounded-2xl bg-red-50 border border-red-100 p-4 text-sm font-black text-red-700 shadow-sm mb-6"
+                    className="rounded-2xl bg-rose-50 border border-rose-100 p-4 text-sm font-black text-rose-700 shadow-sm mb-6 flex items-start gap-3"
                   >
-                    {error || oauthRedirectError}
+                    <AlertCircle className="w-5 h-5 shrink-0" />
+                    {storeError}
                   </motion.div>
                 )}
 
@@ -196,16 +216,19 @@ export const AuthPage: React.FC = () => {
                       >
                         <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest pl-1">Full Name</label>
                         <div className="relative group">
-                          <User className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-brand-600 transition-colors" />
+                          <User className={`w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${errors.name ? 'text-rose-500' : 'text-neutral-400 group-focus-within:text-brand-600'}`} />
                           <input
+                            {...registerField('name')}
                             type="text"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
                             placeholder="Elon Musk"
-                            required={mode === 'signup'}
-                            className="w-full pl-11 pr-4 py-3.5 rounded-2xl border border-neutral-100 bg-neutral-50/50 focus:bg-white text-neutral-900 text-sm font-black focus:ring-8 focus:ring-brand-600/5 focus:border-brand-600/20 outline-none transition-all placeholder:text-neutral-300"
+                            className={`w-full pl-11 pr-4 py-3.5 rounded-2xl border bg-neutral-50/50 focus:bg-white text-neutral-900 text-sm font-black outline-none transition-all placeholder:text-neutral-300 ${
+                              errors.name ? 'border-rose-200 focus:ring-rose-500/5 focus:border-rose-500/20' : 'border-neutral-100 focus:ring-brand-600/5 focus:border-brand-600/20'
+                            }`}
                           />
                         </div>
+                        {errors.name && (
+                          <p className="text-[10px] text-rose-500 font-bold mt-1 pl-1">{errors.name.message}</p>
+                        )}
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -213,16 +236,19 @@ export const AuthPage: React.FC = () => {
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest pl-1">Work Email</label>
                     <div className="relative group">
-                      <Mail className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-brand-600 transition-colors" />
+                      <Mail className={`w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${errors.email ? 'text-rose-500' : 'text-neutral-400 group-focus-within:text-brand-600'}`} />
                       <input
+                        {...registerField('email')}
                         type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
                         placeholder="name@creatoriq.ai"
-                        required
-                        className="w-full pl-11 pr-4 py-3.5 rounded-2xl border border-neutral-100 bg-neutral-50/50 focus:bg-white text-neutral-900 text-sm font-black focus:ring-8 focus:ring-brand-600/5 focus:border-brand-600/20 outline-none transition-all placeholder:text-neutral-300"
+                        className={`w-full pl-11 pr-4 py-3.5 rounded-2xl border bg-neutral-50/50 focus:bg-white text-neutral-900 text-sm font-black outline-none transition-all placeholder:text-neutral-300 ${
+                          errors.email ? 'border-rose-200 focus:ring-rose-500/5 focus:border-rose-500/20' : 'border-neutral-100 focus:ring-brand-600/5 focus:border-brand-600/20'
+                        }`}
                       />
                     </div>
+                    {errors.email && (
+                      <p className="text-[10px] text-rose-500 font-bold mt-1 pl-1">{errors.email.message}</p>
+                    )}
                   </div>
  
                   <div className="space-y-1.5">
@@ -233,17 +259,19 @@ export const AuthPage: React.FC = () => {
                       )}
                     </div>
                     <div className="relative group">
-                      <Lock className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-brand-600 transition-colors" />
+                      <Lock className={`w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${errors.password ? 'text-rose-500' : 'text-neutral-400 group-focus-within:text-brand-600'}`} />
                       <input
+                        {...registerField('password')}
                         type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
                         placeholder="••••••••"
-                        required
-                        minLength={mode === 'signup' ? 8 : undefined}
-                        className="w-full pl-11 pr-4 py-3.5 rounded-2xl border border-neutral-100 bg-neutral-50/50 focus:bg-white text-neutral-900 text-sm font-black focus:ring-8 focus:ring-brand-600/5 focus:border-brand-600/20 outline-none transition-all placeholder:text-neutral-300"
+                        className={`w-full pl-11 pr-4 py-3.5 rounded-2xl border bg-neutral-50/50 focus:bg-white text-neutral-900 text-sm font-black outline-none transition-all placeholder:text-neutral-300 ${
+                          errors.password ? 'border-rose-200 focus:ring-rose-500/5 focus:border-rose-500/20' : 'border-neutral-100 focus:ring-brand-600/5 focus:border-brand-600/20'
+                        }`}
                       />
                     </div>
+                    {errors.password && (
+                      <p className="text-[10px] text-rose-500 font-bold mt-1 pl-1">{errors.password.message}</p>
+                    )}
                   </div>
                 </div>
 
@@ -297,9 +325,9 @@ export const AuthPage: React.FC = () => {
               {mode === 'signup' && (
                 <p className="mt-10 text-center text-[10px] text-neutral-300 font-bold leading-relaxed max-w-xs mx-auto uppercase tracking-tighter">
                   By signing up, you agree to our <br />
-                  <a href="#" className="text-neutral-400 hover:text-neutral-900 transition-colors underline underline-offset-4">Terms</a>
+                  <Link to="/terms" className="text-neutral-400 hover:text-neutral-900 transition-colors underline underline-offset-4">Terms</Link>
                   {' & '}
-                  <a href="#" className="text-neutral-400 hover:text-neutral-900 transition-colors underline underline-offset-4">Privacy</a>
+                  <Link to="/privacy" className="text-neutral-400 hover:text-neutral-900 transition-colors underline underline-offset-4">Privacy</Link>
                 </p>
               )}
             </motion.div>

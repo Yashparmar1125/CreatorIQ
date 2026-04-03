@@ -6,7 +6,7 @@ import { useAuthStore } from '../../../stores/useAuthStore';
 interface OnboardingState {
   step: number;
   niche: string[];
-  format: 'long' | 'shorts' | 'both' | null;
+  format: 'long-form' | 'shorts' | 'hybrid' | null;
   frequency: string | null;
   tone: string | null;
   isYoutubeConnected: boolean;
@@ -30,7 +30,7 @@ interface OnboardingState {
   prevStep: () => void;
   setNiche: (niche: string[]) => void;
   setCustomNiche: (niche: string | null) => void;
-  setFormat: (format: 'long' | 'shorts' | 'both') => void;
+  setFormat: (format: 'long-form' | 'shorts' | 'hybrid') => void;
   setFrequency: (frequency: string) => void;
   setTone: (tone: string) => void;
   setYoutubeConnected: (connected: boolean) => void;
@@ -70,10 +70,11 @@ export const useOnboardingStore = create<OnboardingState>()(
       fetchChannels: async () => {
         set({ isLoading: true, error: null });
         try {
-          const { data } = await api.get('/channels');
+          // Pointing to internal channels list
+          const { data } = await api.get('/internal/channels/me');
           const channels = data.data?.channels || [];
           if (channels.length > 0) {
-            const primary = channels.find((c: any) => c.is_primary) || channels[0];
+            const primary = channels[0];
             set({ 
               connectedChannel: { 
                 id: primary.id,
@@ -94,7 +95,7 @@ export const useOnboardingStore = create<OnboardingState>()(
           }
         } catch (e: any) {
           console.error('Failed to fetch channels:', e);
-          // Don't show error to user yet, just keep it as not connected
+          set({ isYoutubeConnected: false });
         } finally {
           set({ isLoading: false });
         }
@@ -123,7 +124,6 @@ export const useOnboardingStore = create<OnboardingState>()(
             useAuthStore.getState().setUser(data.data);
           }
           set({ isLoading: false });
-          get().reset(); // Clear store and localStorage
         } catch (e: any) {
           set({ 
             isLoading: false, 

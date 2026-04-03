@@ -5,7 +5,10 @@ import { OnboardingWizard } from './features/onboarding/components/OnboardingWiz
 import { LandingPage } from './pages/LandingPage';
 import { AuthPage } from './pages/AuthPage';
 import { OAuthCallbackPage } from './pages/OAuthCallbackPage';
+import { PrivacyPage } from './pages/PrivacyPage';
+import { TermsPage } from './pages/TermsPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { Toaster } from './components/Toaster';
 
 // Feature Pages
 import { DashboardPage } from './features/dashboard/pages/DashboardPage';
@@ -30,6 +33,14 @@ const router = createBrowserRouter([
   {
     path: '/auth/callback',
     element: <OAuthCallbackPage />,
+  },
+  {
+    path: '/privacy',
+    element: <PrivacyPage />,
+  },
+  {
+    path: '/terms',
+    element: <TermsPage />,
   },
   {
     path: '/onboarding',
@@ -113,6 +124,7 @@ function App() {
   return (
     <>
       <RouterProvider router={router} />
+      <Toaster />
       <Analytics />
     </>
   );
