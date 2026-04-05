@@ -14,6 +14,7 @@ export const Footer: React.FC = () => {
             </Link>
           </div>
           <p className="text-neutral-400 font-medium max-w-xs">Building the platform for the next decade of content creation.</p>
+          <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest">Contact: yashparmar11y@gmail.com</p>
           <div className="flex gap-4">
             <div className="w-9 h-9 rounded-full border border-neutral-100 flex items-center justify-center hover:bg-neutral-50 transition-colors">
               <Globe className="w-3.5 h-3.5 text-neutral-400" />

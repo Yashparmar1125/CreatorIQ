@@ -1,29 +1,53 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Database, Lock, Eye, Globe } from 'lucide-react';
+import { Database, Lock, Globe, ShieldCheck, Trash2 } from 'lucide-react';
 import { PublicLayout } from '../components/organisms/PublicLayout';
 
 export const PrivacyPage: React.FC = () => {
   const sections = [
     {
       icon: <Database className="w-5 h-5 text-brand-600" />,
-      title: "Data Collection",
-      content: "We collect information you provide directly to us when you create an account, connect your YouTube channel, or use our analytics tools. This includes your name, email address, and YouTube channel metadata provided via the Google OAuth 2.0 API."
+      title: "Data Collection & Access",
+      content: "CreatorIQ uses YouTube API Services to access metadata from your connected YouTube channel. This include channel statistics, video metadata, and performance metrics. We only request the minimum permissions (OAuth scopes) necessary to provide our analytics and planning features."
     },
     {
       icon: <Lock className="w-5 h-5 text-brand-600" />,
-      title: "How We Use Data",
-      content: "Your data is used to provide AI-driven content optimization, trend analysis, and channel growth strategies. We do not sell your personal information. We use YouTube data only to provide the specific benchmarking and planning features of CreatorIQ."
+      title: "How We Use Google Data",
+      content: "The data retrieved from Google is used exclusively to power the CreatorIQ dashboard, providing you with AI-driven content optimization, trend analysis, and benchmarking. We do not use this data for advertising or sell it to third-party brokers."
     },
     {
-      icon: <Eye className="w-5 h-5 text-brand-600" />,
-      title: "Data Sharing",
-      content: "We do not share your private channel data with third parties except as required to provide our service (e.g., secure cloud hosting) or as required by law. All data is processed using industry-standard encryption."
+      icon: <Trash2 className="w-5 h-5 text-brand-600" />,
+      title: "Data Storage & Retention",
+      content: "We store your YouTube metadata securely using industry-standard encryption. We retain this data only for as long as your account is active or as needed to provide you with historical analytics. You can request data deletion at any time via your account settings."
+    },
+    {
+      icon: <ShieldCheck className="w-5 h-5 text-brand-600" />,
+      title: "Revoking Access",
+      content: (
+        <span>
+          You can revoke CreatorIQ's access to your data at any time via the{' '}
+          <a 
+            href="https://security.google.com/settings/security/permissions" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-brand-600 underline hover:text-brand-700"
+          >
+            Google Security Settings page
+          </a>.
+        </span>
+      )
     },
     {
       icon: <Globe className="w-5 h-5 text-brand-600" />,
-      title: "YouTube API Services",
-      content: "CreatorIQ uses YouTube API Services. By using our platform, you also agree to be bound by the YouTube Terms of Service and the Google Privacy Policy."
+      title: "Third-Party Services",
+      content: (
+        <span>
+          CreatorIQ uses YouTube API Services. By using our platform, you agree to be bound by the{' '}
+          <a href="https://www.youtube.com/t/terms" target="_blank" rel="noopener noreferrer" className="text-brand-600 underline">YouTube Terms of Service</a>
+          {' '}and the{' '}
+          <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" className="text-brand-600 underline">Google Privacy Policy</a>.
+        </span>
+      )
     }
   ];
 
@@ -40,7 +64,7 @@ export const PrivacyPage: React.FC = () => {
               Privacy <span className="text-neutral-400">First.</span>
             </h1>
             <p className="text-neutral-500 text-base md:text-lg leading-relaxed font-bold opacity-80 max-w-xl">
-              Last updated: April 3, 2026. Your trust is our most valuable asset. We build tools that help you grow, not exploit your data.
+              Last updated: April 5, 2026. Your trust is our most valuable asset. CreatorIQ is committed to protecting your data and being transparent about our practices.
             </p>
           </div>
 
@@ -59,16 +83,16 @@ export const PrivacyPage: React.FC = () => {
                   </div>
                   <h2 className="text-xl font-bold tracking-tight text-neutral-900">{section.title}</h2>
                 </div>
-                <p className="text-neutral-500 leading-relaxed font-medium text-sm opacity-80">
+                <div className="text-neutral-500 leading-relaxed font-medium text-sm opacity-80">
                   {section.content}
-                </p>
+                </div>
               </motion.section>
             ))}
           </div>
 
           <div className="pt-12">
             <p className="text-sm text-neutral-400 leading-relaxed text-center font-bold italic">
-              If you have questions about our privacy practices, please contact us at support@creatoriq.ai
+              If you have questions about our privacy practices, please contact us at yashparmar11y@gmail.com
             </p>
           </div>
         </motion.div>
