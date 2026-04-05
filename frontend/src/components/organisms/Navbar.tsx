@@ -20,10 +20,9 @@ export const Navbar: React.FC = () => {
         </div>
 
         <div className="hidden md:flex items-center gap-8 text-[10px] font-bold uppercase tracking-[0.15em] text-neutral-400">
-          <Link to="/" className="hover:text-neutral-900 transition-colors">Product</Link>
-          <a href="#" className="hover:text-neutral-900 transition-colors">Network</a>
-          <a href="#" className="hover:text-neutral-900 transition-colors">Insights</a>
-          <a href="#" className="hover:text-neutral-900 transition-colors">Pricing</a>
+          <Link to="/product" className="hover:text-neutral-900 transition-colors">Product</Link>
+          <Link to="/insights" className="hover:text-neutral-900 transition-colors">Insights</Link>
+          <Link to="/pricing" className="hover:text-neutral-900 transition-colors">Pricing</Link>
         </div>
 
         <div className="flex items-center gap-4">

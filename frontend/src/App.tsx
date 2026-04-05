@@ -17,10 +17,27 @@ import { StrategyPage } from './features/strategy/pages/StrategyPage';
 import { PlannerPage } from './features/planner/pages/PlannerPage';
 import { AnalyticsPage } from './features/analytics/pages/AnalyticsPage';
 
+// Public Pages
+import { ProductPage } from './pages/ProductPage';
+import { PricingPage } from './pages/PricingPage';
+import { InsightsPage } from './pages/InsightsPage';
+
 const router = createBrowserRouter([
   {
     path: '/',
     element: <LandingPage />,
+  },
+  {
+    path: '/product',
+    element: <ProductPage />,
+  },
+  {
+    path: '/pricing',
+    element: <PricingPage />,
+  },
+  {
+    path: '/insights',
+    element: <InsightsPage />,
   },
   {
     path: '/login',

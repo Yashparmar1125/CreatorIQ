@@ -26,20 +26,19 @@ export const Footer: React.FC = () => {
         </div>
 
         <div className="space-y-6">
-          <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-neutral-900">Ecosystem</h4>
+          <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-neutral-900">Product</h4>
           <ul className="space-y-4 text-sm font-bold text-neutral-400">
-            <li><a href="#" className="hover:text-brand-600 transition-colors">Insights Hub</a></li>
-            <li><a href="#" className="hover:text-brand-600 transition-colors">Strategic Planning</a></li>
-            <li><a href="#" className="hover:text-brand-600 transition-colors">Advanced Analytics</a></li>
+            <li><Link to="/product" className="hover:text-brand-600 transition-colors">Platform Overview</Link></li>
+            <li><Link to="/insights" className="hover:text-brand-600 transition-colors">Insights Hub</Link></li>
+            <li><Link to="/pricing" className="hover:text-brand-600 transition-colors">Pricing Plans</Link></li>
           </ul>
         </div>
 
         <div className="space-y-6">
-          <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-neutral-900">Company</h4>
+          <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-neutral-900">Legal</h4>
           <ul className="space-y-4 text-sm font-bold text-neutral-400">
             <li><Link to="/privacy" className="hover:text-brand-600 transition-colors">Privacy Policy</Link></li>
             <li><Link to="/terms" className="hover:text-brand-600 transition-colors">Terms of Service</Link></li>
-            <li><a href="#" className="hover:text-brand-600 transition-colors">Documentation</a></li>
           </ul>
         </div>
       </div>
