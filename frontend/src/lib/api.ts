@@ -1,4 +1,5 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
+import { useNotificationStore } from '../stores/useNotificationStore';
 
 const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:8000/v1';
 
@@ -26,6 +27,9 @@ api.interceptors.response.use(
     }
     const refresh = localStorage.getItem('ciq_refresh_token');
     if (!refresh) {
+      if (error.response?.status && error.response.status >= 500) {
+        useNotificationStore.getState().addNotification('error', 'Server Error', 'We are experiencing some technical difficulties.');
+      }
       return Promise.reject(error);
     }
     original._retry = true;
@@ -46,6 +50,7 @@ api.interceptors.response.use(
     } catch {
       localStorage.removeItem('ciq_access_token');
       localStorage.removeItem('ciq_refresh_token');
+      useNotificationStore.getState().addNotification('error', 'Session Expired', 'Please sign in again.');
       return Promise.reject(error);
     }
   }

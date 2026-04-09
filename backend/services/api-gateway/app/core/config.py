@@ -1,5 +1,8 @@
+import os
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Get root .env path relative to this file
+env_path = os.path.join(os.path.dirname(__file__), "../../../../.env")
 
 class Settings(BaseSettings):
     service_name: str = "api-gateway"
@@ -8,7 +11,7 @@ class Settings(BaseSettings):
     # JWT verification (user auth)
     jwt_issuer: str = "creatoriq-auth"
     jwt_audience: str = "creatoriq-api"
-    jwt_public_key_path: str = "/run/secrets/jwt_public.pem"
+    jwt_public_key_path: str = ""
 
     # Internal service auth (service-to-service)
     internal_service_token: str = "change-me"
@@ -22,7 +25,7 @@ class Settings(BaseSettings):
     analytics_service_url: str = "http://127.0.0.1:8006"
     ml_service_url: str = "http://127.0.0.1:8007"
 
-    model_config = SettingsConfigDict(env_file="../../.env", extra="ignore")
+    model_config = SettingsConfigDict(env_file=env_path, extra="ignore")
 
 
 settings = Settings()
