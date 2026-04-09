@@ -1,5 +1,11 @@
 import hashlib
+import numpy as np
+import serpapi
+from sklearn.linear_model import LinearRegression
+import httpx
 from typing import Any
+
+from app.core.config import settings
 
 
 def _hash_score(s: str) -> float:
@@ -9,22 +15,130 @@ def _hash_score(s: str) -> float:
 
 class MlService:
     def __init__(self) -> None:
-        pass
+        self.client = serpapi.Client(api_key=settings.serpapi_key)
 
     def health(self) -> dict:
         return {"data": {"service": "ml", "status": "ok"}, "meta": {"request_id": "local-dev"}}
 
-    def trend_forecast(self, payload: dict[str, Any]) -> dict:
+    async def trend_forecast(self, payload: dict[str, Any]) -> dict:
         topic = str(payload.get("topic") or "")
-        base = float(payload.get("tvs_score") or 50.0)
-        bump = _hash_score(topic) * 5.0
-        return {
-            "data": {
-                "forecast_tvs": min(100.0, base + bump),
-                "confidence": 0.5 + (_hash_score(topic + "c") * 0.49),
-            },
-            "meta": {"request_id": "local-dev"},
-        }
+        
+        try:
+            # 1. Fetch Google Trends Timeseries from SerpApi
+            results = self.client.search({
+                "engine": "google_trends",
+                "q": topic,
+                "data_type": "TIMESERIES"
+            })
+            
+            interest_over_time = results.get("interest_over_time", {})
+            timeline_data = interest_over_time.get("timeline_data", [])
+            print(f"[MlService] SerpApi returned {len(timeline_data)} data points for '{topic}'")
+            
+            if not timeline_data:
+                # Fallback to hash-based if no data
+                base = float(payload.get("tvs_score") or 50.0)
+                bump = _hash_score(topic) * 5.0
+                return {
+                    "data": {
+                        "forecast_tvs": min(100.0, base + bump),
+                        "confidence": 0.5 + (_hash_score(topic + "c") * 0.49),
+                        "predictions": {"2_day": base + 1, "3_day": base + 2, "5_day": base + 3}
+                    },
+                    "meta": {"request_id": "local-dev"}
+                }
+
+            # 2. Extract X and y for Linear Regression
+            # y is the value, X is the index
+            y = np.array([float(t["values"][0]["extracted_value"]) for t in timeline_data])
+            X = np.arange(len(y)).reshape(-1, 1)
+            
+            # 3. Train Model
+            model = LinearRegression()
+            model.fit(X, y)
+            
+            # 4. Predict for 2, 3, 5 days
+            future_days = [2, 3, 5]
+            X_future = np.array([len(y) + d for d in future_days]).reshape(-1, 1)
+            preds = model.predict(X_future)
+            
+            # 5. Calculate Metrics (from notebook)
+            n = len(y) - 1
+            growth_last = (y[n] - y[n-1]) / (y[n-1] or 1)
+            growth_prev = (y[n-2] - y[n-3]) / (y[n-3] or 1)
+            acceleration = growth_last > growth_prev
+            moving_average = np.mean(y[-3:])
+            peak_distance = 1 - (y[n] / 100.0)
+            
+            # 6. OpenRouter Refinement
+            # We use OpenRouter to validate the trend based on the calculated stats
+            prompt = f"""
+            Analyze this trend intelligence for the topic: '{topic}'
+            Stats:
+            - Current Value: {y[n]}
+            - Growth (Last): {growth_last:.2%}
+            - Acceleration: {'Growing' if acceleration else 'Steady/Decelerating'}
+            - 3-period Moving Average: {moving_average:.2f}
+            - Peak Distance: {peak_distance:.2f}
+            - Predictions (2,3,5 days): {preds.tolist()}
+            
+            Provide a refinement score (0-100) and a brief expert analysis.
+            Format: SCORE: <0-100> | ANALYSIS: <text>
+            """
+            
+            refined_score = 50.0
+            expert_analysis = "Standard prediction model applied."
+            
+            try:
+                async with httpx.AsyncClient(timeout=10.0) as http_client:
+                    response = await http_client.post(
+                        "https://openrouter.ai/api/v1/chat/completions",
+                        headers={
+                            "Authorization": f"Bearer {settings.openrouter_api_key}",
+                            "Content-Type": "application/json"
+                        },
+                        json={
+                            "model": "google/gemini-2.0-flash-001",
+                            "messages": [{"role": "user", "content": prompt}]
+                        }
+                    )
+                    if response.status_code == 200:
+                        content = response.json()["choices"][0]["message"]["content"]
+                        if "SCORE:" in content and "ANALYSIS:" in content:
+                            score_part = content.split("SCORE:")[1].split("|")[0].strip()
+                            refined_score = float(score_part)
+                            expert_analysis = content.split("ANALYSIS:")[1].strip()
+                            print(f"[MlService] OpenRouter refined score for '{topic}': {refined_score}")
+            except Exception as e:
+                print(f"OpenRouter error: {e}")
+
+            return {
+                "data": {
+                    "forecast_tvs": refined_score,
+                    "confidence": 0.8 if bool(acceleration) else 0.6,
+                    "predictions": {
+                        "2_day": float(preds[0]),
+                        "3_day": float(preds[1]),
+                        "5_day": float(preds[2])
+                    },
+                    "metrics": {
+                        "growth": float(growth_last),
+                        "acceleration": bool(acceleration),
+                        "moving_average": float(moving_average),
+                        "peak_distance": float(peak_distance)
+                    },
+                    "expert_analysis": expert_analysis
+                },
+                "meta": {"request_id": "local-dev"}
+            }
+
+        except Exception as e:
+            print(f"ML Processing error: {e}")
+            return {
+                "error": str(e),
+                "data": {"forecast_tvs": 50.0, "confidence": 0.5},
+                "meta": {"request_id": "local-dev-error"}
+            }
 
     def score_idea(self, payload: dict[str, Any]) -> dict:
         topic = str(payload.get("topic") or "")

@@ -4,6 +4,7 @@ import { api } from '../lib/api';
 export interface Trend {
   id: string;
   topic: string;
+  tvs_score: number;
   velocity: string;
   volume: string;
   niches: string[];
@@ -13,6 +14,12 @@ export interface Trend {
   saturation_index: number;
   stability_score: number;
   adjacent_topics: string[];
+  predictions?: {
+    "2_day": number;
+    "3_day": number;
+    "5_day": number;
+  };
+  prediction_confidence: number;
 }
 
 interface TrendsState {
