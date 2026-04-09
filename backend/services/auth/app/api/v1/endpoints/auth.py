@@ -163,3 +163,13 @@ async def get_internal_youtube_tokens(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     return await service.get_internal_youtube_tokens(db)
+
+
+@router.get("/internal/auth/youtube/token/{channel_id}")
+async def get_internal_youtube_token_by_channel(
+    channel_id: str,
+    _: None = Depends(require_internal_token),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    import uuid
+    return await service.get_internal_youtube_token_by_channel(db, uuid.UUID(channel_id))

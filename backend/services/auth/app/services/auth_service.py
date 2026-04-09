@@ -328,6 +328,24 @@ class AuthService:
                 pass
         return {"data": {"tokens": data}, "meta": {"request_id": "local-dev"}}
 
+    async def get_internal_youtube_token_by_channel(self, db: AsyncSession, channel_id: UUID) -> dict:
+        t = await self.repo.get_google_token_by_channel(db, channel_id)
+        if not t:
+            raise HTTPException(status_code=404, detail="Token not found for channel")
+        
+        try:
+            dec_token = decrypt_token(t.access_token_enc)
+            return {
+                "data": {
+                    "user_id": str(t.user_id),
+                    "channel_id": str(t.channel_id),
+                    "access_token": dec_token,
+                },
+                "meta": {"request_id": "local-dev"}
+            }
+        except Exception:
+            raise HTTPException(status_code=500, detail="Failed to decrypt token")
+
     async def _sync_channel_metadata(self, user_id: UUID, access_token: str) -> None:
         """Fetch YouTube channel metadata, latest video stats, and sync to Channel service."""
         try:

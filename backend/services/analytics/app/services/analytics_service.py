@@ -1,5 +1,6 @@
 import uuid
 from datetime import date
+import httpx
 
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -124,14 +125,33 @@ class AnalyticsService:
     ) -> dict:
         _ = user
         ensure_channel_allowed(allowed_channels, channel_id)
-        snap = await self.repo.latest_snapshot(db, channel_id)
         
-        # If we have real stats, we could blend them here, but we must return the strict dashboard payload 
-        # structure expected by the UI.
-        # Fallback values
-        views = 0
-        if snap and isinstance(snap.payload, dict):
-            views = snap.payload.get("views", 0)
+        # 1. Fetch live token from Auth Service
+        access_token = await self._get_google_token(channel_id)
+        
+        # 2. Fetch real stats (Simulated for now, would be YT Data/Analytics API)
+        # In a real scenario, we'd call https://youtubeanalytics.googleapis.com/v2/reports
+        total_views = 0
+        subscriber_growth = 0
+        
+        if access_token:
+            try:
+                async with httpx.AsyncClient() as client:
+                    # Get channel stats as a base for "real" data
+                    yt_res = await client.get(
+                        "https://www.googleapis.com/youtube/v3/channels",
+                        params={"part": "statistics", "id": str(channel_id)},
+                        headers={"Authorization": f"Bearer {access_token}"},
+                    )
+                    if yt_res.status_code == 200:
+                        chan_data = yt_res.json().get("items", [{}])[0]
+                        total_views = int(chan_data.get("statistics", {}).get("viewCount", 0))
+            except Exception as e:
+                print(f"Failed to fetch live YT stats: {e}")
+
+        snap = await self.repo.latest_snapshot(db, channel_id)
+        if total_views == 0 and snap and isinstance(snap.payload, dict):
+            total_views = snap.payload.get("views", 0)
 
         return {
             "data": {
@@ -142,10 +162,10 @@ class AnalyticsService:
                     "outro": 45
                 },
                 "trafficSources": [
-                    { "source": 'Direct Sync', "value": 45 },
-                    { "source": 'External Referrals', "value": 28 },
-                    { "source": 'Organic Discovery', "value": 17 },
-                    { "source": 'Paid Amplification', "value": 10 }
+                    { "source": 'Search', "value": 45 },
+                    { "source": 'Suggested', "value": 28 },
+                    { "source": 'External', "value": 17 },
+                    { "source": 'Others', "value": 10 }
                 ],
                 "audienceDemographics": {
                     "ageGroups": [
@@ -159,11 +179,27 @@ class AnalyticsService:
                         { "country": 'Germany', "percentage": 10 }
                     ]
                 },
-                "total_views": views,
-                "cached": bool(snap)
+                "total_views": total_views,
+                "cached": bool(snap) and total_views == 0
             },
             "meta": {"request_id": "local-dev"},
         }
+
+    async def _get_google_token(self, channel_id: uuid.UUID) -> str | None:
+        """Fetch decrypted token from Auth service."""
+        try:
+            from app.core.config import settings
+            import httpx
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                res = await client.get(
+                    f"{settings.auth_service_url}/internal/auth/youtube/token/{str(channel_id)}",
+                    headers={"X-Internal-Service-Token": settings.internal_service_token}
+                )
+                if res.status_code == 200:
+                    return res.json().get("data", {}).get("access_token")
+        except Exception as e:
+            print(f"Token retrieval failed: {e}")
+        return None
 
     async def rebuild_summary(
         self,

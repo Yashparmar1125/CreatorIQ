@@ -143,6 +143,16 @@ class AuthRepository:
         )
         return res.scalar_one_or_none()
 
+    async def get_google_token_by_channel(self, db: AsyncSession, channel_id: uuid.UUID) -> OAuthToken | None:
+        res = await db.execute(
+            select(OAuthToken).where(
+                OAuthToken.channel_id == channel_id,
+                OAuthToken.provider == OAuthProvider.youtube,
+                OAuthToken.revoked.is_(False)
+            )
+        )
+        return res.scalar_one_or_none()
+
     async def get_all_google_tokens(self, db: AsyncSession) -> list[OAuthToken]:
         res = await db.execute(
             select(OAuthToken).where(
