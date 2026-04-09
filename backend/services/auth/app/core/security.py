@@ -1,5 +1,6 @@
 import hashlib
 import secrets
+import logging
 from datetime import datetime, timedelta, timezone
 from functools import lru_cache
 from typing import Any
@@ -9,6 +10,8 @@ import bcrypt
 from cryptography.fernet import Fernet
 
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 def hash_password(password: str) -> str:
@@ -74,10 +77,17 @@ def encrypt_token(token: str) -> str:
 def decrypt_token(encrypted_token: str) -> str:
     if not encrypted_token:
         return ""
+    
+    # If it doesn't look like a Fernet token (starts with gAAAAA), it might be old plaintext
+    if not encrypted_token.startswith("gAAAAA"):
+        return encrypted_token
+        
     cipher = _get_fernet_cipher()
     try:
         return cipher.decrypt(encrypted_token.encode("utf-8")).decode("utf-8")
-    except Exception:
-        # Fallback for old plaintext tokens or invalid padding
-        return encrypted_token
+    except Exception as e:
+        logger.error(f"Decryption failed: {str(e)}")
+        # If decryption fails, do NOT return the encrypted garbage. 
+        # Return empty or raise so the caller knows the key is invalid.
+        return ""
 

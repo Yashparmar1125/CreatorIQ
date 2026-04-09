@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     database_url: str = ""
     internal_service_token: str = "change-me"
     auth_service_url: str = "http://127.0.0.1:8001"
+    aes_encryption_key: str | None = None
 
 
     model_config = SettingsConfigDict(env_file=env_path, extra="ignore")

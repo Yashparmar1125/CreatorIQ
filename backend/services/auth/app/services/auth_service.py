@@ -1,6 +1,7 @@
 import logging
 import secrets
 import time
+import logging
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 from urllib.parse import quote, urlencode
@@ -16,6 +17,8 @@ from app.core.security import create_access_token, generate_refresh_token, hash_
 from app.models.auth_models import OAuthProvider, PlanTier, User
 from app.repositories.auth_repository import AuthRepository
 from app.schemas.auth_schemas import UserCreate, UserLogin, OnboardingUpdate
+
+logger = logging.getLogger(__name__)
 
 logger = logging.getLogger(__name__)
 
@@ -325,6 +328,35 @@ class AuthService:
                 pass
         return {"data": {"tokens": data}, "meta": {"request_id": "local-dev"}}
 
+    async def get_internal_youtube_token_by_channel(self, db: AsyncSession, channel_id: UUID) -> dict:
+        logger.info(f"Internal request to fetch token for channel: {channel_id}")
+        t = await self.repo.get_google_token_by_channel(db, channel_id)
+        if not t:
+            logger.warning(f"No token record found in database for channel: {channel_id}")
+            raise HTTPException(status_code=404, detail="Token not found for channel")
+        
+        try:
+            dec_token = decrypt_token(t.access_token_enc)
+            if dec_token:
+                logger.info(f"Successfully decrypted token for channel: {channel_id}")
+            else:
+                logger.error(f"Decryption returned None for channel: {channel_id}")
+                
+            return {
+                "data": {
+                    "user_id": str(t.user_id),
+                    "channel_id": str(t.channel_id),
+                    "youtube_channel_id": t.provider_channel_id,
+                    "access_token": dec_token,
+                },
+                "meta": {"request_id": "local-dev"}
+            }
+        except Exception as e:
+            logger.error(f"Failed to decrypt token for channel {channel_id}: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to decrypt token")
+
+    async def _sync_channel_metadata(self, db: AsyncSession, user_id: UUID, access_token: str) -> None:
+        """Fetch YouTube channel metadata, latest video stats, and sync to Channel service."""
     async def _sync_essential(self, user_id: UUID, access_token: str) -> dict | None:
         """Fast sync for core metadata needed for Dashboard presence."""
         logger.info(f"Starting essential sync for user {user_id}")
@@ -337,6 +369,7 @@ class AuthService:
                 )
                 if yt_res.status_code != 200:
                     logger.error(f"YouTube Channel Fetch Failed: {yt_res.status_code} - {yt_res.text}")
+                    return
                     return None
 
                 items = yt_res.json().get("items", [])
@@ -429,6 +462,16 @@ class AuthService:
                     json=payload,
                     headers={"X-Internal-Service-Token": settings.internal_service_token},
                 )
+                if sync_res.status_code < 400:
+                    internal_channel_id = sync_res.json().get("data", {}).get("id")
+                    if internal_channel_id:
+                        yt_provider_id = channel_item.get("id")
+                        logger.info(f"Linking token to internal channel: {internal_channel_id} (YT: {yt_provider_id})")
+                        await self.repo.update_token_channel(db, user_id, UUID(internal_channel_id), yt_provider_id)
+                else:
+                    logger.error(f"Channel Sync Failed: {sync_res.status_code} - {sync_res.text}")
+        except Exception as e:
+            logger.error(f"Error during channel metadata sync: {str(e)}")
                 logger.info(f"Deep sync completed for user {user_id}")
         except Exception as e:
             logger.exception(f"Error during deep channel sync: {str(e)}")
