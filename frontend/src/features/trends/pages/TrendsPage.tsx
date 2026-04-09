@@ -142,21 +142,21 @@ export const TrendsPage: React.FC = () => {
              </div>
 
              {/* Metric Intelligence Row */}
-             <div className="grid grid-cols-2 gap-8 mb-10 pb-10 border-b border-neutral-100">
+             <div className="grid grid-cols-2 gap-8 mb-4">
                 <div className="space-y-4">
                   <div>
                     <p className="text-[9px] font-black text-neutral-300 uppercase tracking-widest flex items-center gap-2 mb-2">
                       <Activity className="w-3 h-3" />
-                      Stability Index
+                      Neural Confidence
                     </p>
                     <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden w-full">
-                       <div className="h-full bg-success-600 transition-all duration-1000" style={{ width: `${trend.stability_score}%` }}></div>
+                       <div className="h-full bg-success-600 transition-all duration-1000" style={{ width: `${trend.prediction_confidence * 100}%` }}></div>
                     </div>
                   </div>
                   <div>
                     <p className="text-[9px] font-black text-neutral-300 uppercase tracking-widest flex items-center gap-2 mb-2">
                       <Target className="w-3 h-3" />
-                      Saturation
+                      Market Saturation
                     </p>
                     <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden w-full">
                        <div className="h-full bg-brand-600 transition-all duration-1000" style={{ width: `${trend.saturation_index}%` }}></div>
@@ -166,13 +166,35 @@ export const TrendsPage: React.FC = () => {
                 <div className="pl-6 border-l border-neutral-100">
                    <p className="text-[10px] font-black text-neutral-300 uppercase tracking-widest flex items-center gap-2 mb-2">
                      <TrendingUp className="w-3 h-3" />
-                     Velocity
+                     Forecast Score
                    </p>
                    <p className="text-3xl font-black text-neutral-900 font-sora">
-                     {trend.velocity}
+                     {trend.tvs_score.toFixed(1)}
                    </p>
                 </div>
              </div>
+
+             {/* Predictions Row */}
+             {trend.predictions && (
+               <div className="mb-10 p-6 bg-brand-600/5 rounded-[32px] border border-brand-600/10">
+                  <div className="flex items-center gap-3 mb-4">
+                     <div className="w-8 h-8 rounded-full bg-brand-600/20 flex items-center justify-center">
+                        <TrendingUp className="w-4 h-4 text-brand-600" />
+                     </div>
+                     <p className="text-[10px] font-black text-brand-600 uppercase tracking-widest">Neural Forecasts (Days)</p>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                     {[2, 3, 5].map(day => (
+                       <div key={day} className="text-center">
+                          <p className="text-[9px] font-black text-neutral-400 mb-1">{day} Days</p>
+                          <p className="text-lg font-black text-neutral-900">
+                             {(trend.predictions as any)[`${day}_day`]?.toFixed(1)}
+                          </p>
+                       </div>
+                     ))}
+                  </div>
+               </div>
+             )}
 
              <div className="flex items-center justify-between">
                 <div className="space-y-1">

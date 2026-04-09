@@ -34,7 +34,7 @@ async def health() -> dict:
 
 @router.post("/internal/ml/trend-forecast")
 async def trend_forecast(body: TrendForecastBody, _: None = Depends(require_internal_token)) -> dict:
-    return service.trend_forecast(body.model_dump(exclude_none=True))
+    return await service.trend_forecast(body.model_dump(exclude_none=True))
 
 
 @router.post("/internal/ml/score-idea")
