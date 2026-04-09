@@ -81,8 +81,29 @@ class TrendService:
         import time
         import asyncio
 
+        # Google Trends Category IDs Mapping
+        CATEGORY_MAP = {
+            "all": 0,
+            "entertainment": 3,
+            "finance": 7,
+            "games": 8,
+            "gaming": 8,
+            "health": 45,
+            "business": 12,
+            "technology": 5,
+            "tech": 5,
+            "science": 174,
+            "sports": 20,
+            "news": 16,
+            "lifestyle": 4,
+            "beauty": 44,
+            "food": 71,
+            "travel": 67,
+            "auto": 47
+        }
+
         async def fetch_intelligence(niche: str):
-            cache_key = f"intel:{niche}"
+            cache_key = f"intel:{niche.lower()}"
             now = time.time()
             if cache_key in self._cache:
                 entry = self._cache[cache_key]
@@ -91,9 +112,22 @@ class TrendService:
 
             try:
                 import random
-                # Optimized: Only fetch RELATED_QUERIES to save SerpApi credits (1 call instead of 3)
-                # Removed gprop="youtube" because it often returns empty lists for broad niches, triggering our mock fallback
-                q_res = await search_google_trends(q=niche, data_type="RELATED_QUERIES")
+                # Determine if input is a known category or a raw keyword
+                cat_id = CATEGORY_MAP.get(niche.lower())
+                
+                search_params = {
+                    "data_type": "RELATED_QUERIES",
+                    "geo": "US" # Default to US for broader trends, can be parameterized
+                }
+                
+                if cat_id is not None:
+                    print(f"[TrendService] Identified Category Search: {niche} (ID: {cat_id})")
+                    search_params["cat"] = cat_id
+                else:
+                    print(f"[TrendService] Identified Keyword Search: {niche}")
+                    search_params["q"] = niche
+
+                q_res = await search_google_trends(**search_params)
                 
                 # Safely get queries
                 rq = q_res.get("related_queries", {})
@@ -208,12 +242,13 @@ class TrendService:
                 "tvs_score": tvs_score,
                 "velocity": f"+{int(growth * 100)}%" if growth > 0 else "0%",
                 "volume": f"{(tvs_score/12):.1f}M",
-                "saturation_index": 10.0 + (hash(query) % 40), # Mocked or calculated if needed
-                "stability_score": 50.0 + (hash(query + "s") % 50), # Mocked or calculated if needed
+                "saturation_index": 10.0 + (hash(query) % 40),
+                "stability_score": 50.0 + (hash(query + "s") % 50),
                 "archetype": archetype,
                 "growth_tip": expert_analysis or growth_tip,
                 "predictions": predictions,
                 "prediction_confidence": float(ml_data.get("confidence", 0.7)),
+                "metrics": metrics, # SHAP/LIME logic included here
                 "status": "emerging" if tvs_score > 85 else "growing",
                 "sentiment": "positive",
                 "supported_formats": ["long_form"] if tvs_score > 80 else ["shorts"],
@@ -224,20 +259,32 @@ class TrendService:
 
         items.sort(key=lambda x: x["tvs_score"], reverse=True)
 
-        # 4. Background Sync (Soft Persist)
+        # 4. Background Sync (Hard Persist for "Save" functionality)
         if items:
             from app.core.db import SessionLocal
             async def bg_sync(data):
                 async with SessionLocal() as s:
                     try:
+                        print(f"[TrendService] Background sync started for {len(data)} items...")
                         await self.repo.ingest_batch(s, data)
                         await s.commit()
-                    except: pass
+                        print(f"[TrendService] Background sync successful.")
+                    except Exception as e:
+                        print(f"[TrendService] Background sync FAILED: {e}")
+            
+            # Use gather to ensure it finishes or use a reliable task
             asyncio.create_task(bg_sync([{
-                "id": uuid.UUID(x["id"]), "topic": x["topic"], "topic_slug": x["id"],
-                "niches": x["niches"], "tvs_score": x["tvs_score"], "prediction_confidence": x["prediction_confidence"],
-                "status": x["status"], "supported_formats": x["supported_formats"],
-                "top_keywords": x["top_keywords"], "description": x["growth_tip"], "data_sources": ["ml-engine"]
+                "id": uuid.UUID(x["id"]), 
+                "topic": x["topic"], 
+                "topic_slug": x["id"],
+                "niches": x["niches"], 
+                "tvs_score": x["tvs_score"], 
+                "prediction_confidence": x["prediction_confidence"],
+                "status": x["status"], 
+                "supported_formats": x["supported_formats"],
+                "top_keywords": x["top_keywords"], 
+                "description": x["growth_tip"], 
+                "data_sources": ["ml-engine"]
             } for x in items]))
 
         return {

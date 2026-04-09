@@ -20,6 +20,20 @@ export interface Trend {
     "5_day": number;
   };
   prediction_confidence: number;
+  metrics?: {
+    growth: number;
+    acceleration: boolean;
+    moving_average: number;
+    peak_distance: number;
+    explainability?: {
+      shap_base_value: number;
+      shap_impact_score: number
+    pact_score: number;
+      lime_contributions: Array<{ feature: string; weight: number }>;
+      shap_plot_base64?: string;
+      model_type: string;
+    };
+  };
 }
 
 interface TrendsState {

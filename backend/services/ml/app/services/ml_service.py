@@ -3,7 +3,18 @@ import numpy as np
 import serpapi
 from sklearn.linear_model import LinearRegression
 import httpx
+import shap
+import lime
+import lime.lime_tabular
 from typing import Any
+import logging
+import io
+import base64
+import matplotlib
+matplotlib.use('Agg') # Run in background without window
+import matplotlib.pyplot as plt
+
+logger = logging.getLogger(__name__)
 
 from app.core.config import settings
 
@@ -43,7 +54,19 @@ class MlService:
                     "data": {
                         "forecast_tvs": min(100.0, base + bump),
                         "confidence": 0.5 + (_hash_score(topic + "c") * 0.49),
-                        "predictions": {"2_day": base + 1, "3_day": base + 2, "5_day": base + 3}
+                        "predictions": {"2_day": base + 1, "3_day": base + 2, "5_day": base + 3},
+                        "metrics": {
+                            "growth": bump / 100.0,
+                            "acceleration": True,
+                            "moving_average": base,
+                            "peak_distance": 0.2,
+                            "explainability": {
+                                "shap_base_value": base,
+                                "shap_impact_score": 12.0 + (_hash_score(topic + "s") * 15.0),
+                                "lime_contributions": [{"feature": "Day", "weight": 15.0 + (_hash_score(topic + "l") * 20.0)}],
+                                "model_type": "Synthetic-LBR"
+                            }
+                        }
                     },
                     "meta": {"request_id": "local-dev"}
                 }
@@ -62,7 +85,54 @@ class MlService:
             X_future = np.array([len(y) + d for d in future_days]).reshape(-1, 1)
             preds = model.predict(X_future)
             
-            # 5. Calculate Metrics (from notebook)
+            # 5. Explainability (SHAP & LIME)
+            # Global Explanation: SHAP
+            explainer_shap = shap.Explainer(model.predict, X)
+            shap_values = explainer_shap(X)
+            
+            # Local Explanation: LIME (for the most recent point)
+            explainer_lime = lime.lime_tabular.LimeTabularExplainer(
+                training_data=X,
+                feature_names=['Day'],
+                class_names=['Interest Score'],
+                mode='regression'
+            )
+            
+            # Explain the last observed point
+            instance_idx = -1 
+            instance_to_explain = X[instance_idx]
+            exp_lime = explainer_lime.explain_instance(
+                data_row=instance_to_explain.reshape(-1),
+                predict_fn=model.predict,
+                num_features=1
+            )
+            
+            # Extract numerical data for frontend rendering
+            # SHAP: Average absolute impact of 'Day'
+            avg_shap_impact = float(np.mean(np.abs(shap_values.values)))
+            
+            # LIME: Feature contribution for the current prediction
+            lime_contributions = [
+                {"feature": str(f), "weight": float(w)} 
+                for f, w in exp_lime.as_list()
+            ]
+
+            # Generate SHAP Plot Image
+            shap_plot_base64 = ""
+            try:
+                plt.figure(figsize=(8, 4))
+                # Create a summary plot for the 'Day' feature
+                # We use the shap_values object we already calculated
+                shap.summary_plot(shap_values, X, feature_names=['Day'], show=False)
+                
+                buf = io.BytesIO()
+                plt.savefig(buf, format='png', bbox_inches='tight', transparent=True, dpi=100)
+                plt.close()
+                shap_plot_base64 = base64.b64encode(buf.getvalue()).decode('utf-8')
+            except Exception as plot_err:
+                print(f"Plotting error: {plot_err}")
+
+            # 6. Calculate Metrics (from notebook)
             n = len(y) - 1
             growth_last = (y[n] - y[n-1]) / (y[n-1] or 1)
             growth_prev = (y[n-2] - y[n-3]) / (y[n-3] or 1)
@@ -125,7 +195,14 @@ class MlService:
                         "growth": float(growth_last),
                         "acceleration": bool(acceleration),
                         "moving_average": float(moving_average),
-                        "peak_distance": float(peak_distance)
+                        "peak_distance": float(peak_distance),
+                        "explainability": {
+                            "shap_base_value": float(explainer_shap.expected_value) if hasattr(explainer_shap, 'expected_value') else 0.0,
+                            "shap_impact_score": avg_shap_impact,
+                            "lime_contributions": lime_contributions,
+                            "shap_plot_base64": shap_plot_base64,
+                            "model_type": "LinearRegression"
+                        }
                     },
                     "expert_analysis": expert_analysis
                 },
@@ -136,7 +213,22 @@ class MlService:
             print(f"ML Processing error: {e}")
             return {
                 "error": str(e),
-                "data": {"forecast_tvs": 50.0, "confidence": 0.5},
+                "data": {
+                    "forecast_tvs": 50.0, 
+                    "confidence": 0.5,
+                    "metrics": {
+                        "growth": 0.0,
+                        "acceleration": False,
+                        "moving_average": 50.0,
+                        "peak_distance": 0.5,
+                        "explainability": {
+                            "shap_base_value": 50.0,
+                            "shap_impact_score": 0.0,
+                            "lime_contributions": [],
+                            "model_type": "Error-Fallback"
+                        }
+                    }
+                },
                 "meta": {"request_id": "local-dev-error"}
             }
 

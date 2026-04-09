@@ -9,12 +9,14 @@ from app.core.config import settings
 
 async def search_google_trends(
     *,
-    q: str,
+    q: str | None = None,
+    cat: int | None = None,
     data_type: str = "RELATED_QUERIES",
     geo: str = "",
     hl: str = "en",
     date: str = "today 3-m",
-    gprop: str = "youtube",
+    gprop: str = "", # Optional: set gprop to empty for categories
+    **kwargs: Any
 ) -> dict[str, Any]:
     if not settings.serpapi_api_key:
         raise RuntimeError("SERPAPI_API_KEY / serpapi_api_key is not set")
@@ -22,11 +24,16 @@ async def search_google_trends(
     params: dict[str, Any] = {
         "engine": "google_trends",
         "api_key": settings.serpapi_api_key,
-        "q": q,
         "data_type": data_type,
         "hl": hl,
         "date": date,
+        **kwargs
     }
+    
+    if q:
+        params["q"] = q
+    if cat is not None:
+        params["cat"] = cat
     if geo:
         params["geo"] = geo
     if gprop:

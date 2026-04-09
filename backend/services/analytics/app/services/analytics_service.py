@@ -1,6 +1,7 @@
 import uuid
 from datetime import date
 import httpx
+import logging
 
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,6 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.channel_access import ensure_channel_allowed
 from app.core.deps import UserContext
 from app.repositories.analytics_repository import AnalyticsRepository
+
+logger = logging.getLogger(__name__)
 
 
 class AnalyticsService:
@@ -126,32 +129,50 @@ class AnalyticsService:
         _ = user
         ensure_channel_allowed(allowed_channels, channel_id)
         
+        logger.info(f"Fetching analytics dashboard for channel: {channel_id}")
+        
         # 1. Fetch live token from Auth Service
-        access_token = await self._get_google_token(channel_id)
+        auth_data = await self._get_google_auth_data(channel_id)
+        access_token = auth_data.get("access_token") if auth_data else None
+        yt_id = auth_data.get("youtube_channel_id") if auth_data else None
+        
+        # Determine which ID to use for YouTube API (fallback to internal if UC... ID is missing)
+        target_yt_id = yt_id or str(channel_id)
         
         # 2. Fetch real stats (Simulated for now, would be YT Data/Analytics API)
-        # In a real scenario, we'd call https://youtubeanalytics.googleapis.com/v2/reports
         total_views = 0
-        subscriber_growth = 0
         
         if access_token:
+            logger.info(f"Access token retrieved, calling YouTube API for channel {target_yt_id}...")
             try:
                 async with httpx.AsyncClient() as client:
                     # Get channel stats as a base for "real" data
                     yt_res = await client.get(
                         "https://www.googleapis.com/youtube/v3/channels",
-                        params={"part": "statistics", "id": str(channel_id)},
+                        params={"part": "statistics", "id": target_yt_id},
                         headers={"Authorization": f"Bearer {access_token}"},
+                        timeout=10.0
                     )
+                    logger.info(f"YouTube API Response Status: {yt_res.status_code}")
                     if yt_res.status_code == 200:
-                        chan_data = yt_res.json().get("items", [{}])[0]
-                        total_views = int(chan_data.get("statistics", {}).get("viewCount", 0))
+                        items = yt_res.json().get("items", [])
+                        if items:
+                            chan_data = items[0]
+                            total_views = int(chan_data.get("statistics", {}).get("viewCount", 0))
+                            logger.info(f"Successfully fetched live views: {total_views}")
+                        else:
+                            logger.warning(f"YouTube API returned no items for channel_id: {channel_id}")
+                    else:
+                        logger.error(f"YouTube API error: {yt_res.text}")
             except Exception as e:
-                print(f"Failed to fetch live YT stats: {e}")
+                logger.error(f"Failed to fetch live YT stats from Google: {str(e)}")
+        else:
+            logger.warning(f"No access token found for channel {channel_id}, falling back to cache")
 
         snap = await self.repo.latest_snapshot(db, channel_id)
         if total_views == 0 and snap and isinstance(snap.payload, dict):
             total_views = snap.payload.get("views", 0)
+            logger.info(f"Using cached views from database: {total_views}")
 
         return {
             "data": {
@@ -185,20 +206,28 @@ class AnalyticsService:
             "meta": {"request_id": "local-dev"},
         }
 
-    async def _get_google_token(self, channel_id: uuid.UUID) -> str | None:
-        """Fetch decrypted token from Auth service."""
+    async def _get_google_auth_data(self, channel_id: uuid.UUID) -> dict | None:
+        """Fetch decrypted token and metadata from Auth service."""
         try:
             from app.core.config import settings
-            import httpx
+            logger.info(f"Requesting auth data from Auth Service for {channel_id}")
             async with httpx.AsyncClient(timeout=5.0) as client:
                 res = await client.get(
                     f"{settings.auth_service_url}/internal/auth/youtube/token/{str(channel_id)}",
                     headers={"X-Internal-Service-Token": settings.internal_service_token}
                 )
+                logger.info(f"Auth Service Response Status: {res.status_code}")
                 if res.status_code == 200:
-                    return res.json().get("data", {}).get("access_token")
+                    data = res.json().get("data", {})
+                    if data.get("access_token"):
+                        logger.info("Successfully retrieved auth metadata from Auth Service")
+                        return data
+                    else:
+                        logger.warning("Auth Service returned 200 but no access_token in payload")
+                else:
+                    logger.error(f"Auth Service returned error: {res.status_code} - {res.text}")
         except Exception as e:
-            print(f"Token retrieval failed: {e}")
+            logger.error(f"Internal auth data retrieval failed: {str(e)}")
         return None
 
     async def rebuild_summary(

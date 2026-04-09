@@ -153,6 +153,19 @@ class AuthRepository:
         )
         return res.scalar_one_or_none()
 
+    async def update_token_channel(self, db: AsyncSession, user_id: uuid.UUID, channel_id: uuid.UUID, provider_channel_id: str) -> None:
+        res = await db.execute(
+            select(OAuthToken).where(
+                OAuthToken.user_id == user_id,
+                OAuthToken.provider == OAuthProvider.youtube
+            )
+        )
+        t = res.scalar_one_or_none()
+        if t:
+            t.channel_id = channel_id
+            t.provider_channel_id = provider_channel_id
+            await db.flush()
+
     async def get_all_google_tokens(self, db: AsyncSession) -> list[OAuthToken]:
         res = await db.execute(
             select(OAuthToken).where(
