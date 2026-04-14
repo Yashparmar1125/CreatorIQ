@@ -1,3 +1,8 @@
 fastapi
 uvicorn[standard]
 pydantic-settings
+serpapi
+google-search-results
+scikit-learn
+numpy
+httpx

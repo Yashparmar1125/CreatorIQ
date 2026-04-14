@@ -13,7 +13,15 @@ import {
 import { useAnalyticsStore } from '../../../stores/useAnalyticsStore';
 
 export const AnalyticsPage: React.FC = () => {
-  const { retentionData, trafficSources, audienceDemographics, loading, fetchAnalytics } = useAnalyticsStore();
+  const { 
+    retentionData, 
+    trafficSources, 
+    audienceDemographics, 
+    total_views,
+    cached,
+    loading, 
+    fetchAnalytics 
+  } = useAnalyticsStore();
 
   useEffect(() => {
     fetchAnalytics();
@@ -48,13 +56,31 @@ export const AnalyticsPage: React.FC = () => {
             Performance metrics and audience retention across your channel.
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <button className="px-5 py-2.5 bg-white border border-neutral-200 rounded-xl font-bold text-xs shadow-sm hover:bg-neutral-50 transition-all">
-            Export
-          </button>
-          <button className="px-5 py-2.5 bg-neutral-900 text-white rounded-xl font-bold text-xs shadow-lg hover:bg-neutral-800 transition-all">
-            Live View
-          </button>
+        <div className="flex items-center gap-4">
+          <div className="flex flex-col items-end">
+            <div className="flex items-center gap-2">
+              <div className={`w-2 h-2 rounded-full ${cached ? 'bg-amber-400' : 'bg-emerald-500 animate-pulse'}`} />
+              <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">
+                {cached ? 'Cached Data' : 'Live Sync'}
+              </span>
+            </div>
+            <p className="text-2xl font-bold font-sora text-neutral-900 tracking-tight">
+              {total_views.toLocaleString()} <span className="text-xs text-neutral-400 font-medium ml-1">Views</span>
+            </p>
+          </div>
+          <div className="h-10 w-px bg-neutral-200 mx-2" />
+          <div className="flex items-center gap-3">
+            <button className="px-5 py-2.5 bg-white border border-neutral-200 rounded-xl font-bold text-xs shadow-sm hover:bg-neutral-50 transition-all">
+              Export
+            </button>
+            <button 
+              onClick={() => fetchAnalytics()}
+              className="px-5 py-2.5 bg-neutral-900 text-white rounded-xl font-bold text-xs shadow-lg hover:bg-neutral-800 transition-all flex items-center gap-2"
+            >
+              <Zap className="w-3.5 h-3.5" />
+              Refresh
+            </button>
+          </div>
         </div>
       </div>
 
@@ -141,9 +167,9 @@ export const AnalyticsPage: React.FC = () => {
                   <div className="h-1.5 w-full bg-neutral-50 rounded-full overflow-hidden">
                     <motion.div 
                       initial={{ width: 0 }}
-                      animate={{ width: `${source.value}%` }}
+                      animate={{ width: `${Math.min(source.value * 2, 100)}%` }} // Scaled for visibility since backend sums to 100
                       transition={{ duration: 1 }}
-                      className="h-full bg-neutral-900 group-hover:bg-brand-600 transition-colors"
+                      className={`h-full ${i === 0 ? 'bg-brand-600' : 'bg-neutral-900'} group-hover:bg-brand-500 transition-colors`}
                     />
                   </div>
                 </div>

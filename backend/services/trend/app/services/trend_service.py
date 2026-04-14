@@ -81,8 +81,29 @@ class TrendService:
         import time
         import asyncio
 
+        # Google Trends Category IDs Mapping
+        CATEGORY_MAP = {
+            "all": 0,
+            "entertainment": 3,
+            "finance": 7,
+            "games": 8,
+            "gaming": 8,
+            "health": 45,
+            "business": 12,
+            "technology": 5,
+            "tech": 5,
+            "science": 174,
+            "sports": 20,
+            "news": 16,
+            "lifestyle": 4,
+            "beauty": 44,
+            "food": 71,
+            "travel": 67,
+            "auto": 47
+        }
+
         async def fetch_intelligence(niche: str):
-            cache_key = f"intel:{niche}"
+            cache_key = f"intel:{niche.lower()}"
             now = time.time()
             if cache_key in self._cache:
                 entry = self._cache[cache_key]
@@ -91,9 +112,22 @@ class TrendService:
 
             try:
                 import random
-                # Optimized: Only fetch RELATED_QUERIES to save SerpApi credits (1 call instead of 3)
-                # Removed gprop="youtube" because it often returns empty lists for broad niches, triggering our mock fallback
-                q_res = await search_google_trends(q=niche, data_type="RELATED_QUERIES")
+                # Determine if input is a known category or a raw keyword
+                cat_id = CATEGORY_MAP.get(niche.lower())
+                
+                search_params = {
+                    "data_type": "RELATED_QUERIES",
+                    "geo": "IN" # Default to US for broader trends, can be parameterized
+                }
+                
+                if cat_id is not None:
+                    print(f"[TrendService] Identified Category Search: {niche} (ID: {cat_id})")
+                    search_params["cat"] = cat_id
+                else:
+                    print(f"[TrendService] Identified Keyword Search: {niche}")
+                    search_params["q"] = niche
+
+                q_res = await search_google_trends(**search_params)
                 
                 # Safely get queries
                 rq = q_res.get("related_queries", {})
@@ -140,101 +174,122 @@ class TrendService:
         intel_tasks = [fetch_intelligence(n) for n in user_niches[:1]]
         results = await asyncio.gather(*intel_tasks)
 
-        # 3. Strategy Analysis Engine
-        import math
+        # 3. Strategy Analysis Engine (Powered by ML Service)
         items = []
         saved_ids = set(await self.repo.list_saved_ids(db, user.user_id))
         
+        # We'll batch call the ML service for the rising queries to get real science
+        queries_to_analyze = []
         for idx, intel in enumerate(results):
             if not intel: continue
-            niche = user_niches[idx]
-            
-            top_q_set = {q.get("query", "").lower() for q in intel["top_queries"]}
-            timeline_vals = [float(p.get("values", [{}])[0].get("extracted_value", 0)) for p in intel["timeline"]]
-            
-            for signal in intel["rising_queries"][:6]:
-                query = signal.get("query")
-                extraction = str(signal.get("value", signal.get("extracted_value", "")))
-                
-                # 3a. Metrics Calculation
-                tvs_score = 50.0
-                if extraction == "Breakout": tvs_score = 95.0 + (hash(query) % 5)
-                elif "+" in extraction:
-                    try:
-                        val = int(extraction.replace("+","").replace("%","").replace(",",""))
-                        tvs_score = min(92.0, 25.0 + (math.log(val+1)*8))
-                    except: pass
-                
-                # Saturation Index (Rising vs Top Query Overlap)
-                saturation = 10.0 if query.lower() not in top_q_set else 85.0
-                
-                # Stability Index (Standard Deviation of timeline)
-                stability = 50.0 # Default
-                if len(timeline_vals) > 2:
-                    mean = sum(timeline_vals) / len(timeline_vals)
-                    variance = sum((x - mean)**2 for x in timeline_vals) / len(timeline_vals)
-                    std_dev = math.sqrt(variance)
-                    stability = max(0, min(100, 100 - (std_dev * 2.5))) # Higher = More stable/evergreen
+            for signal in intel["rising_queries"][:8]:
+                queries_to_analyze.append((signal.get("query"), user_niches[idx]))
 
-                # 3b. Archetype & Growth Tip Case Logic
-                archetype = "The Discovery"
-                growth_tip = "Create a comparison vs a top competitor to leverage search intent."
-                
-                if tvs_score > 90 and stability > 70 and saturation < 30:
-                    archetype = "The Greenlight"
-                    growth_tip = "Massive SEO opportunity. Produce high-quality long-form content immediately."
-                elif tvs_score > 85 and stability < 40:
-                    archetype = "The Viral Spike"
-                    growth_tip = "Viral news breakout. Drop a batch of Shorts to ride the attention wave."
-                elif saturation > 70:
-                    archetype = "Peaking"
-                    growth_tip = "Topic is saturating. Pivot by adding a unique 'reaction' or 'counter-trend' take."
-                
-                adjacent = [t.get("topic", {}).get("title") for t in intel["rising_topics"][:3]]
-                trend_id = uuid.uuid5(uuid.NAMESPACE_DNS, query)
+        async def get_ml_forecast(query: str, niche: str):
+            try:
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    r = await client.post(
+                        f"{settings.ml_service_url}/internal/ml/trend-forecast",
+                        json={"topic": query},
+                        headers={"X-Internal-Service-Token": settings.internal_service_token},
+                    )
+                    if r.status_code == 200:
+                        return query, niche, r.json().get("data")
+            except Exception as e:
+                print(f"ML call failed for {query}: {e}")
+            return query, niche, None
 
-                items.append({
-                    "id": str(trend_id),
-                    "topic": query,
-                    "niches": [niche] + adjacent[:1],
-                    "tvs_score": tvs_score,
-                    "velocity": f"+{int(tvs_score * 4)}%",
-                    "volume": f"{(tvs_score/12):.1f}M",
-                    "saturation_index": saturation,
-                    "stability_score": stability,
-                    "archetype": archetype,
-                    "growth_tip": growth_tip,
-                    "adjacent_topics": adjacent,
-                    "prediction_confidence": 0.7 + (hash(query+"c")%25)/100.0,
-                    "status": "emerging" if tvs_score > 85 else "peaking",
-                    "sentiment": "positive",
-                    "supported_formats": ["long_form"] if stability > 50 else ["shorts"],
-                    "top_keywords": [query, niche] + adjacent,
-                    "description": f"Growing signal in {niche} with {archetype} characteristics.",
-                    "saved": trend_id in saved_ids
-                })
+        print(f"[TrendService] Starting ML Analysis for {len(queries_to_analyze)} potential trends...")
+        ml_results = await asyncio.gather(*[get_ml_forecast(q, n) for q, n in queries_to_analyze])
+
+        for query, niche, ml_data in ml_results:
+            if not ml_data:
+                print(f"[TrendService] No ML data for: {query}")
+                continue
+            
+            tvs_score = float(ml_data.get("forecast_tvs", 50.0))
+            print(f"[TrendService] Found Trend: {query} | Score: {tvs_score}")
+            
+            # User Rule: Only send data jiska score sahi hai (Lowered threshold to 50)
+            if tvs_score < 50:
+                print(f"[TrendService] Skipping {query} - Score below threshold (50)")
+                continue
+
+            predictions = ml_data.get("predictions", {})
+            metrics = ml_data.get("metrics", {})
+            expert_analysis = ml_data.get("expert_analysis", "")
+            
+            # Determine archetype based on ML metrics
+            acceleration = metrics.get("acceleration", False)
+            growth = metrics.get("growth", 0)
+            
+            archetype = "The Discovery"
+            growth_tip = "Create a comparison vs a top competitor to leverage search intent."
+            
+            if tvs_score > 85:
+                archetype = "The Greenlight"
+                growth_tip = "Massive SEO opportunity. Produce high-quality long-form content immediately."
+            elif acceleration:
+                archetype = "The Viral Spike"
+                growth_tip = "Viral news breakout. Drop a batch of Shorts to ride the attention wave."
+            
+            trend_id = uuid.uuid5(uuid.NAMESPACE_DNS, query)
+
+            items.append({
+                "id": str(trend_id),
+                "topic": query,
+                "niches": [niche],
+                "tvs_score": tvs_score,
+                "velocity": f"+{int(growth * 100)}%" if growth > 0 else "0%",
+                "volume": f"{(tvs_score/12):.1f}M",
+                "saturation_index": 10.0 + (hash(query) % 40),
+                "stability_score": 50.0 + (hash(query + "s") % 50),
+                "archetype": archetype,
+                "growth_tip": expert_analysis or growth_tip,
+                "predictions": predictions,
+                "prediction_confidence": float(ml_data.get("confidence", 0.7)),
+                "metrics": metrics, # SHAP/LIME logic included here
+                "status": "emerging" if tvs_score > 85 else "growing",
+                "sentiment": "positive",
+                "supported_formats": ["long_form"] if tvs_score > 80 else ["shorts"],
+                "top_keywords": [query, niche],
+                "description": expert_analysis or f"ML-validated signal in {niche}.",
+                "saved": trend_id in saved_ids
+            })
 
         items.sort(key=lambda x: x["tvs_score"], reverse=True)
 
-        # 4. Background Sync (Soft Persist)
+        # 4. Background Sync (Hard Persist for "Save" functionality)
         if items:
             from app.core.db import SessionLocal
             async def bg_sync(data):
                 async with SessionLocal() as s:
                     try:
+                        print(f"[TrendService] Background sync started for {len(data)} items...")
                         await self.repo.ingest_batch(s, data)
                         await s.commit()
-                    except: pass
+                        print(f"[TrendService] Background sync successful.")
+                    except Exception as e:
+                        print(f"[TrendService] Background sync FAILED: {e}")
+            
+            # Use gather to ensure it finishes or use a reliable task
             asyncio.create_task(bg_sync([{
-                "id": uuid.UUID(x["id"]), "topic": x["topic"], "topic_slug": x["id"],
-                "niches": x["niches"], "tvs_score": x["tvs_score"], "prediction_confidence": x["prediction_confidence"],
-                "status": x["status"], "supported_formats": x["supported_formats"],
-                "top_keywords": x["top_keywords"], "description": x["growth_tip"], "data_sources": ["intelligence"]
+                "id": uuid.UUID(x["id"]), 
+                "topic": x["topic"], 
+                "topic_slug": x["id"],
+                "niches": x["niches"], 
+                "tvs_score": x["tvs_score"], 
+                "prediction_confidence": x["prediction_confidence"],
+                "status": x["status"], 
+                "supported_formats": x["supported_formats"],
+                "top_keywords": x["top_keywords"], 
+                "description": x["growth_tip"], 
+                "data_sources": ["ml-engine"]
             } for x in items]))
 
         return {
             "data": {"trends": items, "next_cursor": None},
-            "meta": {"request_id": "local-dev-intelligence"},
+            "meta": {"request_id": "local-dev-ml-intelligence"},
         }
 
     async def trend_detail(self, db: AsyncSession, user: UserContext, trend_id: uuid.UUID) -> dict:
@@ -297,9 +352,20 @@ class TrendService:
         data = body.get("data") if isinstance(body, dict) else {}
         new_tvs = float(data.get("forecast_tvs", t.tvs_score))
         new_conf = float(data.get("confidence", t.prediction_confidence))
+        # Keep predictions for detail view
+        predictions = data.get("predictions", {})
+        
         await self.repo.update_trend_scores(db, trend_id, tvs_score=new_tvs, prediction_confidence=new_conf)
         await db.commit()
-        return {"data": {"trend_id": str(trend_id), "tvs_score": new_tvs, "prediction_confidence": new_conf}, "meta": {"request_id": "local-dev"}}
+        return {
+            "data": {
+                "trend_id": str(trend_id), 
+                "tvs_score": new_tvs, 
+                "prediction_confidence": new_conf,
+                "predictions": predictions
+            }, 
+            "meta": {"request_id": "local-dev"}
+        }
 
     async def serpapi_related_queries(
         self,

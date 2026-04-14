@@ -5,6 +5,8 @@ interface AnalyticsState {
   retentionData: any;
   trafficSources: any[];
   audienceDemographics: any;
+  total_views: number;
+  cached: boolean;
   loading: boolean;
   fetchAnalytics: () => Promise<void>;
 }
@@ -16,10 +18,10 @@ export const useAnalyticsStore = create<AnalyticsState>((set) => ({
     outro: 45
   },
   trafficSources: [
-    { source: 'Direct Sync', value: 45 },
-    { source: 'External Referrals', value: 28 },
-    { source: 'Organic Discovery', value: 17 },
-    { source: 'Paid Amplification', value: 10 }
+    { source: 'Search', value: 45 },
+    { source: 'Suggested', value: 28 },
+    { source: 'External', value: 17 },
+    { source: 'Others', value: 10 }
   ],
   audienceDemographics: {
     ageGroups: [
@@ -33,6 +35,8 @@ export const useAnalyticsStore = create<AnalyticsState>((set) => ({
       { country: 'Germany', percentage: 10 }
     ]
   },
+  total_views: 0,
+  cached: false,
   loading: false,
   fetchAnalytics: async () => {
     set({ loading: true });
@@ -49,13 +53,13 @@ export const useAnalyticsStore = create<AnalyticsState>((set) => ({
       const { data } = await api.get(`/analytics/dashboard?channel_id=${primary.id}`);
       const payload = data.data;
 
-      console.log("Analytics Payload: ",payload);
-
       if (payload) {
         set({
            retentionData: payload.retentionData,
            trafficSources: payload.trafficSources,
            audienceDemographics: payload.audienceDemographics,
+           total_views: payload.total_views,
+           cached: payload.cached,
         });
       }
     } catch (e) {
