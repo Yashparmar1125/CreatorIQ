@@ -156,88 +156,95 @@ class AuthService:
         ip_address: str | None,
         user_agent: str | None,
     ) -> RedirectResponse:
-        fe = settings.frontend_url.rstrip("/")
-        if oauth_error:
-            return RedirectResponse(url=f"{fe}/login?error={quote(oauth_error)}", status_code=302)
-        if not code or not state:
-            return RedirectResponse(url=f"{fe}/login?error=missing_code", status_code=302)
         try:
-            state_payload = jose_jwt.decode(state, _oauth_state_secret(), algorithms=["HS256"])
-            linked_user_id = state_payload.get("uid")
-        except Exception:
-            return RedirectResponse(url=f"{fe}/login?error=invalid_state", status_code=302)
+            fe = settings.frontend_url.rstrip("/")
+            if oauth_error:
+                return RedirectResponse(url=f"{fe}/login?error={quote(oauth_error)}", status_code=302)
+            if not code or not state:
+                return RedirectResponse(url=f"{fe}/login?error=missing_code", status_code=302)
+            try:
+                state_payload = jose_jwt.decode(state, _oauth_state_secret(), algorithms=["HS256"])
+                linked_user_id = state_payload.get("uid")
+            except Exception:
+                return RedirectResponse(url=f"{fe}/login?error=invalid_state", status_code=302)
 
-        token_json = await self._exchange_google_code(code)
-        if not token_json:
-            return RedirectResponse(url=f"{fe}/login?error=token_exchange", status_code=302)
-        access_google = token_json.get("access_token")
-        if not access_google:
-            return RedirectResponse(url=f"{fe}/login?error=token_exchange", status_code=302)
+            token_json = await self._exchange_google_code(code)
+            if not token_json:
+                return RedirectResponse(url=f"{fe}/login?error=token_exchange", status_code=302)
+            access_google = token_json.get("access_token")
+            if not access_google:
+                return RedirectResponse(url=f"{fe}/login?error=token_exchange", status_code=302)
 
-        info = await self._google_userinfo(access_google)
-        if not info:
-            return RedirectResponse(url=f"{fe}/login?error=profile", status_code=302)
-        sub = str(info.get("id") or "")
-        email = (info.get("email") or "").lower().strip()
-        if not sub or not email:
-            return RedirectResponse(url=f"{fe}/login?error=missing_profile", status_code=302)
+            info = await self._google_userinfo(access_google)
+            if not info:
+                return RedirectResponse(url=f"{fe}/login?error=profile", status_code=302)
+            sub = str(info.get("id") or "")
+            email = (info.get("email") or "").lower().strip()
+            if not sub or not email:
+                return RedirectResponse(url=f"{fe}/login?error=missing_profile", status_code=302)
 
-        name = (info.get("name") or email.split("@")[0]).strip()
-        picture = info.get("picture")
+            name = (info.get("name") or email.split("@")[0]).strip()
+            picture = info.get("picture")
 
-        user = None
-        if linked_user_id:
-            user = await self.repo.get_user_by_id(db, UUID(linked_user_id))
-            if user:
-                user.google_sub = sub
-                if picture and not user.avatar_url:
-                    user.avatar_url = picture
-                await db.flush()
+            user = None
+            if linked_user_id:
+                user = await self.repo.get_user_by_id(db, UUID(linked_user_id))
+                if user:
+                    user.google_sub = sub
+                    if picture and not user.avatar_url:
+                        user.avatar_url = picture
+                    await db.flush()
 
-        if not user:
-            user = await self.repo.get_user_by_google_sub(db, sub)
+            if not user:
+                user = await self.repo.get_user_by_google_sub(db, sub)
 
-        if not user:
-            existing = await self.repo.get_user_by_email(db, email)
-            if existing:
-                if existing.google_sub and existing.google_sub != sub:
-                    return RedirectResponse(url=f"{fe}/login?error=account_conflict", status_code=302)
-                existing.google_sub = sub
-                existing.email_verified = True
-                if picture and not existing.avatar_url:
-                    existing.avatar_url = picture
-                await db.flush()
-                user = existing
-            else:
-                user = await self.repo.create_user_google(
-                    db, email=email, full_name=name, google_sub=sub, avatar_url=picture
-                )
+            if not user:
+                existing = await self.repo.get_user_by_email(db, email)
+                if existing:
+                    if existing.google_sub and existing.google_sub != sub:
+                        return RedirectResponse(url=f"{fe}/login?error=account_conflict", status_code=302)
+                    existing.google_sub = sub
+                    existing.email_verified = True
+                    if picture and not existing.avatar_url:
+                        existing.avatar_url = picture
+                    await db.flush()
+                    user = existing
+                else:
+                    user = await self.repo.create_user_google(
+                        db, email=email, full_name=name, google_sub=sub, avatar_url=picture
+                    )
 
-        google_scopes = token_json.get("scope", "").split(" ")
-        google_expires_in = token_json.get("expires_in", 3600)
-        google_expiry = datetime.now(timezone.utc) + timedelta(seconds=google_expires_in)
+            google_scopes = token_json.get("scope", "").split(" ")
+            google_expires_in = token_json.get("expires_in", 3600)
+            google_expiry = datetime.now(timezone.utc) + timedelta(seconds=google_expires_in)
 
-        await self.repo.upsert_oauth_token(
-            db,
-            user_id=user.id,
-            provider=OAuthProvider.youtube,
-            access_token_enc=encrypt_token(access_google),
-            refresh_token_enc=encrypt_token(token_json.get("refresh_token")),
-            expires_at=google_expiry,
-            scopes=google_scopes,
-        )
+            await self.repo.upsert_oauth_token(
+                db,
+                user_id=user.id,
+                provider=OAuthProvider.youtube,
+                access_token_enc=encrypt_token(access_google),
+                refresh_token_enc=encrypt_token(token_json.get("refresh_token")),
+                expires_at=google_expiry,
+                scopes=google_scopes,
+            )
 
-        # Sync Channel Metadata to Channel Service
-        await self._sync_channel_metadata(db, user.id, access_google)
+            # Sync Channel Metadata to Channel Service
+            await self._sync_channel_metadata(db, user.id, access_google)
 
-        tokens = await self._issue_tokens(db, user, ip_address=ip_address, user_agent=user_agent)
-        await db.commit()
-        access = tokens["access_token"]
-        refresh = tokens["refresh_token"]
-        frag = (
-            f"access_token={quote(access, safe='')}&refresh_token={quote(refresh, safe='')}"
-        )
-        return RedirectResponse(url=f"{fe}/auth/callback#{frag}", status_code=302)
+            tokens = await self._issue_tokens(db, user, ip_address=ip_address, user_agent=user_agent)
+            await db.commit()
+            access = tokens["access_token"]
+            refresh = tokens["refresh_token"]
+            frag = (
+                f"access_token={quote(access, safe='')}&refresh_token={quote(refresh, safe='')}"
+            )
+            return RedirectResponse(url=f"{fe}/auth/callback#{frag}", status_code=302)
+        except Exception as e:
+            logger.exception(f"Unhandled error in google_oauth_callback: {str(e)}")
+            # In development, it's helpful to see the error in the response if possible, 
+            # but here we'll just re-raise and let the handler log it.
+            raise
+
 
     async def _exchange_google_code(self, code: str) -> dict | None:
         async with httpx.AsyncClient(timeout=30.0) as client:
@@ -311,7 +318,7 @@ class AuthService:
         # For now, we assume the token is valid or will be caught by the sync method's error handling.
         # In a full production app, we would implement the refresh flow here or use a library like Authlib.
         
-        await self._sync_channel_metadata(user_id, access_token)
+        await self._sync_channel_metadata(db, user_id, access_token)
         return {"data": {"message": "Sync successful"}, "meta": {"request_id": "local-dev"}}
 
     async def get_internal_youtube_tokens(self, db: AsyncSession) -> dict:

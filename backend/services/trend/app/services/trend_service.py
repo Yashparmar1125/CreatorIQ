@@ -117,7 +117,7 @@ class TrendService:
                 
                 search_params = {
                     "data_type": "RELATED_QUERIES",
-                    "geo": "US" # Default to US for broader trends, can be parameterized
+                    "geo": "IN" # Default to US for broader trends, can be parameterized
                 }
                 
                 if cat_id is not None:

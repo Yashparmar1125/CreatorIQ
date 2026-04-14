@@ -18,5 +18,5 @@ foreach ($Service in $Services) {
 
     Write-Host "[+] Launching $($Service.Name)..."
 
-    Start-Process powershell -ArgumentList "-NoExit -Command `"cd $Path; conda activate $EnvName; uvicorn app.main:app --host 127.0.0.1 --port $($Service.Port) --reload`""
+    Start-Process powershell -ArgumentList "-NoExit -Command `"cd $Path; conda activate $EnvName; python -m uvicorn app.main:app --host 127.0.0.1 --port $($Service.Port) --reload`""
 }

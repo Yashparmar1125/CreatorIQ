@@ -5,9 +5,9 @@ class Settings(BaseSettings):
     service_name: str = "trend"
     environment: str = "development"
 
-    database_url: str = "postgresql+asyncpg://creatoriq:creatoriq@postgres:5432/creatoriq"
+    database_url: str = "postgresql+asyncpg://postgres:CreatorIQ%40123@creator-iq.postgres.database.azure.com:5432/postgres"
     internal_service_token: str = "change-me"
-    ml_service_url: str = "http://ml:8007"
+    ml_service_url: str = "http://127.0.0.1:8007"
 
     # SerpApi Google Trends — https://serpapi.com/google-trends-api
     serpapi_api_key: str = ""
