@@ -1,3 +1,4 @@
+import logging
 import secrets
 import time
 import logging
@@ -6,7 +7,7 @@ from uuid import UUID
 from urllib.parse import quote, urlencode
 
 import httpx
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, BackgroundTasks
 from fastapi.responses import RedirectResponse
 from jose import jwt as jose_jwt
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,6 +16,9 @@ from app.core.config import settings
 from app.core.security import create_access_token, generate_refresh_token, hash_password, hash_refresh_token, verify_password, encrypt_token, decrypt_token
 from app.models.auth_models import OAuthProvider, PlanTier, User
 from app.repositories.auth_repository import AuthRepository
+from app.schemas.auth_schemas import UserCreate, UserLogin, OnboardingUpdate
+
+logger = logging.getLogger(__name__)
 
 logger = logging.getLogger(__name__)
 
@@ -30,15 +34,10 @@ class AuthService:
     def health(self) -> dict:
         return {"data": self.repo.health_payload(), "meta": {"request_id": "local-dev"}}
 
-    async def register(self, db: AsyncSession, payload: dict, *, ip_address: str | None, user_agent: str | None) -> dict:
-        email = (payload.get("email") or "").lower().strip()
-        password = payload.get("password") or ""
-        full_name = payload.get("full_name") or ""
-        if not email or not password or not full_name:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail={"code": "VALIDATION_ERROR", "message": "email, password, full_name are required.", "details": {}},
-            )
+    async def register(self, db: AsyncSession, payload: UserCreate, *, ip_address: str | None, user_agent: str | None) -> dict:
+        email = payload.email.lower().strip()
+        password = payload.password
+        full_name = payload.full_name
 
         existing = await self.repo.get_user_by_email(db, email)
         if existing:
@@ -52,14 +51,9 @@ class AuthService:
         await db.commit()
         return {"data": {"user": self._user_payload(user), **tokens}, "meta": {"request_id": "local-dev"}}
 
-    async def login(self, db: AsyncSession, payload: dict, *, ip_address: str | None, user_agent: str | None) -> dict:
-        email = (payload.get("email") or "").lower().strip()
-        password = payload.get("password") or ""
-        if not email or not password:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail={"code": "VALIDATION_ERROR", "message": "email and password are required.", "details": {}},
-            )
+    async def login(self, db: AsyncSession, payload: UserLogin, *, ip_address: str | None, user_agent: str | None) -> dict:
+        email = payload.email.lower().strip()
+        password = payload.password
 
         user = await self.repo.get_user_by_email(db, email)
         if not user or not user.password_hash or not verify_password(password, user.password_hash):
@@ -149,6 +143,7 @@ class AuthService:
     async def google_oauth_callback(
         self,
         db: AsyncSession,
+        background_tasks: BackgroundTasks,
         *,
         code: str | None,
         state: str | None,
@@ -231,19 +226,11 @@ class AuthService:
             # Sync Channel Metadata to Channel Service
             await self._sync_channel_metadata(db, user.id, access_google)
 
-            tokens = await self._issue_tokens(db, user, ip_address=ip_address, user_agent=user_agent)
-            await db.commit()
-            access = tokens["access_token"]
-            refresh = tokens["refresh_token"]
-            frag = (
-                f"access_token={quote(access, safe='')}&refresh_token={quote(refresh, safe='')}"
-            )
-            return RedirectResponse(url=f"{fe}/auth/callback#{frag}", status_code=302)
-        except Exception as e:
-            logger.exception(f"Unhandled error in google_oauth_callback: {str(e)}")
-            # In development, it's helpful to see the error in the response if possible, 
-            # but here we'll just re-raise and let the handler log it.
-            raise
+        # Fast Sync: Fetch minimal channel metadata (Core Info)
+        channel_core = await self._sync_essential(user.id, access_google)
+        
+        # Deep Sync: Fetch historical data & analytics in background
+        background_tasks.add_task(self._sync_deep, user.id, access_google)
 
 
     async def _exchange_google_code(self, code: str) -> dict | None:
@@ -281,16 +268,16 @@ class AuthService:
         self,
         db: AsyncSession,
         user_id: UUID,
-        payload: dict,
+        payload: OnboardingUpdate,
     ) -> dict:
         user = await self.repo.update_user_onboarding(
             db,
             user_id,
-            niche=payload.get("niche", []),
-            primary_format=payload.get("primary_format", ""),
-            posting_frequency=payload.get("posting_frequency", ""),
-            channel_tone=payload.get("channel_tone", ""),
-            country=payload.get("country", ""),
+            niche=payload.niche,
+            primary_format=payload.primary_format,
+            posting_frequency=payload.posting_frequency,
+            channel_tone=payload.channel_tone,
+            country=payload.country,
         )
         if not user:
             raise HTTPException(
@@ -305,7 +292,7 @@ class AuthService:
         return {"data": {"message": "Use GET /auth/google/callback"}, "meta": {"request_id": "local-dev"}}
 
     async def sync_channel(self, db: AsyncSession, user_id: UUID) -> dict:
-        """Manually trigger a YouTube channel sync for a user."""
+        """Manually trigger a YouTube channel metadata sync."""
         token = await self.repo.get_google_token(db, user_id)
         if not token or not token.access_token_enc:
             raise HTTPException(
@@ -313,12 +300,11 @@ class AuthService:
                 detail={"code": "NO_GOOGLE_CONNECTED", "message": "No Google account connected.", "details": {}}
             )
         
-        # Check if token needs refresh
         access_token = decrypt_token(token.access_token_enc)
-        # For now, we assume the token is valid or will be caught by the sync method's error handling.
-        # In a full production app, we would implement the refresh flow here or use a library like Authlib.
+        await self._sync_essential(user_id, access_token)
+        # For manual sync, we'll run deep sync as well since the user is explicitly asking for it.
+        await self._sync_deep(user_id, access_token)
         
-        await self._sync_channel_metadata(db, user_id, access_token)
         return {"data": {"message": "Sync successful"}, "meta": {"request_id": "local-dev"}}
 
     async def get_internal_youtube_tokens(self, db: AsyncSession) -> dict:
@@ -338,100 +324,28 @@ class AuthService:
                 pass
         return {"data": {"tokens": data}, "meta": {"request_id": "local-dev"}}
 
-    async def get_internal_youtube_token_by_channel(self, db: AsyncSession, channel_id: UUID) -> dict:
-        logger.info(f"Internal request to fetch token for channel: {channel_id}")
-        t = await self.repo.get_google_token_by_channel(db, channel_id)
-        if not t:
-            logger.warning(f"No token record found in database for channel: {channel_id}")
-            raise HTTPException(status_code=404, detail="Token not found for channel")
-        
-        try:
-            dec_token = decrypt_token(t.access_token_enc)
-            if dec_token:
-                logger.info(f"Successfully decrypted token for channel: {channel_id}")
-            else:
-                logger.error(f"Decryption returned None for channel: {channel_id}")
-                
-            return {
-                "data": {
-                    "user_id": str(t.user_id),
-                    "channel_id": str(t.channel_id),
-                    "youtube_channel_id": t.provider_channel_id,
-                    "access_token": dec_token,
-                },
-                "meta": {"request_id": "local-dev"}
-            }
-        except Exception as e:
-            logger.error(f"Failed to decrypt token for channel {channel_id}: {str(e)}")
-            raise HTTPException(status_code=500, detail="Failed to decrypt token")
-
-    async def _sync_channel_metadata(self, db: AsyncSession, user_id: UUID, access_token: str) -> None:
-        """Fetch YouTube channel metadata, latest video stats, and sync to Channel service."""
+    async def _sync_essential(self, user_id: UUID, access_token: str) -> dict | None:
+        """Fast sync for core metadata needed for Dashboard presence."""
+        logger.info(f"Starting essential sync for user {user_id}")
         try:
             async with httpx.AsyncClient() as client:
-                # 1. Fetch Channel Info & Uploads Playlist from YouTube
                 yt_res = await client.get(
                     "https://www.googleapis.com/youtube/v3/channels",
-                    params={"part": "snippet,statistics,topicDetails,contentDetails", "mine": "true"},
+                    params={"part": "snippet,statistics,contentDetails", "mine": "true"},
                     headers={"Authorization": f"Bearer {access_token}"},
                 )
                 if yt_res.status_code != 200:
                     logger.error(f"YouTube Channel Fetch Failed: {yt_res.status_code} - {yt_res.text}")
-                    return
+                    return None
 
-                yt_data = yt_res.json()
-                items = yt_data.get("items", [])
+                items = yt_res.json().get("items", [])
                 if not items:
-                    print("No YouTube channels found for user.")
-                    return
+                    logger.warning(f"No YouTube channels found for user {user_id}")
+                    return None
 
                 channel_item = items[0]
                 snippet = channel_item.get("snippet", {})
                 stats = channel_item.get("statistics", {})
-                topics = channel_item.get("topicDetails", {}).get("topicCategories", [])
-                uploads_playlist_id = channel_item.get("contentDetails", {}).get("relatedPlaylists", {}).get("uploads")
-
-                # 2. Fetch Latest 5 Videos for Engagement Calculation
-                engagement_rate = 0.0
-                if uploads_playlist_id:
-                    playlist_res = await client.get(
-                        "https://www.googleapis.com/youtube/v3/playlistItems",
-                        params={
-                            "part": "snippet,contentDetails",
-                            "playlistId": uploads_playlist_id,
-                            "maxResults": 5,
-                        },
-                        headers={"Authorization": f"Bearer {access_token}"},
-                    )
-                    
-                    if playlist_res.status_code == 200:
-                        video_items = playlist_res.json().get("items", [])
-                        video_ids = [v.get("contentDetails", {}).get("videoId") for v in video_items]
-                        
-                        if video_ids:
-                            videos_res = await client.get(
-                                "https://www.googleapis.com/youtube/v3/videos",
-                                params={
-                                    "part": "statistics",
-                                    "id": ",".join(video_ids),
-                                },
-                                headers={"Authorization": f"Bearer {access_token}"},
-                            )
-                            
-                            if videos_res.status_code == 200:
-                                v_data = videos_res.json().get("items", [])
-                                total_engagements = 0
-                                total_views = 0
-                                for v in v_data:
-                                    v_stats = v.get("statistics", {})
-                                    likes = int(v_stats.get("likeCount", 0))
-                                    comments = int(v_stats.get("commentCount", 0))
-                                    views = int(v_stats.get("viewCount", 0))
-                                    total_engagements += (likes + comments)
-                                    total_views += views
-                                
-                                if total_views > 0:
-                                    engagement_rate = (total_engagements / total_views) * 100
 
                 channel_payload = {
                     "user_id": str(user_id),
@@ -442,27 +356,81 @@ class AuthService:
                     "subscriber_count": int(stats.get("subscriberCount", 0)),
                     "video_count": int(stats.get("videoCount", 0)),
                     "view_count": int(stats.get("viewCount", 0)),
-                    "engagement_rate": round(engagement_rate, 2),
-                    "niches": self._map_youtube_topics(topics),
+                    "sync_status": "essential_complete"
                 }
 
-                # 3. Push metadata to Channel Service
-                channel_url = f"{settings.channel_service_url}/internal/channels/upsert-from-oauth"
                 sync_res = await client.post(
-                    channel_url,
+                    f"{settings.channel_service_url}/internal/channels/upsert-from-oauth",
                     json=channel_payload,
                     headers={"X-Internal-Service-Token": settings.internal_service_token},
                 )
-                if sync_res.status_code < 400:
-                    internal_channel_id = sync_res.json().get("data", {}).get("id")
-                    if internal_channel_id:
-                        yt_provider_id = channel_item.get("id")
-                        logger.info(f"Linking token to internal channel: {internal_channel_id} (YT: {yt_provider_id})")
-                        await self.repo.update_token_channel(db, user_id, UUID(internal_channel_id), yt_provider_id)
-                else:
-                    logger.error(f"Channel Sync Failed: {sync_res.status_code} - {sync_res.text}")
+                if sync_res.status_code >= 400:
+                    logger.error(f"Essential Sync Push Failed: {sync_res.status_code} - {sync_res.text}")
+                
+                return channel_payload
         except Exception as e:
-            logger.error(f"Error during channel metadata sync: {str(e)}")
+            logger.exception(f"Error during essential channel sync: {str(e)}")
+            return None
+
+    async def _sync_deep(self, user_id: UUID, access_token: str) -> None:
+        """Comprehensive sync for analytics and historical data (runs in background)."""
+        logger.info(f"Starting deep sync for user {user_id}")
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                # 1. Re-fetch channel to get uploads playlist & topics
+                yt_res = await client.get(
+                    "https://www.googleapis.com/youtube/v3/channels",
+                    params={"part": "contentDetails,topicDetails", "mine": "true"},
+                    headers={"Authorization": f"Bearer {access_token}"},
+                )
+                if yt_res.status_code != 200: return
+
+                yt_data = yt_res.json()
+                items = yt_data.get("items", [])
+                if not items: return
+
+                channel_item = items[0]
+                topics = channel_item.get("topicDetails", {}).get("topicCategories", [])
+                uploads_playlist_id = channel_item.get("contentDetails", {}).get("relatedPlaylists", {}).get("uploads")
+
+                # 2. Fetch Latest Videos for Engagement calculation
+                engagement_rate = 0.0
+                if uploads_playlist_id:
+                    playlist_res = await client.get(
+                        "https://www.googleapis.com/youtube/v3/playlistItems",
+                        params={"part": "contentDetails", "playlistId": uploads_playlist_id, "maxResults": 10},
+                        headers={"Authorization": f"Bearer {access_token}"},
+                    )
+                    
+                    if playlist_res.status_code == 200:
+                        video_ids = [v.get("contentDetails", {}).get("videoId") for v in playlist_res.json().get("items", [])]
+                        if video_ids:
+                            v_res = await client.get(
+                                "https://www.googleapis.com/youtube/v3/videos",
+                                params={"part": "statistics", "id": ",".join(video_ids)},
+                                headers={"Authorization": f"Bearer {access_token}"},
+                            )
+                            if v_res.status_code == 200:
+                                v_data = v_res.json().get("items", [])
+                                te = sum(int(v.get("statistics", {}).get("likeCount", 0)) + int(v.get("statistics", {}).get("commentCount", 0)) for v in v_data)
+                                tv = sum(int(v.get("statistics", {}).get("viewCount", 0)) for v in v_data)
+                                if tv > 0: engagement_rate = (te / tv) * 100
+
+                payload = {
+                    "user_id": str(user_id),
+                    "engagement_rate": round(engagement_rate, 2),
+                    "niches": self._map_youtube_topics(topics),
+                    "sync_status": "deep_complete"
+                }
+
+                await client.post(
+                    f"{settings.channel_service_url}/internal/channels/upsert-from-oauth",
+                    json=payload,
+                    headers={"X-Internal-Service-Token": settings.internal_service_token},
+                )
+                logger.info(f"Deep sync completed for user {user_id}")
+        except Exception as e:
+            logger.exception(f"Error during deep channel sync: {str(e)}")
 
     def _map_youtube_topics(self, categories: list[str]) -> list[str]:
         """Map Wikipedia-style topic URLs from YouTube to internal niche tags."""

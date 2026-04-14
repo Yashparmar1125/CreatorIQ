@@ -1,15 +1,18 @@
+import os
 from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Get root .env path relative to this file
+env_path = os.path.join(os.path.dirname(__file__), "../../../../.env")
 
 class Settings(BaseSettings):
     service_name: str = "strategy"
     environment: str = "development"
 
-    database_url: str = "postgresql+asyncpg://creatoriq:creatoriq@postgres:5432/creatoriq"
+    database_url: str = ""
     internal_service_token: str = "change-me"
-    ml_service_url: str = "http://ml:8007"
-    channel_service_url: str = "http://channel:8002"
+    ml_service_url: str = "http://127.0.0.1:8007"
+    channel_service_url: str = "http://127.0.0.1:8002"
 
     # OpenRouter (OpenAI-compatible) — https://openrouter.ai
     openrouter_api_key: str = ""
@@ -23,7 +26,7 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("MODEL_NAME", "LLM_MODEL"),
     )
 
-    model_config = SettingsConfigDict(env_file="../../.env", extra="ignore")
+    model_config = SettingsConfigDict(env_file=env_path, extra="ignore")
 
 
 settings = Settings()

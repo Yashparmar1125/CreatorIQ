@@ -5,7 +5,10 @@ import { OnboardingWizard } from './features/onboarding/components/OnboardingWiz
 import { LandingPage } from './pages/LandingPage';
 import { AuthPage } from './pages/AuthPage';
 import { OAuthCallbackPage } from './pages/OAuthCallbackPage';
+import { PrivacyPage } from './pages/PrivacyPage';
+import { TermsPage } from './pages/TermsPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { Toaster } from './components/Toaster';
 
 // Feature Pages
 import { DashboardPage } from './features/dashboard/pages/DashboardPage';
@@ -14,10 +17,27 @@ import { StrategyPage } from './features/strategy/pages/StrategyPage';
 import { PlannerPage } from './features/planner/pages/PlannerPage';
 import { AnalyticsPage } from './features/analytics/pages/AnalyticsPage';
 
+// Public Pages
+import { ProductPage } from './pages/ProductPage';
+import { PricingPage } from './pages/PricingPage';
+import { InsightsPage } from './pages/InsightsPage';
+
 const router = createBrowserRouter([
   {
     path: '/',
     element: <LandingPage />,
+  },
+  {
+    path: '/product',
+    element: <ProductPage />,
+  },
+  {
+    path: '/pricing',
+    element: <PricingPage />,
+  },
+  {
+    path: '/insights',
+    element: <InsightsPage />,
   },
   {
     path: '/login',
@@ -30,6 +50,14 @@ const router = createBrowserRouter([
   {
     path: '/auth/callback',
     element: <OAuthCallbackPage />,
+  },
+  {
+    path: '/privacy',
+    element: <PrivacyPage />,
+  },
+  {
+    path: '/terms',
+    element: <TermsPage />,
   },
   {
     path: '/onboarding',
@@ -113,6 +141,7 @@ function App() {
   return (
     <>
       <RouterProvider router={router} />
+      <Toaster />
       <Analytics />
     </>
   );

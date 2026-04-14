@@ -1,0 +1,56 @@
+import React from 'react';
+import { Link } from 'react-router';
+import logo from '../../assets/logo.png';
+import { Globe, Shield } from 'lucide-react';
+
+export const Footer: React.FC = () => {
+  return (
+    <footer className="py-16 border-t border-neutral-100 mt-12">
+      <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-12">
+        <div className="space-y-6 col-span-1 md:col-span-2">
+          <div className="flex items-center gap-3">
+            <Link to="/">
+              <img src={logo} className="h-6 w-auto object-contain brightness-0 opacity-80 hover:opacity-100 transition-opacity" alt="CreatorIQ" />
+            </Link>
+          </div>
+          <p className="text-neutral-400 font-medium max-w-xs">Building the platform for the next decade of content creation.</p>
+          <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest">Contact: yashparmar11y@gmail.com</p>
+          <div className="flex gap-4">
+            <div className="w-9 h-9 rounded-full border border-neutral-100 flex items-center justify-center hover:bg-neutral-50 transition-colors">
+              <Globe className="w-3.5 h-3.5 text-neutral-400" />
+            </div>
+            <div className="w-9 h-9 rounded-full border border-neutral-100 flex items-center justify-center hover:bg-neutral-50 transition-colors">
+              <Shield className="w-3.5 h-3.5 text-neutral-400" />
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-neutral-900">Product</h4>
+          <ul className="space-y-4 text-sm font-bold text-neutral-400">
+            <li><Link to="/product" className="hover:text-brand-600 transition-colors">Platform Overview</Link></li>
+            <li><Link to="/insights" className="hover:text-brand-600 transition-colors">Insights Hub</Link></li>
+            <li><Link to="/pricing" className="hover:text-brand-600 transition-colors">Pricing Plans</Link></li>
+          </ul>
+        </div>
+
+        <div className="space-y-6">
+          <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-neutral-900">Legal</h4>
+          <ul className="space-y-4 text-sm font-bold text-neutral-400">
+            <li><Link to="/privacy" className="hover:text-brand-600 transition-colors">Privacy Policy</Link></li>
+            <li><Link to="/terms" className="hover:text-brand-600 transition-colors">Terms of Service</Link></li>
+          </ul>
+        </div>
+      </div>
+      <div className="max-w-7xl mx-auto px-6 mt-12 pt-10 border-t border-neutral-50 flex flex-col md:flex-row justify-between items-center gap-6 text-[10px] font-bold text-neutral-400 uppercase tracking-widest text-center md:text-left">
+        <span>© 2026 CreatorIQ Studio.</span>
+        <div className="flex gap-4">
+          <Link to="/terms" className="hover:text-neutral-900 transition-colors">Terms</Link>
+          <span>&</span>
+          <Link to="/privacy" className="hover:text-neutral-900 transition-colors">Privacy</Link>
+          <span className="opacity-40 ml-2">• 1.0.4-stable</span>
+        </div>
+      </div>
+    </footer>
+  );
+};
