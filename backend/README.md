@@ -117,4 +117,4 @@ http://localhost:8000/v1/auth/google/callback
 
 ## Architecture
 
-See `README.md` (root) and `docs/` for product specs.
+See [../README.md](../README.md) for full architecture, trends engine, and API overview. Additional backend docs: `docs/` and per-service READMEs.
