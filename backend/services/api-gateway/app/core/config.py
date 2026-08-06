@@ -7,6 +7,7 @@ env_path = os.path.join(os.path.dirname(__file__), "../../../../.env")
 class Settings(BaseSettings):
     service_name: str = "api-gateway"
     environment: str = "development"
+    frontend_url: str = "http://localhost:5173"
 
     # JWT verification (user auth)
     jwt_issuer: str = "creatoriq-auth"
