@@ -27,7 +27,7 @@ if (-not (Test-Path ".env")) {
 # 3. Build images
 Write-Host ""
 Write-Host "Building Docker images..." -ForegroundColor Cyan
-docker compose --profile migrate build
+docker compose --profile db-push build
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 # 4. Start infra
@@ -49,15 +49,15 @@ if ($retries -eq 0) {
     exit 1
 }
 
-# 5. Run migrations
+# 5. Sync database schema (no Alembic)
 Write-Host ""
-Write-Host "Running database migrations..." -ForegroundColor Cyan
+Write-Host "Syncing database schema (db push)..." -ForegroundColor Cyan
 $services = @("auth", "channel", "trend", "strategy", "planner", "analytics")
 foreach ($svc in $services) {
-    Write-Host "  -> migrate-$svc" -ForegroundColor Gray
-    docker compose --profile migrate run --rm "migrate-$svc"
+    Write-Host "  -> db-push-$svc" -ForegroundColor Gray
+    docker compose --profile db-push run --rm "db-push-$svc"
     if ($LASTEXITCODE -ne 0) {
-        Write-Error "Migration failed for $svc"
+        Write-Error "Schema sync failed for $svc"
         exit $LASTEXITCODE
     }
 }

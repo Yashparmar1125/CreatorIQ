@@ -137,7 +137,7 @@ class YouTubeVideoCollector:
         seen_videos: set[str],
     ) -> int:
         count = 0
-        for query in queries[:3]:
+        for query in queries[:5]:
             count += await self._ingest_query(
                 db, cluster_name, query, region_code=region_code, seen_videos=seen_videos
             )

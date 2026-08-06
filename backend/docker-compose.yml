@@ -2,7 +2,7 @@ name: creatoriq-backend
 
 # Shared environment for all services (overrides .env host-specific values like Azure DB / 127.0.0.1 URLs)
 x-common-env: &common-env
-  ENVIRONMENT: development
+  ENVIRONMENT: ${ENVIRONMENT:-development}
   LOG_LEVEL: INFO
   DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://creatoriq:creatoriq@postgres:5432/creatoriq}
   REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
@@ -175,63 +175,63 @@ services:
       ml:
         condition: service_started
 
-  # One-shot migration runners (use: docker compose --profile migrate run --rm migrate-auth)
-  migrate-auth:
-    profiles: ["migrate"]
+  # One-shot schema sync (use: docker compose --profile db-push run --rm db-push-auth)
+  db-push-auth:
+    profiles: ["db-push"]
     <<: *service-defaults
     restart: "no"
     build: ./services/auth
-    command: ["alembic", "-c", "alembic.ini", "upgrade", "head"]
+    command: ["python", "-m", "app.db_push"]
     depends_on:
       postgres:
         condition: service_healthy
 
-  migrate-channel:
-    profiles: ["migrate"]
+  db-push-channel:
+    profiles: ["db-push"]
     <<: *service-defaults
     restart: "no"
     build: ./services/channel
-    command: ["alembic", "-c", "alembic.ini", "upgrade", "head"]
+    command: ["python", "-m", "app.db_push"]
     depends_on:
       postgres:
         condition: service_healthy
 
-  migrate-trend:
-    profiles: ["migrate"]
+  db-push-trend:
+    profiles: ["db-push"]
     <<: *service-defaults
     restart: "no"
     build: ./services/trend
-    command: ["alembic", "-c", "alembic.ini", "upgrade", "head"]
+    command: ["python", "-m", "app.db_push"]
     depends_on:
       postgres:
         condition: service_healthy
 
-  migrate-strategy:
-    profiles: ["migrate"]
+  db-push-strategy:
+    profiles: ["db-push"]
     <<: *service-defaults
     restart: "no"
     build: ./services/strategy
-    command: ["alembic", "-c", "alembic.ini", "upgrade", "head"]
+    command: ["python", "-m", "app.db_push"]
     depends_on:
       postgres:
         condition: service_healthy
 
-  migrate-planner:
-    profiles: ["migrate"]
+  db-push-planner:
+    profiles: ["db-push"]
     <<: *service-defaults
     restart: "no"
     build: ./services/planner
-    command: ["alembic", "-c", "alembic.ini", "upgrade", "head"]
+    command: ["python", "-m", "app.db_push"]
     depends_on:
       postgres:
         condition: service_healthy
 
-  migrate-analytics:
-    profiles: ["migrate"]
+  db-push-analytics:
+    profiles: ["db-push"]
     <<: *service-defaults
     restart: "no"
     build: ./services/analytics
-    command: ["alembic", "-c", "alembic.ini", "upgrade", "head"]
+    command: ["python", "-m", "app.db_push"]
     depends_on:
       postgres:
         condition: service_healthy

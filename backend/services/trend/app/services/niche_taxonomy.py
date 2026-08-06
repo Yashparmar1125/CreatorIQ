@@ -2,10 +2,10 @@
 
 NICHE_CLUSTERS: dict[str, dict] = {
     "Entertainment": {
-        "queries": ["comedy shorts", "meme trends", "bollywood movie trailer"],
-        "youtube_queries": ["comedy shorts india", "meme shorts", "funny shorts"],
+        "queries": ["comedy shorts", "meme trends", "bollywood movie trailer", "viral shorts india"],
+        "youtube_queries": ["comedy shorts india", "meme shorts", "funny shorts", "bollywood trailer", "viral shorts"],
         "geo_default": "IN",
-        "category_id": "4",
+        "category_id": "3",
     },
     "Gaming": {
         "queries": ["gaming trends", "new games", "esports"],
@@ -23,19 +23,19 @@ NICHE_CLUSTERS: dict[str, dict] = {
         "queries": ["study tips", "online courses", "exam preparation"],
         "youtube_queries": ["study tips shorts", "upsc preparation", "jee tips"],
         "geo_default": "IN",
-        "category_id": "0",
+        "category_id": "20",
     },
     "Fitness": {
         "queries": ["workout trends", "fitness motivation", "gym"],
         "youtube_queries": ["workout shorts", "gym motivation india"],
         "geo_default": "IN",
-        "category_id": "7",
+        "category_id": "45",
     },
     "Finance": {
         "queries": ["stock market", "investing tips", "personal finance"],
         "youtube_queries": ["stock market india", "personal finance tips"],
         "geo_default": "IN",
-        "category_id": "0",
+        "category_id": "7",
     },
     "Cooking": {
         "queries": ["recipe trends", "cooking hacks", "food"],
@@ -47,19 +47,19 @@ NICHE_CLUSTERS: dict[str, dict] = {
         "queries": ["new music", "song trends", "music videos"],
         "youtube_queries": ["new song hindi", "music video trending"],
         "geo_default": "IN",
-        "category_id": "4",
+        "category_id": "3",
     },
     "Travel": {
         "queries": ["travel destinations", "budget travel", "vlog travel"],
         "youtube_queries": ["travel vlog india", "budget travel tips"],
         "geo_default": "IN",
-        "category_id": "8",
+        "category_id": "0",
     },
     "Beauty": {
         "queries": ["skincare trends", "makeup tutorial", "beauty hacks"],
         "youtube_queries": ["makeup tutorial shorts", "skincare routine india"],
         "geo_default": "IN",
-        "category_id": "8",
+        "category_id": "0",
     },
 }
 

@@ -38,7 +38,7 @@ Write-Host "Copying secrets to VM..."
 & scp $scpArgs ".\backend\secrets\jwt_public.pem" "${VmUser}@${VmHost}:~/CreatorIQ/backend/secrets/"
 
 # 5. Create deployment script and transfer it
-$deployScript = @"
+$deployScript = @'
 set -e
 echo "➡️ Navigating to repository..."
 cd ~/CreatorIQ || { echo 'Repo not found. Clone it first!'; exit 1; }
@@ -60,19 +60,39 @@ docker compose up -d --build
 echo "➡️ Cleaning up unused images..."
 docker image prune -f
 
-echo "➡️ Building migration containers..."
-docker compose --profile migrate build
+echo "➡️ Building db-push containers..."
+docker compose --profile db-push build
 
-echo "➡️ Running Database Migrations..."
-docker compose --profile migrate run --rm migrate-auth
-docker compose --profile migrate run --rm migrate-channel
-docker compose --profile migrate run --rm migrate-trend
-docker compose --profile migrate run --rm migrate-strategy
-docker compose --profile migrate run --rm migrate-planner
-docker compose --profile migrate run --rm migrate-analytics
+echo "➡️ Syncing database schema (db push)..."
+docker compose --profile db-push run --rm db-push-auth
+docker compose --profile db-push run --rm db-push-channel
+docker compose --profile db-push run --rm db-push-trend
+docker compose --profile db-push run --rm db-push-strategy
+docker compose --profile db-push run --rm db-push-planner
+docker compose --profile db-push run --rm db-push-analytics
+
+echo "➡️ Priming trend concept store..."
+TOKEN=$(docker exec ciq-trend printenv INTERNAL_SERVICE_TOKEN 2>/dev/null || true)
+if [ -z "$TOKEN" ]; then
+  echo "⚠️  Could not read INTERNAL_SERVICE_TOKEN — skipping trend collector"
+else
+  echo "➡️ Waiting for trend service to be ready..."
+  for i in $(seq 1 30); do
+    if curl -sf http://localhost:8003/health >/dev/null 2>&1; then
+      break
+    fi
+    sleep 2
+  done
+  if curl -sf -X POST "http://localhost:8003/internal/trends/collect" \
+      -H "X-Internal-Service-Token: $TOKEN"; then
+    echo "✅ Trend concept store primed"
+  else
+    echo "⚠️  Trend collector failed — check YOUTUBE_API_KEY and run: docker logs ciq-trend"
+  fi
+fi
 
 echo "✅ Deployment script finished successfully!"
-"@
+'@
 
 Write-Host "Preparing deployment script..."
 $tmpScript = [System.IO.Path]::GetTempFileName()

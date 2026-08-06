@@ -201,9 +201,10 @@ class TrendEnrichmentService:
         out["topic"] = title.title()
         niche = (ctx.get("niches") or ["your niche"])[0]
         fmt = ctx.get("content_format") or "shorts"
+        fmt_label = {"both": "short or long-form", "long_form": "long-form", "shorts": "Short"}.get(fmt, fmt)
         tone = ctx.get("tone") or "conversational"
         vol = raw.get("volume") or raw.get("key_indicator") or "rising search interest"
-        out["headline"] = f"Rising in {niche} — worth a {fmt} video"
+        out["headline"] = f"Rising in {niche} — worth a {fmt_label} video"
         out["why_trending"] = (
             f"'{title}' is gaining traction on YouTube with {vol}. "
             f"Creators in {niche} are starting to cover this angle."

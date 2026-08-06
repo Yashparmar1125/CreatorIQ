@@ -18,7 +18,7 @@ from app.repositories.feed_repository import FeedRepository
 from app.services.concept_collector import ConceptCollector
 from app.services.trend_enrichment_service import TrendEnrichmentService
 from app.services.niche_taxonomy import NICHE_KEYWORDS, PLAN_CREDITS
-from app.services.quality_filters import passes_feed_quality
+from app.services.quality_filters import passes_feed_quality, passes_ingest_quality
 from app.services.scoring import (
     GEO_RELEVANCE_THRESHOLD,
     NICHE_FIT_THRESHOLD,
@@ -31,6 +31,8 @@ from app.services.scoring import (
 logger = logging.getLogger(__name__)
 
 _POLITICS_KEYWORDS = {"election", "politics", "parliament", "minister", "government", "vote", "congress"}
+_RELAXED_NICHE_FIT_THRESHOLD = 0.42
+_FEED_TARGET = 5
 
 
 def _volume_display(vol: int) -> str:
@@ -119,12 +121,21 @@ class FeedService:
             logger.exception("Failed to fetch creator context for %s", user_id)
         return defaults
 
-    def _score_concept(self, concept: TrendConcept, ctx: dict[str, Any]) -> dict[str, Any] | None:
+    def _score_concept(
+        self,
+        concept: TrendConcept,
+        ctx: dict[str, Any],
+        *,
+        strict: bool = True,
+    ) -> dict[str, Any] | None:
         title = concept.canonical_title
         title_l = title.lower()
         vol = int(concept.search_volume_est or 0)
 
-        if not passes_feed_quality(title, search_volume=vol):
+        if strict:
+            if not passes_feed_quality(title, search_volume=vol):
+                return None
+        elif not passes_ingest_quality(title, search_volume=vol):
             return None
         if any(kw in title_l for kw in _POLITICS_KEYWORDS):
             return None
@@ -142,7 +153,8 @@ class FeedService:
             title=title,
             keywords=keywords,
         )
-        if nfit < NICHE_FIT_THRESHOLD:
+        niche_threshold = NICHE_FIT_THRESHOLD if strict else _RELAXED_NICHE_FIT_THRESHOLD
+        if nfit < niche_threshold:
             return None
 
         geo_src = ctx.get("geo_source") or "global_default"
@@ -151,7 +163,7 @@ class FeedService:
             concept_geo=dict(concept.geo_strength or {}),
             geo_source=geo_src,
         )
-        if grelevance < GEO_RELEVANCE_THRESHOLD and geo_src != "global_default":
+        if strict and grelevance < GEO_RELEVANCE_THRESHOLD and geo_src != "global_default":
             return None
 
         raw = float(concept.raw_momentum)
@@ -265,14 +277,20 @@ class FeedService:
                 return True
         return False
 
-    async def _build_ranked_pool(self, db: AsyncSession, ctx: dict[str, Any]) -> list[dict[str, Any]]:
+    async def _build_ranked_pool(
+        self,
+        db: AsyncSession,
+        ctx: dict[str, Any],
+        *,
+        strict: bool = True,
+    ) -> list[dict[str, Any]]:
         concepts = await self.concept_repo.list_active_concepts(db, max_age_days=7, limit=200)
         user_niches = ctx.get("niches") or []
         scored: list[dict[str, Any]] = []
         for c in concepts:
             if not self._matches_user_clusters(c, user_niches):
                 continue
-            item = self._score_concept(c, ctx)
+            item = self._score_concept(c, ctx, strict=strict)
             if item:
                 scored.append(item)
         scored.sort(
@@ -283,6 +301,78 @@ class FeedService:
             reverse=True,
         )
         return scored
+
+    def _merge_ranked(
+        self,
+        primary: list[dict[str, Any]],
+        secondary: list[dict[str, Any]],
+        *,
+        top_n: int = _FEED_TARGET,
+    ) -> list[dict[str, Any]]:
+        seen = {x["id"] for x in primary}
+        merged = list(primary)
+        for item in secondary:
+            if item["id"] in seen:
+                continue
+            merged.append(item)
+            seen.add(item["id"])
+            if len(merged) >= top_n:
+                break
+        return merged[:top_n]
+
+    def _resolve_geo(self, ctx: dict[str, Any]) -> str:
+        weights = ctx.get("audience_geo_weights") or {}
+        if weights:
+            return max(weights, key=weights.get)
+        return "IN"
+
+    async def _ensure_ranked_pool(
+        self,
+        db: AsyncSession,
+        ctx: dict[str, Any],
+        *,
+        is_first_feed: bool = False,
+    ) -> list[dict[str, Any]]:
+        """Collect concepts and score until we have enough feed candidates."""
+        geo = self._resolve_geo(ctx)
+        niches = ctx.get("niches") or []
+
+        if is_first_feed:
+            try:
+                await self.collector.run_all_clusters(db)
+            except Exception:
+                logger.exception("Full collector bootstrap failed on first feed")
+
+        ranked = await self._build_ranked_pool(db, ctx)
+        if len(ranked) >= _FEED_TARGET:
+            return ranked
+
+        try:
+            await self.collector.collect_for_niches(
+                db,
+                niches,
+                geo=geo,
+                max_queries=8 if is_first_feed else 4,
+            )
+        except Exception:
+            logger.exception("On-demand niche collection failed")
+
+        ranked = await self._build_ranked_pool(db, ctx)
+        if len(ranked) >= _FEED_TARGET:
+            return ranked
+
+        if not is_first_feed:
+            try:
+                await self.collector.run_all_clusters(db)
+            except Exception:
+                logger.exception("Full collector fallback failed")
+            ranked = await self._build_ranked_pool(db, ctx)
+
+        if len(ranked) < _FEED_TARGET:
+            relaxed = await self._build_ranked_pool(db, ctx, strict=False)
+            ranked = self._merge_ranked(ranked, relaxed)
+
+        return ranked
 
     async def get_latest_feed(self, db: AsyncSession, user_id: uuid.UUID) -> dict[str, Any] | None:
         snap = await self.feed_repo.get_latest_snapshot(db, user_id)
@@ -331,14 +421,7 @@ class FeedService:
                     },
                 )
 
-        ranked = await self._build_ranked_pool(db, ctx)
-        if len(ranked) < 5:
-            geo = "IN"
-            weights = ctx.get("audience_geo_weights") or {}
-            if weights:
-                geo = max(weights, key=weights.get)
-            await self.collector.collect_for_niches(db, ctx.get("niches") or [], geo=geo)
-            ranked = await self._build_ranked_pool(db, ctx)
+        ranked = await self._ensure_ranked_pool(db, ctx, is_first_feed=is_first_feed)
 
         if not ranked:
             raise HTTPException(

@@ -243,10 +243,13 @@ class ConceptCollector:
                     continue
                 pct = int(ts.get("increase_percentage") or 0)
                 growth = _growth_norm(pct)
-                keywords = NICHE_KEYWORDS.get(cluster_name.lower(), [cluster_name.lower()])
-                text = title.lower()
-                if not any(kw in text for kw in keywords) and cluster_name.lower() not in text:
-                    continue
+                # Category-scoped trending is already niche-filtered by SerpApi.
+                # Only apply keyword gate for broad "all topics" (category_id 0).
+                if category_id == "0":
+                    keywords = NICHE_KEYWORDS.get(cluster_name.lower(), [cluster_name.lower()])
+                    text = title.lower()
+                    if not any(kw in text for kw in keywords) and cluster_name.lower() not in text:
+                        continue
                 momentum = compute_raw_momentum(
                     youtube_video_velocity=growth,
                     youtube_search_velocity=growth * 0.8,

@@ -54,10 +54,10 @@ jobs:
             # Clean up dangling images to save space
             docker image prune -f
             
-            # Run database migrations
-            docker compose --profile migrate run --rm migrate-auth
-            docker compose --profile migrate run --rm migrate-channel
-            docker compose --profile migrate run --rm migrate-trend
-            docker compose --profile migrate run --rm migrate-strategy
-            docker compose --profile migrate run --rm migrate-planner
-            docker compose --profile migrate run --rm migrate-analytics
+            # Sync database schema from SQLAlchemy models (no Alembic)
+            docker compose --profile db-push run --rm db-push-auth
+            docker compose --profile db-push run --rm db-push-channel
+            docker compose --profile db-push run --rm db-push-trend
+            docker compose --profile db-push run --rm db-push-strategy
+            docker compose --profile db-push run --rm db-push-planner
+            docker compose --profile db-push run --rm db-push-analytics
