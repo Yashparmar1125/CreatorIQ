@@ -26,6 +26,8 @@ venv.bak/
 htmlcov/
 .mypy_cache/
 .env
+.env.production
+.env.*
 
 # Secrets / Config
 secrets/

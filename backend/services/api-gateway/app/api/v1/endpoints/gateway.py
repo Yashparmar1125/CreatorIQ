@@ -18,6 +18,11 @@ async def health() -> dict:
     return service.health()
 
 
+@router.get("/full-health")
+async def full_health() -> dict:
+    return await service.full_health()
+
+
 @router.api_route("/v1/{path:path}", methods=["GET", "POST", "PATCH", "DELETE"])
 async def route_all(path: str, request: Request):
     target = resolve_target(path)
