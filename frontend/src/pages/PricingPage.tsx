@@ -1,196 +1,292 @@
 import React from 'react';
-import { motion } from 'framer-motion';
-import { Check, Info, ArrowRight, Zap, Target, Shield, Users } from 'lucide-react';
 import { Link } from 'react-router';
+import {
+  Check,
+  ArrowRight,
+  Sparkles,
+  Zap,
+  Crown,
+  Building2,
+  RefreshCw,
+  HelpCircle,
+  Mail,
+} from 'lucide-react';
 import { PublicLayout } from '../components/organisms/PublicLayout';
+import { MarketingHero, MarketingSection, MarketingCta } from '../components/marketing/MarketingSections';
+import { Button } from '../components/ui/Button';
+import { Card } from '../components/ui/Card';
+import { Badge } from '../components/ui/Badge';
+import { cn } from '../lib/utils';
+import type { LucideIcon } from 'lucide-react';
+
+const plans: {
+  name: string;
+  price: string;
+  period: string;
+  description: string;
+  features: string[];
+  cta: string;
+  href: string;
+  popular: boolean;
+  external?: boolean;
+  icon: LucideIcon;
+}[] = [
+  {
+    name: 'Free',
+    price: '$0',
+    period: 'forever',
+    description: 'For new creators exploring trends and building a content rhythm.',
+    features: [
+      '1 free trend feed on onboarding',
+      '2 feed refreshes per month',
+      'Browse feed history',
+      'Trend detail & title ideas',
+      'Basic channel profile',
+    ],
+    cta: 'Start free',
+    href: '/signup',
+    popular: false,
+    icon: Zap,
+  },
+  {
+    name: 'Pro',
+    price: '$49',
+    period: '/month',
+    description: 'For creators publishing consistently and scaling with data-backed decisions.',
+    features: [
+      'Everything in Free',
+      '20 feed refreshes per month',
+      'Unlimited strategy briefs',
+      'Full analytics dashboard',
+      'Content planner',
+      'Priority AI enrichment',
+    ],
+    cta: 'Start Pro trial',
+    href: '/signup',
+    popular: true,
+    icon: Crown,
+  },
+  {
+    name: 'Agency',
+    price: 'Custom',
+    period: '',
+    description: 'For teams managing multiple creator channels and client workflows.',
+    features: [
+      '100+ feed refreshes per month',
+      'Multi-channel management',
+      'API access',
+      'Dedicated support',
+      'Custom onboarding',
+      'SSO & team permissions',
+    ],
+    cta: 'Contact sales',
+    href: 'mailto:yashparmar11y@gmail.com',
+    popular: false,
+    external: true,
+    icon: Building2,
+  },
+];
+
+const faqs = [
+  {
+    q: 'What counts as a feed refresh?',
+    a: 'Each time you click Refresh Feed to generate a new Top 5 snapshot, it uses one credit. Viewing your latest feed and browsing history is always free.',
+  },
+  {
+    q: 'Do I get a feed when I sign up?',
+    a: 'Yes. Your first personalized Top 5 feed is generated free when you complete onboarding — no credit required.',
+  },
+  {
+    q: 'Can I cancel anytime?',
+    a: 'Yes. Cancel from your account settings. You keep access until the end of your billing period.',
+  },
+  {
+    q: 'Is there a trial for Pro?',
+    a: 'New accounts can explore the Free plan fully. Pro includes a 14-day trial when billing launches.',
+  },
+];
+
+const comparison = [
+  { feature: 'Trend feed (Top 5)', free: true, pro: true, agency: true },
+  { feature: 'Monthly refreshes', free: '2', pro: '20', agency: '100+' },
+  { feature: 'Feed history', free: true, pro: true, agency: true },
+  { feature: 'Strategy briefs', free: 'Limited', pro: 'Unlimited', agency: 'Unlimited' },
+  { feature: 'Analytics', free: 'Basic', pro: 'Full', agency: 'Full' },
+  { feature: 'Planner', free: false, pro: true, agency: true },
+  { feature: 'Multi-channel', free: false, pro: false, agency: true },
+];
+
+const highlights = [
+  { icon: RefreshCw, title: 'Cancel anytime', desc: 'No lock-in contracts on monthly plans.' },
+  { icon: Sparkles, title: 'First feed free', desc: 'Personalized Top 5 on onboarding completion.' },
+  { icon: HelpCircle, title: 'Human support', desc: 'Email us directly — we read every message.' },
+];
+
+function FeatureCell({ value }: { value: boolean | string }) {
+  if (value === true) return <Check className="mx-auto h-4 w-4 text-success-600" />;
+  if (value === false) return <span className="text-neutral-300">—</span>;
+  return <span className="text-sm text-neutral-700">{value}</span>;
+}
 
 export const PricingPage: React.FC = () => {
-  const plans = [
-    {
-      name: "Starter",
-      price: "0",
-      description: "Perfect for new creators identifying their niche.",
-      features: [
-        "Basic Channel Analytics",
-        "3 AI Topic Suggestions / Week",
-        "Last 30 Days Retention Data",
-        "Public Trends Access"
-      ],
-      cta: "Start Free",
-      popular: false
-    },
-    {
-      name: "Pro",
-      price: "49",
-      description: "For serious creators scaling their audience.",
-      features: [
-        "Everything in Starter",
-        "Unlimited AI Topic Discovery",
-        "Retention Heatmaps & Hook AI",
-        "Predictive Performance Tools",
-        "Community Discord Access"
-      ],
-      cta: "Go Pro Now",
-      popular: true
-    },
-    {
-      name: "Enterprise",
-      price: "Custom",
-      description: "Tailored solutions for media houses and teams.",
-      features: [
-        "Multi-Channel Management",
-        "API Access & Custom Reports",
-        "Priority AI Processing",
-        "Dedicated Growth Strategist",
-        "SSO & Team Permissions"
-      ],
-      cta: "Contact Sales",
-      popular: false
-    }
-  ];
-
   return (
     <PublicLayout>
-      <section className="pt-48 pb-24 px-6 text-center space-y-12">
-        <motion.div
-           initial={{ opacity: 0, y: 20 }}
-           animate={{ opacity: 1, y: 0 }}
-           className="space-y-6"
-        >
-          <h1 className="text-5xl md:text-8xl font-black font-sora tracking-tighter leading-tight">
-             Simple, Transparent <br />
-             <span className="text-neutral-400">Pricing.</span>
-          </h1>
-          <p className="text-xl text-neutral-500 font-medium max-w-2xl mx-auto leading-relaxed italic opacity-80">
-            Choose the plan that fits your current stage. Upgrade as you grow. No hidden fees, cancel anytime.
-          </p>
-        </motion.div>
+      <MarketingHero
+        badge="Simple pricing"
+        badgeIcon={<Sparkles className="h-3.5 w-3.5" />}
+        title="Plans that grow with your channel"
+        description="Start free with a personalized trend feed. Upgrade when you need more refreshes, strategy, and analytics."
+      />
 
-        <div className="flex flex-wrap justify-center gap-8 pt-10">
-          {plans.map((plan, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1 }}
-              className={`relative p-10 rounded-[40px] border w-full max-w-xs flex flex-col justify-between text-left transition-all group ${
-                plan.popular 
-                  ? 'bg-neutral-900 text-white border-neutral-800 shadow-2xl scale-105 z-10' 
-                  : 'bg-white text-neutral-900 border-neutral-100 hover:border-neutral-200 hover:shadow-xl'
-              }`}
+      <MarketingSection className="-mt-4 bg-neutral-50 pt-0">
+        <div className="mb-10 grid gap-4 sm:grid-cols-3">
+          {highlights.map((h) => (
+            <div
+              key={h.title}
+              className="flex items-start gap-3 rounded-xl border border-neutral-200 bg-white p-4 shadow-sm"
             >
-              {plan.popular && (
-                <div className="absolute top-0 right-1/2 translate-x-1/2 -translate-y-1/2 px-4 py-1.5 bg-brand-600 text-white rounded-full text-[10px] font-black uppercase tracking-widest shadow-xl shadow-brand-600/30">
-                  Most Popular
-                </div>
-              )}
-              
-              <div className="space-y-8">
-                <div className="space-y-2">
-                  <h3 className={`text-xl font-bold uppercase tracking-[0.2em] ${plan.popular ? 'text-brand-400' : 'text-neutral-400'}`}>
-                    {plan.name}
-                  </h3>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-5xl font-black font-sora">${plan.price}</span>
-                    {plan.price !== "Custom" && (
-                      <span className={`text-sm font-bold opacity-60 ${plan.popular ? 'text-neutral-400' : 'text-neutral-500'}`}>
-                        /mo
-                      </span>
-                    )}
-                  </div>
-                </div>
-                
-                <p className={`text-sm font-medium leading-relaxed opacity-80 ${plan.popular ? 'text-neutral-400' : 'text-neutral-500'}`}>
-                   {plan.description}
-                </p>
-
-                <ul className="space-y-4">
-                  {plan.features.map((feature, j) => (
-                    <li key={j} className="flex items-center gap-3 text-sm font-bold tracking-tight">
-                      <Check className={`w-4 h-4 ${plan.popular ? 'text-brand-600' : 'text-success-600'}`} />
-                      {feature}
-                    </li>
-                  ))}
-                </ul>
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
+                <h.icon className="h-4 w-4" />
               </div>
-
-              <div className="pt-12">
-                 <Link
-                   to="/signup"
-                   className={`w-full py-4.5 rounded-2xl font-black text-sm tracking-widest uppercase text-center block transition-all hover:scale-[1.02] active:scale-95 ${
-                     plan.popular
-                       ? 'bg-brand-600 text-white shadow-xl shadow-brand-600/30'
-                       : 'bg-neutral-900 text-white'
-                   }`}
-                 >
-                   {plan.cta}
-                 </Link>
+              <div>
+                <p className="text-sm font-medium text-neutral-900">{h.title}</p>
+                <p className="mt-1 text-xs text-neutral-500">{h.desc}</p>
               </div>
-            </motion.div>
+            </div>
           ))}
         </div>
-      </section>
 
-      {/* Feature Comparison Mini-Section */}
-      <section className="py-32 px-6 max-w-5xl mx-auto">
-        <div className="text-center space-y-12">
-           <h2 className="text-3xl md:text-5xl font-black font-sora tracking-tighter">Everything you need <br /><span className="text-neutral-400 text-3xl">to scale your channel.</span></h2>
-           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-              {[
-                { icon: <Zap className="w-5 h-5" />, title: "Instant Access", color: 'text-brand-600' },
-                { icon: <Target className="w-5 h-5" />, title: "Goal Tracking", color: 'text-accent-600' },
-                { icon: <Shield className="w-5 h-5" />, title: "Safe & Secure", color: 'text-success-600' },
-                { icon: <Users className="w-5 h-5" />, title: "Global Network", color: 'text-brand-400' },
-              ].map((item, i) => (
-                <div key={i} className="p-6 rounded-[32px] border border-neutral-100 hover:bg-neutral-50 transition-colors flex flex-col items-center gap-4 text-center">
-                   <div className={`${item.color} w-10 h-10 rounded-xl bg-white flex items-center justify-center border border-neutral-100 shadow-sm`}>
-                      {item.icon}
-                   </div>
-                   <p className="text-[10px] font-black uppercase tracking-widest text-neutral-900">{item.title}</p>
+        <div className="grid gap-6 lg:grid-cols-3">
+          {plans.map((plan) => (
+            <Card
+              key={plan.name}
+              className={cn(
+                'relative flex flex-col shadow-sm transition-shadow hover:shadow-md',
+                plan.popular && 'border-brand-600 ring-1 ring-brand-600 lg:scale-[1.02]'
+              )}
+            >
+              {plan.popular && (
+                <Badge variant="brand" className="absolute -top-3 left-4">
+                  Most popular
+                </Badge>
+              )}
+              <div className="mb-6">
+                <div className="flex items-center gap-3">
+                  <div
+                    className={cn(
+                      'flex h-10 w-10 items-center justify-center rounded-xl',
+                      plan.popular ? 'bg-brand-600 text-white' : 'bg-neutral-100 text-neutral-600'
+                    )}
+                  >
+                    <plan.icon className="h-5 w-5" />
+                  </div>
+                  <h3 className="text-base font-semibold text-neutral-900">{plan.name}</h3>
                 </div>
+                <div className="mt-4 flex items-baseline gap-1">
+                  <span className="text-4xl font-semibold tracking-tight text-neutral-900">
+                    {plan.price}
+                  </span>
+                  {plan.period && <span className="text-sm text-neutral-500">{plan.period}</span>}
+                </div>
+                <p className="mt-3 text-sm leading-relaxed text-neutral-500">{plan.description}</p>
+              </div>
+              <ul className="mb-8 flex-1 space-y-3 border-t border-neutral-100 pt-6">
+                {plan.features.map((feature) => (
+                  <li key={feature} className="flex items-start gap-2.5 text-sm text-neutral-700">
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" />
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+              {plan.external ? (
+                <a href={plan.href}>
+                  <Button variant={plan.popular ? 'primary' : 'secondary'} className="w-full">
+                    <Mail className="h-4 w-4" />
+                    {plan.cta}
+                  </Button>
+                </a>
+              ) : (
+                <Link to={plan.href}>
+                  <Button variant={plan.popular ? 'primary' : 'secondary'} className="w-full">
+                    {plan.cta}
+                  </Button>
+                </Link>
+              )}
+            </Card>
+          ))}
+        </div>
+      </MarketingSection>
+
+      <MarketingSection
+        title="Compare plans"
+        description="See what is included at each tier."
+        className="border-t border-neutral-200 bg-white"
+      >
+        <div className="overflow-hidden rounded-xl border border-neutral-200 shadow-sm">
+          <table className="w-full min-w-[560px] text-left text-sm">
+            <thead>
+              <tr className="border-b border-neutral-200 bg-neutral-50">
+                <th className="px-5 py-4 font-medium text-neutral-900">Feature</th>
+                <th className="px-5 py-4 text-center font-medium text-neutral-900">Free</th>
+                <th className="px-5 py-4 text-center font-medium text-brand-600">Pro</th>
+                <th className="px-5 py-4 text-center font-medium text-neutral-900">Agency</th>
+              </tr>
+            </thead>
+            <tbody>
+              {comparison.map((row) => (
+                <tr key={row.feature} className="border-b border-neutral-100 last:border-0">
+                  <td className="px-5 py-3.5 text-neutral-700">{row.feature}</td>
+                  <td className="px-5 py-3.5 text-center">
+                    <FeatureCell value={row.free} />
+                  </td>
+                  <td className="bg-brand-50/30 px-5 py-3.5 text-center">
+                    <FeatureCell value={row.pro} />
+                  </td>
+                  <td className="px-5 py-3.5 text-center">
+                    <FeatureCell value={row.agency} />
+                  </td>
+                </tr>
               ))}
-           </div>
+            </tbody>
+          </table>
         </div>
-      </section>
+      </MarketingSection>
 
-      {/* FAQ Link or Mini-Section */}
-      <section className="py-32 px-6 bg-neutral-50/50">
-        <div className="max-w-3xl mx-auto space-y-12">
-          <div className="text-center space-y-4">
-             <h2 className="text-3xl font-black font-sora tracking-tight">Common Questions</h2>
-             <p className="text-neutral-500 font-medium">Everything you need to know about the product and pricing.</p>
-          </div>
-          <div className="space-y-6">
-             {[
-               { q: "Can I cancel my subscription any time?", a: "Absolutely. You can cancel your subscription from your account dashboard at any point. You'll keep your access until the end of the billing cycle." },
-               { q: "Is there a free trial for the Pro plan?", a: "Yes, we offer a 14-day free trial of the Pro plan for all new users so you can test the AI tools yourself." },
-               { q: "Do you offer discounts for educational creators?", a: "We love educators! Contact our support team with proof of your educational affiliation for a special discount." }
-             ].map((faq, i) => (
-               <div key={i} className="p-8 rounded-3xl bg-white border border-neutral-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer">
-                  <h4 className="text-sm font-black text-neutral-900 mb-3 flex items-center justify-between">
-                    {faq.q}
-                    <Info className="w-4 h-4 text-neutral-300" />
-                  </h4>
-                  <p className="text-sm text-neutral-500 font-medium leading-relaxed opacity-80">{faq.a}</p>
-               </div>
-             ))}
-          </div>
-          <div className="text-center pt-8">
-             <p className="text-sm text-neutral-400 font-bold">Still have questions? <Link to="/contact" className="text-brand-600 underline">Contact our support team.</Link></p>
-          </div>
+      <MarketingSection title="Frequently asked questions" className="bg-neutral-50">
+        <div className="grid gap-4 md:grid-cols-2">
+          {faqs.map((faq) => (
+            <Card key={faq.q} className="shadow-sm">
+              <div className="flex items-start gap-3">
+                <HelpCircle className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" />
+                <div>
+                  <h3 className="text-sm font-medium text-neutral-900">{faq.q}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-neutral-500">{faq.a}</p>
+                </div>
+              </div>
+            </Card>
+          ))}
         </div>
-      </section>
+        <p className="mt-8 text-center text-sm text-neutral-500">
+          Questions?{' '}
+          <a href="mailto:yashparmar11y@gmail.com" className="inline-flex items-center gap-1 font-medium text-brand-600 hover:underline">
+            <Mail className="h-3.5 w-3.5" />
+            Email support
+          </a>
+        </p>
+      </MarketingSection>
 
-      {/* CTA Branding Reveal */}
-      <section className="py-40 relative px-6">
-        <div className="max-w-5xl mx-auto p-12 md:p-24 bg-neutral-900 rounded-[56px] text-center text-white relative overflow-hidden shadow-2xl">
-            <div className="absolute inset-0 bg-brand-600/10 blur-[150px] translate-y-1/2" />
-            <h2 className="text-4xl md:text-6xl font-black font-sora tracking-tighter leading-tight mb-8">Start your journey <br />into <span className="text-neutral-400 italic">intelligence.</span></h2>
-            <Link to="/signup" className="inline-flex items-center gap-3 px-10 py-5 bg-brand-600 text-white rounded-full font-black text-lg hover:scale-110 active:scale-95 transition-all shadow-2xl shadow-brand-600/30 group">
-              Get Started for Free <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
-            </Link>
-        </div>
-      </section>
+      <MarketingCta
+        variant="dark"
+        title="Start with a free trend feed"
+        description="No credit card required. Connect YouTube and get your Top 5 on day one."
+      >
+        <Link to="/signup">
+          <Button size="lg">
+            Create free account
+            <ArrowRight className="h-4 w-4" />
+          </Button>
+        </Link>
+      </MarketingCta>
     </PublicLayout>
   );
 };

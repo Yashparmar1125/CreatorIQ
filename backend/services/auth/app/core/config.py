@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     # Service-to-service auth
     internal_service_token: str = "change-me"
     channel_service_url: str = "http://127.0.0.1:8002"
+    trend_service_url: str = "http://127.0.0.1:8003"
 
     # Google OAuth (Sign in + YouTube scopes)
     google_client_id: str = ""

@@ -17,6 +17,8 @@ from app.models.auth_models import OAuthProvider, PlanTier, User
 from app.repositories.auth_repository import AuthRepository
 from app.schemas.auth_schemas import UserCreate, UserLogin, OnboardingUpdate
 
+from app.integrations.youtube_analytics_client import MIN_VIEWS_FOR_ANALYTICS_GEO, YouTubeAnalyticsClient
+
 logger = logging.getLogger(__name__)
 
 
@@ -124,6 +126,7 @@ class AuthService:
                 "email",
                 "profile",
                 "https://www.googleapis.com/auth/youtube.readonly",
+                "https://www.googleapis.com/auth/yt-analytics.readonly",
             ]
         )
         params = {
@@ -286,8 +289,46 @@ class AuthService:
                 detail={"code": "USER_NOT_FOUND", "message": "User not found."},
             )
 
+        # Build creator profile via channel service
+        profile_data: dict | None = None
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                r = await client.post(
+                    f"{settings.channel_service_url}/internal/channels/profile/build",
+                    json={
+                        "user_id": str(user_id),
+                        "mode": "onboarding",
+                        "niche": payload.niche,
+                        "primary_format": payload.primary_format,
+                        "posting_frequency": payload.posting_frequency,
+                        "channel_tone": payload.channel_tone,
+                        "country": payload.country,
+                    },
+                    headers={"X-Internal-Service-Token": settings.internal_service_token},
+                )
+                if r.status_code < 400:
+                    profile_data = r.json().get("data")
+                else:
+                    logger.error("Profile build failed: %s %s", r.status_code, r.text)
+        except Exception as e:
+            logger.exception("Profile build error: %s", e)
+
+        # Generate first free trend feed (non-blocking best-effort)
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                await client.post(
+                    f"{settings.trend_service_url}/internal/trends/feeds/generate-first",
+                    json={"user_id": str(user_id)},
+                    headers={"X-Internal-Service-Token": settings.internal_service_token},
+                )
+        except Exception as e:
+            logger.warning("First trend feed generation skipped: %s", e)
+
         await db.commit()
-        return {"data": self._user_payload(user), "meta": {"request_id": "local-dev"}}
+        user_payload = self._user_payload(user)
+        if profile_data:
+            user_payload["creator_profile"] = profile_data
+        return {"data": user_payload, "meta": {"request_id": "local-dev"}}
 
     def youtube_callback(self) -> dict:
         return {"data": {"message": "Use GET /auth/google/callback"}, "meta": {"request_id": "local-dev"}}
@@ -378,23 +419,25 @@ class AuthService:
         logger.info(f"Starting deep sync for user {user_id}")
         try:
             async with httpx.AsyncClient(timeout=60.0) as client:
-                # 1. Re-fetch channel to get uploads playlist & topics
                 yt_res = await client.get(
                     "https://www.googleapis.com/youtube/v3/channels",
-                    params={"part": "contentDetails,topicDetails", "mine": "true"},
+                    params={"part": "contentDetails,topicDetails,statistics", "mine": "true"},
                     headers={"Authorization": f"Bearer {access_token}"},
                 )
-                if yt_res.status_code != 200: return
+                if yt_res.status_code != 200:
+                    return
 
                 yt_data = yt_res.json()
                 items = yt_data.get("items", [])
-                if not items: return
+                if not items:
+                    return
 
                 channel_item = items[0]
                 topics = channel_item.get("topicDetails", {}).get("topicCategories", [])
                 uploads_playlist_id = channel_item.get("contentDetails", {}).get("relatedPlaylists", {}).get("uploads")
+                stats = channel_item.get("statistics", {})
+                view_count = int(stats.get("viewCount", 0))
 
-                # 2. Fetch Latest Videos for Engagement calculation
                 engagement_rate = 0.0
                 if uploads_playlist_id:
                     playlist_res = await client.get(
@@ -402,7 +445,7 @@ class AuthService:
                         params={"part": "contentDetails", "playlistId": uploads_playlist_id, "maxResults": 10},
                         headers={"Authorization": f"Bearer {access_token}"},
                     )
-                    
+
                     if playlist_res.status_code == 200:
                         video_ids = [v.get("contentDetails", {}).get("videoId") for v in playlist_res.json().get("items", [])]
                         if video_ids:
@@ -415,20 +458,40 @@ class AuthService:
                                 v_data = v_res.json().get("items", [])
                                 te = sum(int(v.get("statistics", {}).get("likeCount", 0)) + int(v.get("statistics", {}).get("commentCount", 0)) for v in v_data)
                                 tv = sum(int(v.get("statistics", {}).get("viewCount", 0)) for v in v_data)
-                                if tv > 0: engagement_rate = (te / tv) * 100
+                                if tv > 0:
+                                    engagement_rate = (te / tv) * 100
 
-                payload = {
+                analysis_payload = {
                     "user_id": str(user_id),
                     "engagement_rate": round(engagement_rate, 2),
                     "niches": self._map_youtube_topics(topics),
-                    "sync_status": "deep_complete"
                 }
-
-                await client.post(
-                    f"{settings.channel_service_url}/internal/channels/upsert-from-oauth",
-                    json=payload,
+                await client.patch(
+                    f"{settings.channel_service_url}/internal/channels/user/{user_id}/analysis",
+                    json=analysis_payload,
                     headers={"X-Internal-Service-Token": settings.internal_service_token},
                 )
+
+                analytics_client = YouTubeAnalyticsClient()
+                geo_weights = await analytics_client.fetch_audience_geography(access_token, client=client)
+                if geo_weights and view_count >= MIN_VIEWS_FOR_ANALYTICS_GEO:
+                    geo_res = await client.patch(
+                        f"{settings.channel_service_url}/internal/channels/user/{user_id}/geo",
+                        json={"audience_geo_weights": geo_weights, "view_count": view_count},
+                        headers={"X-Internal-Service-Token": settings.internal_service_token},
+                    )
+                    if geo_res.status_code >= 400:
+                        logger.warning("Geo sync push failed: %s %s", geo_res.status_code, geo_res.text)
+                    else:
+                        logger.info("YouTube Analytics geography synced for user %s", user_id)
+                elif geo_weights:
+                    logger.info(
+                        "YouTube Analytics geography skipped for user %s (views %s < %s)",
+                        user_id,
+                        view_count,
+                        MIN_VIEWS_FOR_ANALYTICS_GEO,
+                    )
+
                 logger.info(f"Deep sync completed for user {user_id}")
         except Exception as e:
             logger.exception(f"Error during deep channel sync: {str(e)}")

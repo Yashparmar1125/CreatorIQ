@@ -1,47 +1,111 @@
-import React from 'react';
-import { Link } from 'react-router';
+import React, { useState } from 'react';
+import { Link, NavLink } from 'react-router';
 import logo from '../../assets/logo.png';
 import { useAuthStore } from '../../stores/useAuthStore';
+import { Button } from '../ui/Button';
+import { Menu, X } from 'lucide-react';
+import { cn } from '../../lib/utils';
+
+const navLinks = [
+  { to: '/product', label: 'Product' },
+  { to: '/insights', label: 'Insights' },
+  { to: '/pricing', label: 'Pricing' },
+];
 
 export const Navbar: React.FC = () => {
   const { isAuthenticated } = useAuthStore();
+  const [open, setOpen] = useState(false);
 
   return (
-    <nav className="fixed top-4 left-1/2 -translate-x-1/2 w-[95%] max-w-7xl z-50">
-      <div className="glass px-6 py-3 rounded-2xl border border-white/40 flex items-center justify-between shadow-xl shadow-neutral-900/5">
-        <div className="flex items-center gap-2 group cursor-pointer">
-          <Link to="/" className="flex items-center gap-2.5">
-            <img src={logo} className="h-8 w-auto object-contain" alt="CreatorIQ" />
-            <span className="text-sm font-bold font-sora tracking-tight">
-              <span className="text-neutral-900">Creator</span>
-              <span className="text-neutral-400">IQ</span>
-            </span>
-          </Link>
-        </div>
+    <header className="sticky top-0 z-50 border-b border-neutral-200 bg-white/95 backdrop-blur-sm">
+      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+        <Link to="/" className="flex items-center gap-2.5 shrink-0">
+          <img src={logo} className="h-7 w-auto" alt="CreatorIQ" />
+          <span className="font-sora text-sm font-semibold text-neutral-900">
+            Creator<span className="text-neutral-400">IQ</span>
+          </span>
+        </Link>
 
-        <div className="hidden md:flex items-center gap-8 text-[10px] font-bold uppercase tracking-[0.15em] text-neutral-400">
-          <Link to="/product" className="hover:text-neutral-900 transition-colors">Product</Link>
-          <Link to="/insights" className="hover:text-neutral-900 transition-colors">Insights</Link>
-          <Link to="/pricing" className="hover:text-neutral-900 transition-colors">Pricing</Link>
-        </div>
+        <nav className="hidden items-center gap-6 md:flex">
+          {navLinks.map((link) => (
+            <NavLink
+              key={link.to}
+              to={link.to}
+              className={({ isActive }) =>
+                cn(
+                  'text-sm font-medium transition-colors',
+                  isActive ? 'text-brand-600' : 'text-neutral-600 hover:text-neutral-900'
+                )
+              }
+            >
+              {link.label}
+            </NavLink>
+          ))}
+        </nav>
 
-        <div className="flex items-center gap-4">
+        <div className="hidden items-center gap-2 md:flex">
           {!isAuthenticated ? (
             <>
-              <Link to="/login" className="text-[10px] font-bold uppercase tracking-widest text-neutral-900 hover:text-brand-600 transition-colors hidden sm:block px-4">
-                Access
+              <Link to="/login">
+                <Button variant="ghost" size="sm">
+                  Log in
+                </Button>
               </Link>
-              <Link to="/signup" className="px-6 py-2.5 bg-neutral-900 text-white rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-brand-600 hover:scale-[1.02] transition-all shadow-lg shadow-neutral-900/10 active:scale-98">
-                Get Started
+              <Link to="/signup">
+                <Button size="sm">Get started</Button>
               </Link>
             </>
           ) : (
-            <Link to="/app/dashboard" className="px-6 py-2.5 bg-brand-600 text-white rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-brand-500 hover:scale-[1.02] transition-all shadow-lg shadow-brand-600/10 active:scale-98">
-              Dashboard
+            <Link to="/app/dashboard">
+              <Button size="sm">Dashboard</Button>
             </Link>
           )}
         </div>
+
+        <button
+          type="button"
+          className="rounded-lg p-2 text-neutral-600 hover:bg-neutral-100 md:hidden"
+          onClick={() => setOpen(!open)}
+          aria-label={open ? 'Close menu' : 'Open menu'}
+        >
+          {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        </button>
       </div>
-    </nav>
+
+      {open && (
+        <div className="border-t border-neutral-200 bg-white px-4 py-4 md:hidden">
+          <nav className="flex flex-col gap-1">
+            {navLinks.map((link) => (
+              <Link
+                key={link.to}
+                to={link.to}
+                onClick={() => setOpen(false)}
+                className="rounded-lg px-3 py-2.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </nav>
+          <div className="mt-4 flex flex-col gap-2 border-t border-neutral-100 pt-4">
+            {!isAuthenticated ? (
+              <>
+                <Link to="/login" onClick={() => setOpen(false)}>
+                  <Button variant="secondary" className="w-full">
+                    Log in
+                  </Button>
+                </Link>
+                <Link to="/signup" onClick={() => setOpen(false)}>
+                  <Button className="w-full">Get started</Button>
+                </Link>
+              </>
+            ) : (
+              <Link to="/app/dashboard" onClick={() => setOpen(false)}>
+                <Button className="w-full">Dashboard</Button>
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
+    </header>
   );
 };

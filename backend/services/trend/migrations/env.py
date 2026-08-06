@@ -9,6 +9,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from app.models.base import Base  # noqa: E402
 from app.core.config import settings  # noqa: E402
 import app.models.trend_models  # noqa: F401,E402
+import app.models.concept_models  # noqa: F401,E402
 
 config = context.config
 target_metadata = Base.metadata

@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Body, Depends, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,6 +24,18 @@ class SerpapiRelatedBody(BaseModel):
     date: str = "today 3-m"
 
 
+class SaveTrendBody(BaseModel):
+    """
+    Optional body for saving a live (ad-hoc) trend that isn't in the DB yet.
+    Pass the full trend object from the list_trends response to auto-upsert it.
+    """
+    trend_data: dict | None = None
+
+
+class GenerateFirstFeedBody(BaseModel):
+    user_id: str
+
+
 @router.get("/health")
 async def health() -> dict:
     return service.health()
@@ -34,10 +46,36 @@ async def list_trends(
     q: str | None = Query(default=None),
     user: UserContext = Depends(get_user_context),
     db: AsyncSession = Depends(get_db),
-    limit: int = Query(default=20, ge=1, le=100),
+    limit: int = Query(default=5, ge=1, le=10),
     cursor: str | None = None,
 ) -> dict:
     return await service.list_trends(db, user, q=q, limit=limit, cursor=cursor)
+
+
+@router.post("/trends/refresh")
+async def refresh_trends(
+    user: UserContext = Depends(get_user_context),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    return await service.refresh_feed(db, user)
+
+
+@router.get("/trends/history")
+async def trends_history(
+    user: UserContext = Depends(get_user_context),
+    db: AsyncSession = Depends(get_db),
+    limit: int = Query(default=10, ge=1, le=50),
+) -> dict:
+    return await service.feed_history(db, user, limit=limit)
+
+
+@router.get("/trends/history/{feed_id}")
+async def get_feed_snapshot(
+    feed_id: str,
+    user: UserContext = Depends(get_user_context),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    return await service.get_feed_snapshot(db, user, uuid.UUID(feed_id))
 
 
 @router.get("/trends/{trend_id}")
@@ -52,10 +90,11 @@ async def trend_detail(
 @router.post("/trends/{trend_id}/save")
 async def save_trend(
     trend_id: str,
+    body: SaveTrendBody = Body(default=SaveTrendBody()),
     user: UserContext = Depends(get_user_context),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    return await service.save_trend(db, user, uuid.UUID(trend_id))
+    return await service.save_trend(db, user, uuid.UUID(trend_id), trend_data=body.trend_data)
 
 
 @router.delete("/trends/{trend_id}/save")
@@ -76,6 +115,23 @@ async def serpapi_related_queries(
     return await service.serpapi_related_queries(
         q=body.q, geo=body.geo, hl=body.hl, date=body.date
     )
+
+
+@router.post("/internal/trends/feeds/generate-first")
+async def generate_first_feed(
+    body: GenerateFirstFeedBody,
+    _: None = Depends(require_internal_token),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    return await service.generate_first_feed(db, uuid.UUID(body.user_id))
+
+
+@router.post("/internal/trends/collect")
+async def run_collector(
+    _: None = Depends(require_internal_token),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    return await service.run_collector(db)
 
 
 @router.post("/internal/trends/ingest")

@@ -1,9 +1,17 @@
 import { create } from 'zustand';
 import { MOCK_DASHBOARD_STATS, MOCK_INSIGHTS } from '../lib/mock-data';
+import type { StatIconKey } from '../lib/stat-icons';
 import { api } from '../lib/api';
 
+interface DashboardStat {
+  label: string;
+  value: string;
+  trend: string;
+  icon: StatIconKey;
+}
+
 interface DashboardState {
-  stats: typeof MOCK_DASHBOARD_STATS;
+  stats: DashboardStat[];
   insights: typeof MOCK_INSIGHTS;
   isLoading: boolean;
   error: string | null;
@@ -31,30 +39,30 @@ export const useDashboardStore = create<DashboardState>((set) => ({
       const primary = channels.find((c: any) => c.is_primary) || channels[0];
 
       if (primary) {
-        const stats = [
-          { 
-            label: 'Total Views', 
-            value: formatNumber(primary.view_count || 0), 
-            trend: '+5.2%', 
-            icon: '👁️' 
+        const stats: DashboardStat[] = [
+          {
+            label: 'Total Views',
+            value: formatNumber(primary.view_count || 0),
+            trend: '+5.2%',
+            icon: 'eye',
           },
-          { 
-            label: 'Subscribers', 
-            value: formatNumber(primary.subscriber_count || 0), 
-            trend: '+2.1%', 
-            icon: '👥' 
+          {
+            label: 'Subscribers',
+            value: formatNumber(primary.subscriber_count || 0),
+            trend: '+2.1%',
+            icon: 'users',
           },
-          { 
-            label: 'Videos', 
-            value: primary.video_count?.toString() || '0', 
-            trend: 'Stable', 
-            icon: '🎥' 
+          {
+            label: 'Videos',
+            value: primary.video_count?.toString() || '0',
+            trend: 'Stable',
+            icon: 'video',
           },
-          { 
-            label: 'Engagement', 
-            value: primary.engagement_rate != null ? `${primary.engagement_rate}%` : 'N/A', 
-            trend: primary.engagement_rate > 5 ? '+High' : 'Normal', 
-            icon: '📈' 
+          {
+            label: 'Engagement',
+            value: primary.engagement_rate != null ? `${primary.engagement_rate}%` : 'N/A',
+            trend: primary.engagement_rate > 5 ? '+High' : 'Normal',
+            icon: 'trending',
           },
         ];
         set({ stats, insights: MOCK_INSIGHTS, isLoading: false });

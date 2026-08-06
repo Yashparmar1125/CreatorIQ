@@ -1,66 +1,74 @@
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { clsx } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-function cn(...inputs: any[]) {
-  return twMerge(clsx(inputs));
-}
+import { AnimatePresence, motion } from 'framer-motion';
+import { cn } from '../../../../lib/utils';
+import { OnboardingStepShell } from '../OnboardingStepShell';
+import { Input } from '../../../../components/ui/Input';
+import { Badge } from '../../../../components/ui/Badge';
 
 interface NicheStepProps {
   selectedNiches: string[];
   customNiche?: string;
   detectedNiches?: string[];
+  isNewChannel?: boolean;
   onToggleNiche: (niche: string) => void;
   onCustomNicheChange: (value: string) => void;
   onNext: () => void;
   onBack: () => void;
 }
 
-const NICHES = ['Tech', 'Gaming', 'Finance', 'Fitness', 'Cooking', 'Vlog', 'Education', 'Entertainment', 'Beauty', 'Travel', 'Music', 'Fashion', 'Other'];
+const NICHES = [
+  'Tech', 'Gaming', 'Finance', 'Fitness', 'Cooking', 'Vlog',
+  'Education', 'Entertainment', 'Beauty', 'Travel', 'Music', 'Fashion', 'Other',
+];
 
 export const NicheStep: React.FC<NicheStepProps> = ({
   selectedNiches,
   customNiche,
   detectedNiches = [],
+  isNewChannel = false,
   onToggleNiche,
   onCustomNicheChange,
   onNext,
-  onBack
+  onBack,
 }) => {
-  const isNextDisabled = selectedNiches.length === 0 || (selectedNiches.includes('Other') && !customNiche);
+  const isNextDisabled =
+    selectedNiches.length === 0 || (selectedNiches.includes('Other') && !customNiche);
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
-      className="text-center space-y-8 max-w-2xl mx-auto"
+    <OnboardingStepShell
+      title="Channel category"
+      description={
+        isNewChannel
+          ? 'Select your niches manually. We will auto-detect from your videos as your channel grows.'
+          : 'Select up to 3 categories that best describe your content.'
+      }
+      onBack={onBack}
+      onNext={onNext}
+      nextLabel="Confirm"
+      nextDisabled={isNextDisabled}
+      cardClassName="space-y-5"
     >
-      <div className="space-y-3">
-        <h2 className="text-3xl font-bold font-sora text-white tracking-tight">Channel Category</h2>
-        <p className="text-neutral-500 font-medium text-sm">Select up to 3 categories that best describe your content.</p>
-      </div>
-      
-      <div className="flex flex-wrap justify-center gap-3">
+      <div className="flex flex-wrap justify-center gap-2">
         {NICHES.map((n) => {
-          const isDetected = detectedNiches.includes(n);
+          const isDetected = !isNewChannel && detectedNiches.includes(n);
           const isSelected = selectedNiches.includes(n);
           return (
             <button
               key={n}
+              type="button"
               onClick={() => onToggleNiche(n)}
               className={cn(
-                "px-6 py-3 rounded-xl border transition-all font-bold text-[11px] uppercase tracking-wider relative",
-                isSelected 
-                  ? "bg-brand-600 border-brand-600 text-white shadow-lg scale-105" 
-                  : "bg-white/5 border-white/5 text-neutral-400 hover:border-white/10 hover:text-white"
+                'relative rounded-xl border px-4 py-2.5 text-xs font-medium transition-all',
+                isSelected
+                  ? 'border-brand-600 bg-brand-600 text-white shadow-md shadow-brand-600/25'
+                  : 'border-neutral-200 bg-white text-neutral-600 hover:border-brand-200 hover:bg-brand-50/50'
               )}
             >
               {n}
               {isDetected && (
-                <div className="absolute -top-2 -right-2 px-1.5 py-0.5 bg-yellow-400 text-neutral-900 text-[7px] font-black rounded-lg border border-neutral-900 shadow-sm animate-pulse">
-                  DETECTED
-                </div>
+                <Badge variant="brand" className="absolute -right-2 -top-2 px-1.5 py-0 text-[9px]">
+                  Detected
+                </Badge>
               )}
             </button>
           );
@@ -69,34 +77,21 @@ export const NicheStep: React.FC<NicheStepProps> = ({
 
       <AnimatePresence>
         {selectedNiches.includes('Other') && (
-          <motion.div 
-            initial={{ opacity: 0, height: 0, marginTop: 0 }}
-            animate={{ opacity: 1, height: 'auto', marginTop: 24 }}
-            exit={{ opacity: 0, height: 0, marginTop: 0 }}
-            className="space-y-2 text-left"
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="space-y-1.5 overflow-hidden"
           >
-             <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest pl-2">Custom Niche Name</label>
-             <input
-              type="text"
+            <label className="text-xs font-medium text-neutral-600">Custom niche</label>
+            <Input
               value={customNiche || ''}
               onChange={(e) => onCustomNicheChange(e.target.value)}
               placeholder="Enter your unique niche..."
-              className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-bold text-sm outline-none focus:border-brand-600 focus:bg-white/10 transition-all placeholder:text-neutral-700"
-             />
+            />
           </motion.div>
         )}
       </AnimatePresence>
-      
-      <div className="flex justify-center gap-4 pt-4">
-         <button onClick={onBack} className="px-6 py-3 bg-white/5 text-neutral-400 rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-white/10 transition-all">Back</button>
-         <button 
-          onClick={onNext} 
-          disabled={isNextDisabled}
-          className="px-10 py-3 bg-white text-neutral-900 rounded-xl font-bold text-xs uppercase tracking-wider shadow-lg hover:bg-neutral-100 disabled:opacity-20 disabled:cursor-not-allowed transition-all"
-         >
-           Confirm
-         </button>
-      </div>
-    </motion.div>
+    </OnboardingStepShell>
   );
 };

@@ -5,90 +5,114 @@ import { useOnboardingStore } from '../stores/onboardingStore';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { WelcomeStep } from './steps/WelcomeStep';
 import { ConnectStep } from './steps/ConnectStep';
+import { AnalysisStatusStep } from './steps/AnalysisStatusStep';
 import { NicheStep } from './steps/NicheStep';
 import { PreferencesStep } from './steps/PreferencesStep';
+import { ProfileReviewStep } from './steps/ProfileReviewStep';
 import { ReadyStep } from './steps/ReadyStep';
-import { clsx } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-function cn(...inputs: any[]) {
-  return twMerge(clsx(inputs));
-}
+import logo from '../../../assets/logo.png';
+import { cn } from '../../../lib/utils';
 
 const stepsConfig = [
   { id: 1, name: 'Welcome' },
   { id: 2, name: 'YouTube' },
-  { id: 3, name: 'Setup' },
-  { id: 4, name: 'Ready' },
+  { id: 3, name: 'Analysis' },
+  { id: 4, name: 'Niche' },
+  { id: 5, name: 'Strategy' },
+  { id: 6, name: 'Review' },
 ];
 
 export const OnboardingWizard: React.FC = () => {
-  const { 
-    step, nextStep, prevStep, setStep,
+  const {
+    step,
+    nextStep,
+    prevStep,
+    setStep,
     isYoutubeConnected,
-    niche, setNiche, 
-    customNiche, setCustomNiche,
-    country, setCountry,
-    connectedChannel, fetchChannels,
-    format, setFormat, 
-    tone, setTone, 
-    frequency, setFrequency,
-    completeOnboarding, isLoading, error: onboardingError, reset
+    niche,
+    setNiche,
+    customNiche,
+    setCustomNiche,
+    country,
+    setCountry,
+    connectedChannel,
+    fetchChannels,
+    fetchAnalysisStatus,
+    analysisStatus,
+    profileMaturity,
+    format,
+    setFormat,
+    tone,
+    setTone,
+    frequency,
+    setFrequency,
+    completeOnboarding,
+    isLoading,
+    error: onboardingError,
+    reset,
   } = useOnboardingStore();
 
   const { startGoogleOAuth, user } = useAuthStore();
 
-  // Safety Reset: If the browser has a persisted 'step 5+' but the user is not yet onboarded,
-  // it means the state is from a previous session. Reset to step 1.
-  useEffect(() => {
-    if (step >= 5 && user && !user.onboarding_completed) {
-      setStep(1);
-    }
-    // Handle invalid step numbers
-    if (step < 1 || step > 5) {
-      setStep(1);
-    }
-  }, [step, user, setStep]);
-
-  // Smart Skip Logic: If user already authenticated with Google (OAuth signup), skip Step 2
-  useEffect(() => {
-    if (step === 2 && user?.is_google_authenticated) {
-      nextStep();
-    }
-  }, [step, user?.is_google_authenticated, nextStep]);
+  const TOTAL_STEPS = 7;
 
   useEffect(() => {
-    if (step === 2 && !isYoutubeConnected) {
-      fetchChannels();
+    if (step >= TOTAL_STEPS && user && !user.onboarding_completed) {
+      setStep(1);
     }
-  }, [step, isYoutubeConnected, fetchChannels]);
+    if (step < 1 || step > TOTAL_STEPS) {
+      setStep(1);
+    }
+  }, [step, user, setStep, TOTAL_STEPS]);
+
+  useEffect(() => {
+    if (step === 2) {
+      void fetchChannels();
+    }
+  }, [step, fetchChannels]);
+
+  const showDetectedNiches =
+    profileMaturity !== 'new' && Boolean(connectedChannel?.niches?.length);
 
   const renderCurrentStep = () => {
     switch (step) {
       case 1:
         return <WelcomeStep onNext={nextStep} />;
-      
+
       case 2:
         return (
-          <ConnectStep 
+          <ConnectStep
             isLoading={isLoading}
             isYoutubeConnected={isYoutubeConnected}
             onConnect={startGoogleOAuth}
             onNext={nextStep}
             onBack={prevStep}
             connectedChannel={connectedChannel || undefined}
+            profileMaturity={profileMaturity}
           />
         );
 
       case 3:
         return (
-          <NicheStep 
+          <AnalysisStatusStep
+            isLoading={isLoading}
+            analysisStatus={analysisStatus}
+            onPoll={fetchAnalysisStatus}
+            onNext={nextStep}
+            onBack={prevStep}
+          />
+        );
+
+      case 4:
+        return (
+          <NicheStep
             selectedNiches={niche}
             customNiche={customNiche || undefined}
-            detectedNiches={connectedChannel?.niches}
+            detectedNiches={showDetectedNiches ? connectedChannel?.niches : []}
+            isNewChannel={profileMaturity === 'new'}
             onToggleNiche={(n) => {
               if (niche.includes(n)) {
-                setNiche(niche.filter(i => i !== n));
+                setNiche(niche.filter((i) => i !== n));
               } else if (niche.length < 3) {
                 setNiche([...niche, n]);
               }
@@ -99,34 +123,52 @@ export const OnboardingWizard: React.FC = () => {
           />
         );
 
-      case 4:
+      case 5:
         return (
-          <PreferencesStep 
+          <PreferencesStep
             format={format}
             frequency={frequency}
             tone={tone}
             country={country}
-            isLoading={isLoading}
-            error={onboardingError}
+            isLoading={false}
             setFormat={setFormat}
             setFrequency={setFrequency}
             setTone={setTone}
             setCountry={setCountry}
-            onComplete={async () => {
+            onComplete={nextStep}
+            onBack={prevStep}
+          />
+        );
+
+      case 6:
+        return (
+          <ProfileReviewStep
+            niche={niche.filter((n) => n !== 'Other').concat(
+              niche.includes('Other') && customNiche ? [customNiche] : []
+            )}
+            format={format}
+            tone={tone}
+            frequency={frequency}
+            country={country}
+            profileMaturity={profileMaturity}
+            channelName={connectedChannel?.name}
+            isLoading={isLoading}
+            error={onboardingError}
+            onConfirm={async () => {
               await completeOnboarding();
-              setStep(5); // Go to Ready State
+              setStep(7);
             }}
             onBack={prevStep}
           />
         );
 
-      case 5:
+      case 7:
         return (
-          <ReadyStep 
+          <ReadyStep
             onEnter={() => {
               reset();
-              window.location.href = '/app/dashboard';
-            }} 
+              window.location.href = '/app/trends';
+            }}
           />
         );
 
@@ -136,42 +178,51 @@ export const OnboardingWizard: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-950 flex flex-col items-center justify-center p-6 relative overflow-hidden font-sora">
-      {/* Background Decor */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-brand-600/20 rounded-full blur-[160px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-brand-900/40 rounded-full blur-[160px]" />
+    <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-gradient-to-b from-neutral-950 via-neutral-950 to-indigo-950 p-6 font-sora">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -left-1/4 -top-1/4 h-[60%] w-[60%] rounded-full bg-brand-600/15 blur-[120px] animate-breathe" />
+        <div className="absolute -bottom-1/4 -right-1/4 h-[50%] w-[50%] rounded-full bg-cyan-500/10 blur-[100px]" />
       </div>
 
-      <div className="w-full max-w-4xl relative z-10">
-        {step < 5 && (
-          <div className="flex justify-center gap-3 mb-16">
+      <div className="relative z-10 mb-8 flex items-center gap-3">
+        <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg bg-white p-0.5">
+          <img src={logo} alt="CreatorIQ" className="h-full w-full object-contain" />
+        </div>
+        <span className="font-sora text-sm font-semibold text-white">
+          Creator<span className="text-neutral-500">IQ</span>
+        </span>
+      </div>
+
+      <div className="relative z-10 w-full max-w-3xl">
+        {step < 7 && (
+          <div className="mb-10 flex justify-center gap-2">
             {stepsConfig.map((s) => (
-              <div 
+              <div
                 key={s.id}
                 className={cn(
-                  "h-1 rounded-full transition-all duration-500",
-                  step >= s.id ? "bg-brand-600 w-12" : "bg-white/10 w-6"
+                  'h-1.5 rounded-full transition-all duration-500',
+                  step >= s.id ? 'w-8 bg-gradient-to-r from-brand-500 to-brand-600' : 'w-3 bg-white/10'
                 )}
+                title={s.name}
               />
             ))}
           </div>
         )}
 
         <AnimatePresence mode="wait">
-          <motion.div key={step}>
-            {renderCurrentStep()}
-          </motion.div>
+          <motion.div key={step}>{renderCurrentStep()}</motion.div>
         </AnimatePresence>
       </div>
 
-      <div className="absolute bottom-10 text-[9px] uppercase font-bold tracking-widest text-neutral-600 flex gap-8">
-        <span className="text-white/20">© 2026 CreatorIQ</span>
-        <Link to="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
-        <Link to="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
+      <div className="absolute bottom-8 flex gap-6 text-[10px] font-medium uppercase tracking-wider text-neutral-600">
+        <span>© 2026 CreatorIQ</span>
+        <Link to="/privacy" className="hover:text-neutral-400 transition-colors">
+          Privacy
+        </Link>
+        <Link to="/terms" className="hover:text-neutral-400 transition-colors">
+          Terms
+        </Link>
       </div>
     </div>
   );
 };
-
-

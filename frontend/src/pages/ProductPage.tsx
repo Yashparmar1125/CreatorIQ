@@ -1,154 +1,173 @@
 import React from 'react';
-import { motion } from 'framer-motion';
-import { Cpu, Activity, Layers, Sparkles, ArrowRight, Zap, Shield, Target } from 'lucide-react';
 import { Link } from 'react-router';
+import {
+  TrendingUp,
+  BarChart2,
+  Calendar,
+  Lightbulb,
+  Shield,
+  Zap,
+  Target,
+  Check,
+  ArrowRight,
+} from 'lucide-react';
 import { PublicLayout } from '../components/organisms/PublicLayout';
+import { MarketingHero, MarketingSection, MarketingCta } from '../components/marketing/MarketingSections';
+import { Button } from '../components/ui/Button';
+import { Card } from '../components/ui/Card';
+
+const modules = [
+  {
+    icon: TrendingUp,
+    title: 'Trend Engine',
+    description:
+      'A personalized Top 5 feed built from real YouTube video velocity, Google Trends corroboration, and your niche profile.',
+    benefits: ['Niche-fit scoring', 'AI content angles', 'Feed history'],
+  },
+  {
+    icon: Lightbulb,
+    title: 'Strategy Architect',
+    description:
+      'Generate titles, hooks, script outlines, and SEO tags for any topic — grounded in your channel context.',
+    benefits: ['Copy-ready titles', '3-phase script', 'Channel-aware tone'],
+  },
+  {
+    icon: BarChart2,
+    title: 'Analytics',
+    description:
+      'Retention flow, traffic sources, and audience demographics to see where viewers engage and drop off.',
+    benefits: ['Retention metrics', 'Traffic breakdown', 'Audience geo'],
+  },
+  {
+    icon: Calendar,
+    title: 'Planner',
+    description:
+      'A production calendar to schedule drafts, track uploads, and keep your publishing rhythm consistent.',
+    benefits: ['Monthly view', 'Draft events', 'Team-ready layout'],
+  },
+];
+
+const pillars = [
+  {
+    icon: Zap,
+    title: 'Real signals',
+    body: 'YouTube Data API for video momentum — not just search strings.',
+  },
+  {
+    icon: Target,
+    title: 'Niche-first',
+    body: 'Hard filters ensure trends match your content clusters before ranking.',
+  },
+  {
+    icon: Shield,
+    title: 'Privacy-first',
+    body: 'OAuth-only YouTube access. Your data stays yours.',
+  },
+];
 
 export const ProductPage: React.FC = () => {
-  const features = [
-    {
-      title: "AI Topic Discovery",
-      icon: <Cpu className="w-6 h-6 text-brand-600" />,
-      description: "Our proprietary neural networks analyze billions of data points across the creator economy to identify breakout trends before they peak. Stay ahead of the curve with zero manual research.",
-      benefits: ["Predictive Trend Scoring", "Niche-Specific Alerts", "Competitor Gap Analysis"]
-    },
-    {
-      title: "Retention Intelligence",
-      icon: <Activity className="w-6 h-6 text-brand-600" />,
-      description: "Understand exactly why your audience leaves. Our AI analyzes frame-by-frame retention data to provide actionable feedback on pacing, hooks, and content structure.",
-      benefits: ["Frame-by-Frame Heatmaps", "Hook Effectiveness Score", "AI-Generated Edit Suggestions"]
-    },
-    {
-      title: "Strategic Content Planner",
-      icon: <Layers className="w-6 h-6 text-brand-600" />,
-      description: "Stop guessing your upload schedule. CreatorIQ suggests the optimal time, format, and topic sequence based on your channel's unique audience behavior.",
-      benefits: ["Automated Editorial Calendar", "Multi-Platform Sync", "Performance Forecasting"]
-    }
-  ];
-
   return (
     <PublicLayout>
-      {/* Hero Section */}
-      <section className="pt-48 pb-24 px-6 relative">
-        <div className="max-w-7xl mx-auto text-center space-y-8">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-50 border border-brand-100 mb-4"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-brand-600 fill-brand-600" />
-            <span className="text-[10px] font-bold text-brand-800 uppercase tracking-widest">Built for the next decade of creators</span>
-          </motion.div>
-          
-          <motion.h1
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-5xl md:text-8xl font-black font-sora tracking-tighter leading-tight"
-          >
-            The Intelligence <br />
-            <span className="text-neutral-400">Layer</span> of YouTube.
-          </motion.h1>
-          
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="text-xl text-neutral-500 font-medium max-w-2xl mx-auto leading-relaxed"
-          >
-            CreatorIQ replaces intuition with data. We've built the most advanced AI engine specifically designed to grow channels and maximize viewer retention.
-          </motion.p>
-        </div>
-      </section>
+      <MarketingHero
+        badge="Platform overview"
+        title="The intelligence layer for YouTube creators"
+        description="CreatorIQ connects trend discovery, strategy, analytics, and planning — so every video starts with a clear signal."
+        actions={
+          <Link to="/signup">
+            <Button size="lg">
+              Start free
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </Link>
+        }
+      />
 
-      {/* Feature Deep Dive */}
-      <section className="py-32 px-6 max-w-7xl mx-auto space-y-24">
-        {features.map((feature, i) => (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
-            className={`flex flex-col lg:flex-row items-center gap-20 ${i % 2 !== 0 ? 'lg:flex-row-reverse' : ''}`}
-          >
-            <div className="flex-1 space-y-8">
-              <div className="w-14 h-14 rounded-2xl bg-brand-600/10 flex items-center justify-center border border-brand-100 shadow-sm">
-                {feature.icon}
+      <MarketingSection
+        title="Four modules, one workflow"
+        description="Each tool is designed to answer a specific question in your content pipeline."
+        className="bg-neutral-50"
+      >
+        <div className="grid gap-6 md:grid-cols-2">
+          {modules.map((mod) => (
+            <Card key={mod.title}>
+              <div className="mb-4 flex h-9 w-9 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
+                <mod.icon className="h-4 w-4" />
               </div>
-              <div className="space-y-4">
-                <h2 className="text-4xl font-black font-sora tracking-tight leading-none text-neutral-900">{feature.title}</h2>
-                <p className="text-lg text-neutral-500 font-medium leading-relaxed italic opacity-80">{feature.description}</p>
-              </div>
-              <ul className="space-y-4">
-                {feature.benefits.map((benefit, j) => (
-                  <li key={j} className="flex items-center gap-3 text-neutral-900 font-bold text-sm tracking-tight">
-                    <div className="w-1.5 h-1.5 rounded-full bg-brand-600" />
-                    {benefit}
+              <h3 className="text-lg font-semibold text-neutral-900">{mod.title}</h3>
+              <p className="mt-2 text-sm text-neutral-500">{mod.description}</p>
+              <ul className="mt-4 space-y-2">
+                {mod.benefits.map((b) => (
+                  <li key={b} className="flex items-center gap-2 text-sm text-neutral-600">
+                    <Check className="h-3.5 w-3.5 text-success-600" />
+                    {b}
                   </li>
                 ))}
               </ul>
-              <Link to="/signup" className="inline-flex items-center gap-2 text-brand-600 font-bold hover:gap-4 transition-all">
-                Learn more and deploy <ArrowRight className="w-5 h-5" />
-              </Link>
-            </div>
-            <div className="flex-1 w-full">
-              <div className="glass p-3 rounded-[40px] border border-white/60 shadow-2xl relative group overflow-hidden">
-                <div className="absolute inset-0 bg-brand-600/5 group-hover:bg-brand-600/10 transition-colors" />
-                <div className="bg-neutral-900 rounded-[32px] h-[450px] flex items-center justify-center overflow-hidden relative">
-                   <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_center,theme(colors.brand.600),transparent)]" />
-                   <span className="text-[10px] font-black uppercase tracking-[0.4em] text-white/20">Advanced Visualization {i + 1}</span>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        ))}
-      </section>
-
-      {/* Technical Edge Stats */}
-      <section className="py-40 px-6 bg-neutral-900 text-white relative overflow-hidden">
-        <div className="absolute inset-0 bg-brand-600/5 blur-[150px] -translate-y-1/2" />
-        <div className="max-w-7xl mx-auto relative z-10 grid grid-cols-1 md:grid-cols-3 gap-12 text-center md:text-left">
-          <div className="space-y-4">
-             <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center border border-white/10 mb-6">
-               <Zap className="w-6 h-6 text-brand-400" />
-             </div>
-             <h3 className="text-2xl font-black font-sora">Real-time Pulse</h3>
-             <p className="text-neutral-400 font-medium leading-relaxed text-sm">Analyze data as it happens. Our sub-second latency ensures you never miss a trending wave.</p>
-          </div>
-          <div className="space-y-4">
-             <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center border border-white/10 mb-6">
-               <Target className="w-6 h-6 text-accent-400" />
-             </div>
-             <h3 className="text-2xl font-black font-sora">99.8% Accuracy</h3>
-             <p className="text-neutral-400 font-medium leading-relaxed text-sm">Advanced ML models trained on over a petabyte of YouTube metadata for results you can bank on.</p>
-          </div>
-          <div className="space-y-4">
-             <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center border border-white/10 mb-6">
-               <Shield className="w-6 h-6 text-success-400" />
-             </div>
-             <h3 className="text-2xl font-black font-sora">Privacy First</h3>
-             <p className="text-neutral-400 font-medium leading-relaxed text-sm">We never sell your data. Secure OAuth integration means your channel security is always the top priority.</p>
-          </div>
+            </Card>
+          ))}
         </div>
-      </section>
+      </MarketingSection>
 
-      {/* Final CTA */}
-      <section className="py-40 px-6">
-        <div className="max-w-5xl mx-auto glass p-16 md:p-24 rounded-[56px] border border-white/60 text-center space-y-10 shadow-2xl relative overflow-hidden">
-          <div className="absolute top-[-50%] left-[-50%] w-full h-full bg-brand-600/5 blur-[100px] rounded-full animate-breathe" />
-          <h2 className="text-4xl md:text-6xl font-black font-sora tracking-tighter leading-tight relative z-10">
-            Ready to <span className="text-neutral-400">evolve?</span>
-          </h2>
-          <p className="text-xl text-neutral-500 font-medium max-w-xl mx-auto relative z-10">
-             Join 20,000+ creators who use CreatorIQ to build sustainable, data-driven careers.
-          </p>
-          <div className="pt-8 relative z-10">
-            <Link to="/signup" className="px-12 py-6 bg-neutral-900 text-white rounded-[32px] font-black text-xl hover:bg-brand-600 hover:scale-105 active:scale-95 transition-all shadow-xl shadow-neutral-900/10">
-              Start Your Free Trial
-            </Link>
-          </div>
+      <MarketingSection
+        title="How trends are ranked"
+        description="Opportunity score combines momentum, niche fit, geography, and format alignment."
+        className="border-t border-neutral-200 bg-white"
+      >
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Card>
+            <h3 className="text-sm font-medium text-neutral-900">Signal sources</h3>
+            <ul className="mt-4 space-y-3 text-sm text-neutral-600">
+              <li className="flex justify-between border-b border-neutral-100 pb-2">
+                <span>YouTube video velocity</span>
+                <span className="font-medium text-neutral-900">Primary</span>
+              </li>
+              <li className="flex justify-between border-b border-neutral-100 pb-2">
+                <span>Google Trends (YouTube)</span>
+                <span className="font-medium text-neutral-900">Corroboration</span>
+              </li>
+              <li className="flex justify-between">
+                <span>Channel profile & geo</span>
+                <span className="font-medium text-neutral-900">Personalization</span>
+              </li>
+            </ul>
+          </Card>
+          <Card className="bg-neutral-900 text-white border-neutral-800">
+            <h3 className="text-sm font-medium">On every refresh</h3>
+            <ol className="mt-4 space-y-3 text-sm text-neutral-300">
+              <li>1. Filter concepts by niche fit and quality</li>
+              <li>2. Score by opportunity + audience geography</li>
+              <li>3. Apply freshness (≥3 new items when possible)</li>
+              <li>4. AI-enrich cards with angles and growth tips</li>
+            </ol>
+          </Card>
         </div>
-      </section>
+      </MarketingSection>
+
+      <MarketingSection title="Built on principles that matter" className="bg-neutral-50">
+        <div className="grid gap-6 md:grid-cols-3">
+          {pillars.map((p) => (
+            <Card key={p.title}>
+              <p.icon className="h-5 w-5 text-brand-600" />
+              <h3 className="mt-4 text-base font-semibold text-neutral-900">{p.title}</h3>
+              <p className="mt-2 text-sm text-neutral-500">{p.body}</p>
+            </Card>
+          ))}
+        </div>
+      </MarketingSection>
+
+      <MarketingCta
+        title="See it on your own channel"
+        description="Connect YouTube and get your first personalized trend feed in minutes."
+      >
+        <Link to="/signup">
+          <Button size="lg">Create free account</Button>
+        </Link>
+        <Link to="/pricing">
+          <Button variant="secondary" size="lg">
+            View pricing
+          </Button>
+        </Link>
+      </MarketingCta>
     </PublicLayout>
   );
 };

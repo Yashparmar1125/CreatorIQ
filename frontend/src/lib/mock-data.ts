@@ -1,8 +1,15 @@
-export const MOCK_DASHBOARD_STATS = [
-  { label: 'Total Views', value: '1.2M', trend: '+12.4%', icon: '👁️' },
-  { label: 'Subscribers', value: '45.8K', trend: '+8.2%', icon: '👥' },
-  { label: 'Avg. CTR', value: '8.2%', trend: '+1.5%', icon: '⚡' },
-  { label: 'Engagement', value: '12.5%', trend: '+3.1%', icon: '📈' },
+import { type StatIconKey } from './stat-icons';
+
+export const MOCK_DASHBOARD_STATS: {
+  label: string;
+  value: string;
+  trend: string;
+  icon: StatIconKey;
+}[] = [
+  { label: 'Total Views', value: '1.2M', trend: '+12.4%', icon: 'eye' },
+  { label: 'Subscribers', value: '45.8K', trend: '+8.2%', icon: 'users' },
+  { label: 'Avg. CTR', value: '8.2%', trend: '+1.5%', icon: 'zap' },
+  { label: 'Engagement', value: '12.5%', trend: '+3.1%', icon: 'trending' },
 ];
 
 export const MOCK_TRENDS = [
@@ -21,5 +28,5 @@ export const MOCK_PLANNER_EVENTS = [
 export const MOCK_INSIGHTS = [
   { title: 'New Trend: Web Components', impact: '+240%' },
   { title: 'Title Optimization: 85/100', impact: '+15%' },
-  { title: 'Thumbnail Heatmap: Area B', impact: 'Low Attn' }
+  { title: 'Thumbnail Heatmap: Area B', impact: 'Low Attn' },
 ];

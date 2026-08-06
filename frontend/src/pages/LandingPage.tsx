@@ -1,185 +1,299 @@
 import React from 'react';
-import { motion } from 'framer-motion';
-import { PlayCircle, ArrowRight, Sparkles, TrendingUp, Cpu, Activity, Layers } from 'lucide-react';
 import { Link } from 'react-router';
+import {
+  ArrowRight,
+  TrendingUp,
+  BarChart2,
+  Calendar,
+  Lightbulb,
+  Check,
+  Sparkles,
+  Youtube,
+  Layers,
+  Rocket,
+  PlayCircle,
+  Activity,
+  Target,
+  Zap,
+} from 'lucide-react';
 import { useAuthStore } from '../stores/useAuthStore';
 import { PublicLayout } from '../components/organisms/PublicLayout';
+import { MarketingHero, MarketingSection, MarketingCta } from '../components/marketing/MarketingSections';
+import { Button } from '../components/ui/Button';
+import { Card } from '../components/ui/Card';
+import { Badge } from '../components/ui/Badge';
+
+const features = [
+  {
+    icon: TrendingUp,
+    title: 'Trend opportunities',
+    description:
+      'Personalized Top 5 feed ranked by niche fit, YouTube momentum, and audience geography.',
+    points: ['Real YouTube video signals', 'AI-curated angles', 'Feed history'],
+    accent: 'border-brand-600',
+  },
+  {
+    icon: Lightbulb,
+    title: 'Strategy briefs',
+    description:
+      'Turn a topic into titles, hooks, and a script outline grounded in your channel profile.',
+    points: ['Optimized titles', 'Retention outline', 'SEO tags'],
+    accent: 'border-violet-500',
+  },
+  {
+    icon: BarChart2,
+    title: 'Channel analytics',
+    description:
+      'Retention, traffic sources, and audience breakdowns to understand what is working.',
+    points: ['Retention metrics', 'Traffic sources', 'Audience geo'],
+    accent: 'border-cyan-500',
+  },
+  {
+    icon: Calendar,
+    title: 'Content planner',
+    description: 'Schedule drafts and coordinate your production calendar in one view.',
+    points: ['Monthly calendar', 'Draft tracking', 'Publishing rhythm'],
+    accent: 'border-emerald-500',
+  },
+];
+
+const steps = [
+  {
+    icon: Youtube,
+    title: 'Connect YouTube',
+    body: 'Link your channel and complete a short onboarding profile.',
+  },
+  {
+    icon: Layers,
+    title: 'Get your Top 5',
+    body: 'Receive a personalized trend feed on day one — free.',
+  },
+  {
+    icon: Rocket,
+    title: 'Plan and publish',
+    body: 'Use Strategy and Planner to ship content with confidence.',
+  },
+];
+
+const trustMetrics = [
+  { icon: Target, label: 'Niche-fit scoring', value: 'Per channel' },
+  { icon: Activity, label: 'Signal sources', value: 'YouTube + Trends' },
+  { icon: Zap, label: 'First feed', value: 'Free on signup' },
+];
+
+function HeroPreview() {
+  return (
+    <div className="relative">
+      <div className="absolute -inset-4 rounded-2xl bg-gradient-to-br from-brand-100/60 to-transparent blur-2xl" />
+      <Card variant="elevated" className="relative overflow-hidden shadow-xl shadow-neutral-900/8">
+        <div className="flex items-center justify-between border-b border-neutral-200 bg-neutral-50 px-4 py-3">
+          <div className="flex items-center gap-2">
+            <div className="h-2.5 w-2.5 rounded-full bg-red-400" />
+            <div className="h-2.5 w-2.5 rounded-full bg-amber-400" />
+            <div className="h-2.5 w-2.5 rounded-full bg-green-400" />
+          </div>
+          <Badge variant="brand">
+            <Sparkles className="h-3 w-3" />
+            Live feed
+          </Badge>
+        </div>
+        <div className="grid lg:grid-cols-5">
+          <div className="space-y-3 border-b border-neutral-200 p-4 lg:col-span-3 lg:border-b-0 lg:border-r">
+            <p className="text-xs font-medium text-neutral-500">Top opportunities · Entertainment</p>
+            {[
+              { title: 'Phir Har Gaya comedy short', meta: '18.8M views · Score 76', hot: true },
+              { title: 'Indian Dad New Car', meta: '214K/hr velocity', hot: false },
+              { title: 'Meme format spike', meta: 'Rising in IN', hot: false },
+            ].map((item) => (
+              <div
+                key={item.title}
+                className="flex items-start gap-3 rounded-lg border border-neutral-200 bg-white p-3 transition-colors hover:border-brand-200 hover:bg-brand-50/30"
+              >
+                <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
+                  <TrendingUp className="h-4 w-4" />
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-neutral-900">{item.title}</p>
+                  <p className="text-xs text-neutral-500">{item.meta}</p>
+                </div>
+                {item.hot && (
+                  <Badge variant="brand" className="ml-auto shrink-0">
+                    Hot
+                  </Badge>
+                )}
+              </div>
+            ))}
+          </div>
+          <div className="bg-neutral-900 p-4 text-white lg:col-span-2">
+            <div className="flex items-center gap-2 text-brand-300">
+              <Sparkles className="h-4 w-4" />
+              <p className="text-xs font-medium">AI insight</p>
+            </div>
+            <p className="mt-3 text-sm leading-relaxed text-neutral-200">
+              Test this trend with a 15-second Short using the same audio within 24 hours.
+            </p>
+            <div className="mt-5 grid grid-cols-2 gap-3 border-t border-white/10 pt-4">
+              <div>
+                <p className="text-[10px] uppercase tracking-wide text-neutral-500">Velocity</p>
+                <p className="mt-1 text-lg font-semibold">214K/hr</p>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-wide text-neutral-500">Niche fit</p>
+                <p className="mt-1 text-lg font-semibold">98%</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+}
 
 export const LandingPage: React.FC = () => {
   const { isAuthenticated } = useAuthStore();
 
-  const features = [
-    {
-      title: 'Viral Topic Finder',
-      icon: <Cpu className="w-5 h-5 text-brand-400" />,
-      desc: 'Spot viral trends before they go mainstream and get ahead of the curve.',
-      stat: '94% Accuracy',
-      color: 'bg-brand-600'
-    },
-    {
-      title: 'Audience Insights',
-      icon: <Activity className="w-5 h-5 text-accent-400" />,
-      desc: 'See exactly where your viewers stop watching and how to keep them engaged.',
-      stat: '12.4x Growth',
-      color: 'bg-neutral-900'
-    },
-    {
-      title: 'Content Planner',
-      icon: <Layers className="w-5 h-5 text-success-400" />,
-      desc: 'Plan your upload schedule based on real performance data that works.',
-      stat: 'Zero Friction',
-      color: 'bg-success-600'
-    }
-  ];
-
   return (
     <PublicLayout>
-      {/* Hero Section */}
-      <section className="pt-48 pb-24 px-6 relative">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center space-y-12 max-w-4xl mx-auto">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-50 border border-brand-100 shadow-sm"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-brand-600 fill-brand-600" />
-              <span className="text-[10px] font-bold text-brand-800 uppercase tracking-widest">Now in Public Access: Creator v2.0</span>
-            </motion.div>
-
-            <motion.h1
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1, duration: 0.8 }}
-              className="text-5xl md:text-7xl font-black font-sora text-neutral-900 leading-[1.1] tracking-[-0.04em] py-2"
-            >
-              Grow Your <br />
-              <span className="text-neutral-400">Channel</span> with AI.
-            </motion.h1>
-
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="text-lg md:text-xl text-neutral-500 font-medium leading-relaxed max-w-xl mx-auto"
-            >
-              The all-in-one platform for YouTube creators to find viral topics and keep viewers watching longer.
-            </motion.p>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="flex flex-col sm:flex-row justify-center gap-4 pt-6"
-            >
-              <Link
-                to={isAuthenticated ? "/app/dashboard" : "/signup"}
-                className="px-8 py-4.5 bg-neutral-900 text-white rounded-2xl font-bold text-base shadow-xl shadow-neutral-900/20 hover:bg-brand-600 hover:scale-[1.02] transition-all flex items-center justify-center gap-3 group active:scale-98"
-              >
-                {isAuthenticated ? "Go to Dashboard" : "Start Growing Free"}
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </Link>
-              <button className="px-8 py-4.5 bg-white text-neutral-900 border border-neutral-200 rounded-2xl font-bold text-base hover:bg-neutral-50 flex items-center justify-center gap-3 transition-all">
-                <PlayCircle className="w-5 h-5 text-brand-600" />
-                View Demo
-              </button>
-            </motion.div>
+      <MarketingHero
+        badge="Built for YouTube creators"
+        badgeIcon={<Youtube className="h-3.5 w-3.5" />}
+        title={
+          <>
+            Grow your channel with{' '}
+            <span className="text-gradient-brand">clear signals</span>, not guesswork.
+          </>
+        }
+        description="CreatorIQ combines trend discovery, AI strategy, analytics, and planning — so you spend less time researching and more time creating."
+        actions={
+          <>
+            <Link to={isAuthenticated ? '/app/dashboard' : '/signup'}>
+              <Button size="lg">
+                {isAuthenticated ? 'Go to dashboard' : 'Start free'}
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+            <Link to="/product">
+              <Button variant="secondary" size="lg">
+                <PlayCircle className="h-4 w-4" />
+                See how it works
+              </Button>
+            </Link>
+          </>
+        }
+        footer={
+          <div className="mt-10 grid gap-4 border-t border-neutral-200/80 pt-8 sm:grid-cols-3">
+            {trustMetrics.map((m) => (
+              <div key={m.label} className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand-100 to-brand-50 text-brand-600 ring-1 ring-brand-200/50 shadow-sm">
+                  <m.icon className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-neutral-900">{m.value}</p>
+                  <p className="text-xs text-neutral-500">{m.label}</p>
+                </div>
+              </div>
+            ))}
           </div>
+        }
+        visual={<HeroPreview />}
+      />
 
-          <motion.div
-            initial={{ opacity: 0, y: 80 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5, duration: 1 }}
-            className="mt-20 relative group"
-          >
-            <div className="glass p-3 rounded-[40px] border border-white/60 shadow-xl relative overflow-hidden group-hover:scale-[1.005] transition-transform duration-1000">
-              <img
-                src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=2426&auto=format&fit=crop"
-                className="rounded-[50px] w-full h-[700px] object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-1000"
-                alt="CreatorIQ Intelligence UI"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-transparent opacity-60" />
-
-              <div className="absolute top-1/4 right-12 glass p-8 rounded-[40px] border border-white border shadow-2xl animate-float max-w-xs space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-success-500 text-white flex items-center justify-center">
-                    <TrendingUp className="w-6 h-6" />
-                  </div>
-                  <p className="text-sm font-black text-neutral-900">Trend Alert</p>
-                </div>
-                <p className="text-neutral-500 font-bold leading-relaxed text-xs">
-                  "AI comparison" topics are peaking. Predicted viral window: Next 48 hours.
-                </p>
-              </div>
-
-              <div className="absolute bottom-1/4 left-12 glass p-8 rounded-[40px] border border-white border shadow-2xl animate-float delay-1000 max-w-xs space-y-6">
-                <div className="space-y-2">
-                  <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest text-[10px]">Predicted CTR</p>
-                  <p className="text-5xl font-black text-brand-600 font-sora leading-none tracking-tighter">14.2%</p>
-                </div>
-                <div className="h-2 w-full bg-neutral-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-brand-600 w-[14.2%] rounded-full" />
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Feature Bento Grid */}
-      <section className="py-40 px-6 max-w-7xl mx-auto space-y-32">
-        <div className="text-center space-y-6 max-w-3xl mx-auto">
-          <h2 className="text-5xl md:text-7xl font-black font-sora tracking-tighter leading-tight">Beyond human intuition.</h2>
-          <p className="text-xl text-neutral-500 font-medium">We analyzed 1.2 billion metrics to build the definitive tool for the modern creator economy.</p>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-          {features.map((f, i) => (
-            <motion.div
-              key={i}
-              whileHover={{ y: -8 }}
-              className={`${f.color} p-8 rounded-3xl text-white flex flex-col justify-between min-h-[400px] shadow-xl shadow-neutral-900/5 relative overflow-hidden group`}
+      <MarketingSection
+        title="Everything you need in one workspace"
+        description="Four connected tools — from spotting a trend to publishing the video."
+        className="bg-neutral-50"
+        align="center"
+      >
+        <div className="grid gap-5 sm:grid-cols-2">
+          {features.map((feature) => (
+            <Card
+              key={feature.title}
+              variant="elevated"
+              hover
+              className={`h-full border-l-4 ${feature.accent}`}
             >
-              <div className="absolute top-[-20%] right-[-20%] w-[60%] h-[60%] bg-white/5 rounded-full blur-[80px] group-hover:bg-white/10 transition-colors" />
-
-              <div className="relative z-10">
-                <div className="w-16 h-16 rounded-3xl bg-white/10 backdrop-blur-md flex items-center justify-center mb-10 border border-white/10 group-hover:scale-110 transition-transform">
-                  {f.icon}
-                </div>
-                <h3 className="text-4xl font-black font-sora leading-tight tracking-tighter mb-6">{f.title}</h3>
-                <p className="text-white/60 text-lg leading-relaxed font-medium">{f.desc}</p>
+              <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-brand-100 to-brand-50 text-brand-600 ring-1 ring-brand-200/50">
+                <feature.icon className="h-5 w-5" />
               </div>
-
-              <div className="relative z-10 pt-12">
-                <p className="text-[10px] uppercase font-black tracking-[0.3em] mb-4 opacity-50">Metric benchmark</p>
-                <p className="text-5xl font-black font-sora text-white">{f.stat}</p>
-                <ArrowRight className="w-8 h-8 mt-10 text-white group-hover:translate-x-4 transition-transform" />
-              </div>
-            </motion.div>
+              <h3 className="text-lg font-semibold text-neutral-900">{feature.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-neutral-600">{feature.description}</p>
+              <ul className="mt-5 space-y-2.5">
+                {feature.points.map((point) => (
+                  <li key={point} className="flex items-center gap-2.5 text-sm text-neutral-700">
+                    <Check className="h-4 w-4 shrink-0 text-success-600" />
+                    {point}
+                  </li>
+                ))}
+              </ul>
+            </Card>
           ))}
         </div>
-      </section>
+      </MarketingSection>
 
-      {/* CTA Branding Reveal */}
-      <section className="py-40 relative">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="bg-neutral-900 rounded-[56px] p-12 md:p-24 text-center text-white relative overflow-hidden shadow-xl shadow-brand-600/5">
-            <div className="absolute inset-0 bg-brand-600/10 blur-[150px] translate-y-1/2" />
-            <div className="relative z-10 space-y-10">
-              <h2 className="text-4xl md:text-6xl font-black font-sora tracking-tighter leading-tight">Start Growing <br /><span className="text-neutral-500">Today.</span></h2>
-              <p className="text-xl md:text-2xl text-neutral-400 max-w-2xl mx-auto font-medium">Stop guessing. Start growing. The next generation of YouTube tools is here.</p>
-              <div className="flex flex-col sm:flex-row justify-center gap-6 pt-10">
-                <Link to="/onboarding" className="px-12 py-7 bg-brand-600 text-white rounded-[32px] font-black text-xl hover:scale-110 active:scale-95 transition-all shadow-2xl shadow-brand-600/30">
-                  Get Early Access
-                </Link>
-                <button className="px-12 py-7 bg-white/5 backdrop-blur-xl border border-white/10 text-white rounded-[32px] font-black text-xl hover:bg-white/10 transition-all">
-                  Contact Sales
-                </button>
+      <MarketingSection
+        title="How it works"
+        description="From signup to your first personalized feed in minutes."
+        className="border-t border-neutral-200 bg-white"
+      >
+        <div className="grid gap-6 md:grid-cols-3">
+          {steps.map((item, i) => (
+            <div
+              key={item.title}
+              className="surface-card-elevated relative rounded-xl p-6 transition-transform duration-200 hover:-translate-y-1"
+            >
+              {i < steps.length - 1 && (
+                <div className="absolute -right-3 top-1/2 hidden h-px w-6 bg-neutral-200 md:block" />
+              )}
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-neutral-800 to-neutral-900 text-white shadow-lg">
+                <item.icon className="h-5 w-5" />
               </div>
+              <h3 className="mt-5 text-base font-semibold text-neutral-900">{item.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-neutral-500">{item.body}</p>
             </div>
-          </div>
+          ))}
         </div>
-      </section>
+      </MarketingSection>
+
+      <MarketingSection
+        title="Built for creators who publish consistently"
+        description="Actionable signals tied to your niche — not generic viral noise."
+        className="bg-neutral-50"
+        align="center"
+      >
+        <div className="grid gap-5 sm:grid-cols-3">
+          {[
+            { icon: Layers, stat: 'Top 5', label: 'Curated opportunities per feed' },
+            { icon: Youtube, stat: 'YouTube', label: 'Real video velocity signals' },
+            { icon: Sparkles, stat: 'AI', label: 'Personalized angles & titles' },
+          ].map((item) => (
+            <Card key={item.label} variant="elevated" hover className="text-center">
+              <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-brand-100 to-brand-50 text-brand-600 ring-1 ring-brand-200/50">
+                <item.icon className="h-5 w-5" />
+              </div>
+              <p className="mt-4 text-2xl font-semibold text-neutral-900">{item.stat}</p>
+              <p className="mt-1 text-sm text-neutral-500">{item.label}</p>
+            </Card>
+          ))}
+        </div>
+      </MarketingSection>
+
+      <MarketingCta
+        variant="dark"
+        title="Ready to find your next video idea?"
+        description="Create a free account and get your first personalized trend feed on onboarding."
+      >
+        <Link to={isAuthenticated ? '/app/trends' : '/signup'}>
+          <Button size="lg">
+            {isAuthenticated ? 'View my trends' : 'Get started free'}
+            <ArrowRight className="h-4 w-4" />
+          </Button>
+        </Link>
+        <Link to="/pricing">
+          <Button variant="secondary" size="lg" className="bg-white/10 text-white border-white/20 hover:bg-white/20">
+            View pricing
+          </Button>
+        </Link>
+      </MarketingCta>
     </PublicLayout>
   );
 };

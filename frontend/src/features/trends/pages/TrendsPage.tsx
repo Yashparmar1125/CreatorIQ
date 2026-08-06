@@ -1,199 +1,461 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router';
 import { useTrendsStore } from '../../../stores/useTrendsStore';
-import { TrendingUp, PlayCircle, Zap, Search, Target, Activity, Sparkles, Loader2 } from 'lucide-react';
+import { FeedHistoryDrawer } from '../components/FeedHistoryDrawer';
+import { PageHeader } from '../../../components/ui/PageHeader';
+import { Card } from '../../../components/ui/Card';
+import { Button } from '../../../components/ui/Button';
+import { Badge } from '../../../components/ui/Badge';
+import { Alert } from '../../../components/ui/Alert';
+import { Input } from '../../../components/ui/Input';
+import {
+  TrendingUp,
+  Search,
+  Sparkles,
+  Loader2,
+  X,
+  LayoutList,
+  Film,
+  Layers,
+  User,
+  RefreshCw,
+  Globe,
+  ExternalLink,
+  History,
+  Lightbulb,
+  Bookmark,
+} from 'lucide-react';
+import { sanitizeStrategyTopic } from '../../../lib/strategyTopic';
+import { cn } from '../../../lib/utils';
+
+const FORMAT_TABS = [
+  { key: 'all' as const, label: 'All', Icon: Layers },
+  { key: 'long_form' as const, label: 'Long-form', Icon: LayoutList },
+  { key: 'shorts' as const, label: 'Shorts', Icon: Film },
+];
+
+function formatSubs(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
+  return String(n);
+}
+
+const SkeletonCard = () => (
+  <div className="surface-card-elevated animate-pulse space-y-4 rounded-xl p-5 md:p-6">
+    <div className="h-4 w-24 rounded bg-neutral-100" />
+    <div className="h-6 w-3/4 rounded bg-neutral-100" />
+    <div className="h-16 w-full rounded-lg bg-neutral-50" />
+    <div className="grid grid-cols-3 gap-3">
+      <div className="h-10 rounded bg-neutral-50" />
+      <div className="h-10 rounded bg-neutral-50" />
+      <div className="h-10 rounded bg-neutral-50" />
+    </div>
+  </div>
+);
 
 export const TrendsPage: React.FC = () => {
-  const { trends, isLoading, fetchTrends, toggleSaveTrend } = useTrendsStore();
+  const navigate = useNavigate();
+  const {
+    trends,
+    isLoading,
+    isRefreshing,
+    error,
+    emptyReason,
+    channelContext,
+    geoContext,
+    credits,
+    feedId,
+    snapshotAt,
+    isPersonalized,
+    aiEnriched,
+    isHistorical,
+    feedHistory,
+    isHistoryLoading,
+    activeFormatFilter,
+    fetchTrends,
+    refreshFeed,
+    fetchFeedHistory,
+    loadHistoricalFeed,
+    loadCurrentFeed,
+    toggleSaveTrend,
+    setFormatFilter,
+  } = useTrendsStore();
+
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeSearch, setActiveSearch] = useState('');
+  const [historyOpen, setHistoryOpen] = useState(false);
+
+  useEffect(() => {
+    fetchTrends();
+  }, []);
+
+  useEffect(() => {
+    if (historyOpen) {
+      fetchFeedHistory();
+    }
+  }, [historyOpen, fetchFeedHistory]);
 
   const handlePredict = () => {
-    if (searchQuery.trim()) {
-      fetchTrends(searchQuery);
-    } else {
-      fetchTrends();
-    }
+    const q = searchQuery.trim();
+    setActiveSearch(q);
+    fetchTrends(q || undefined);
+  };
+
+  const handleClearSearch = () => {
+    setSearchQuery('');
+    setActiveSearch('');
+    fetchTrends();
+  };
+
+  const filteredTrends = useMemo(() => {
+    if (activeFormatFilter === 'all') return trends;
+    return trends.filter((t) => t.supported_formats?.includes(activeFormatFilter));
+  }, [trends, activeFormatFilter]);
+
+  const extractTopic = (trend: (typeof trends)[number]) =>
+    sanitizeStrategyTopic(trend.raw_topic || trend.topic);
+
+  const handleQuickStrategy = (trend: (typeof trends)[number], e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate('/app/strategy', {
+      state: { topic: extractTopic(trend), autoGenerate: true },
+    });
   };
 
   return (
-    <div className="space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-1000">
-      <header className="flex flex-col lg:flex-row lg:items-end justify-between gap-12">
-        <div className="max-w-2xl">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-brand-600/10 text-brand-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-brand-600/10">
-                <Zap className="w-3 h-3 fill-current" />
-                AI Velocity Engine
-              </div>
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-success-600/10 text-success-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-success-600/10 animate-pulse">
-                <div className="w-1.5 h-1.5 rounded-full bg-success-600" />
-                Live Signals
-              </div>
-            </div>
-            <h2 className="text-5xl md:text-6xl font-black text-neutral-900 tracking-[-0.04em] font-sora leading-tight">
-             Viral <span className="text-neutral-300">Discovery</span>
-           </h2>
-           <p className="text-neutral-500 font-bold text-lg leading-relaxed mt-4">
-             Identify breakout patterns before they saturate. Our neural engine analyzes search intent and competitor velocity in real-time.
-           </p>
-        </div>
-        
-        <div className="flex flex-wrap gap-4">
-          <div className="relative group/search flex items-center">
-            <Search className={`w-5 h-5 absolute left-6 text-neutral-400 group-focus-within/search:text-brand-600 transition-colors ${isLoading ? 'opacity-0' : 'opacity-100'}`} />
-            {isLoading && <Loader2 className="w-5 h-5 absolute left-6 text-brand-600 animate-spin" />}
-            <input 
-              type="text" 
-              placeholder="Detect breakout niches..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') handlePredict(); }}
-              className="pl-16 pr-[9rem] py-5 bg-white glass border border-white/60 rounded-[24px] text-sm font-black focus:outline-none focus:ring-8 focus:ring-brand-600/5 focus:border-brand-600 transition-all w-[28rem] shadow-2xl shadow-neutral-200/20 placeholder:text-neutral-300"
-            />
-            <button
-               onClick={handlePredict}
-               disabled={isLoading}
-               className="absolute right-2 top-2 bottom-2 px-6 bg-brand-600 text-white rounded-[18px] text-[11px] font-black uppercase tracking-[0.15em] hover:bg-brand-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm whitespace-nowrap"
-            >
-               {isLoading ? (
-                 <>
-                   <Loader2 className="w-3 h-3 animate-spin" />
-                   Searching
-                 </>
-               ) : (
-                 'Predict =>'
-               )}
-            </button>
+    <div className="space-y-6 animate-in">
+      <PageHeader
+        title={<span className="text-gradient-brand">Trends</span>}
+        description="Your personalized Top 5 opportunities ranked by niche fit, momentum, and audience geography."
+        badge={
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            {isPersonalized && <Badge variant="brand">Personalized</Badge>}
+            {aiEnriched && (
+              <Badge variant="neutral">
+                <Sparkles className="h-3 w-3" />
+                AI curated
+              </Badge>
+            )}
           </div>
-        </div>
-      </header>
+        }
+        actions={
+          !activeSearch ? (
+            <div className="flex flex-wrap gap-2">
+              <Button variant="secondary" onClick={() => setHistoryOpen(true)}>
+                <History className="h-4 w-4" />
+                History
+                {feedHistory.length > 0 && (
+                  <span className="ml-0.5 rounded-full bg-neutral-200 px-1.5 py-0.5 text-[10px] font-semibold text-neutral-600">
+                    {feedHistory.length}
+                  </span>
+                )}
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => refreshFeed()}
+                disabled={isRefreshing || isLoading}
+              >
+                {isRefreshing ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4" />
+                )}
+                Refresh feed
+              </Button>
+            </div>
+          ) : undefined
+        }
+      />
 
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 animate-pulse">
-          {[1, 2, 3, 4].map(i => (
-             <div key={i} className="glass p-12 rounded-[56px] border border-white/60 shadow-xl shadow-neutral-200/20 relative overflow-hidden flex flex-col min-h-[520px]">
-                <div className="absolute top-0 right-0 p-8">
-                   <div className="w-24 h-8 bg-neutral-200/50 rounded-2xl" />
-                </div>
-                <div className="mb-12 flex-1">
-                   <div className="flex gap-2 flex-wrap mb-8">
-                      <div className="w-16 h-6 bg-neutral-200/50 rounded-full" />
-                      <div className="w-20 h-6 bg-neutral-200/50 rounded-full" />
-                   </div>
-                   <div className="w-3/4 h-12 bg-neutral-200/50 rounded-xl mb-12" />
-                   <div className="w-full h-32 bg-neutral-900/5 rounded-[32px]" />
-                </div>
-                <div className="grid grid-cols-2 gap-8 mb-10 pb-10 border-b border-neutral-100">
-                   <div className="space-y-6">
-                      <div className="w-full h-3 bg-neutral-200/50 rounded-full" />
-                      <div className="w-full h-3 bg-neutral-200/50 rounded-full" />
-                   </div>
-                   <div className="pl-6 border-l border-neutral-100 flex flex-col justify-center">
-                      <div className="w-20 h-8 bg-neutral-200/50 rounded-xl" />
-                   </div>
-                </div>
-                <div className="flex items-center justify-between">
-                   <div className="w-24 h-8 bg-neutral-200/50 rounded-xl" />
-                   <div className="w-40 h-10 bg-neutral-200/50 rounded-[24px]" />
-                </div>
-             </div>
-          ))}
+      {/* Search */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative min-w-0 flex-1 rounded-xl border border-neutral-200/80 bg-white p-1 shadow-sm">
+          <Input
+            icon={<Search className="h-4 w-4" />}
+            placeholder="Search a topic or niche..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handlePredict();
+            }}
+            className="pr-24"
+          />
+          {activeSearch && (
+            <button
+              type="button"
+              onClick={handleClearSearch}
+              className="absolute right-20 top-1/2 -translate-y-1/2 rounded p-1 text-neutral-400 hover:text-neutral-600"
+              aria-label="Clear search"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+          <Button
+            size="sm"
+            className="absolute right-1 top-1/2 -translate-y-1/2"
+            onClick={handlePredict}
+            disabled={isLoading}
+          >
+            {isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Search'}
+          </Button>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-          {trends.map((trend, i) => (
-            <div key={i} className="glass p-12 rounded-[56px] border border-white/60 premium-shadow-hover group cursor-pointer relative overflow-hidden flex flex-col min-h-[520px]">
-             {/* Archetype Badge */}
-             <div className="absolute top-0 right-0 p-8">
-                <div className={`px-6 py-2 rounded-2xl ${
-                  trend.archetype === 'The Greenlight' ? 'bg-success-600/10 text-success-600' :
-                  trend.archetype === 'The Viral Spike' ? 'bg-brand-600/10 text-brand-600' :
-                  'bg-neutral-900/10 text-neutral-900'
-                } text-[10px] font-black uppercase tracking-[0.2em] shadow-sm border border-current/10 animate-in zoom-in duration-500`}>
-                   {trend.archetype}
-                </div>
-             </div>
+      </div>
 
-             <div className="mb-12 flex-1">
-                <div className="flex gap-2 flex-wrap mb-8">
-                  {trend.niches.map((tag, idx) => (
-                    <span key={idx} className="text-[10px] font-black text-brand-600 uppercase tracking-widest bg-brand-50 border border-brand-100/50 px-4 py-1.5 rounded-full">
-                      {tag}
+      {/* Meta bar */}
+      {!activeSearch && (geoContext?.badge || credits || isHistorical || snapshotAt) && (
+        <Card variant="glass" padding="sm" className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+          {isHistorical && (
+            <span className="text-amber-800">
+              Viewing a past snapshot.{' '}
+              <button type="button" onClick={() => loadCurrentFeed()} className="font-medium text-brand-600 hover:underline">
+                Back to current
+              </button>
+            </span>
+          )}
+          {geoContext?.badge && (
+            <span className="flex items-center gap-1.5 text-neutral-600">
+              <Globe className="h-4 w-4 shrink-0" />
+              {geoContext.badge}
+            </span>
+          )}
+          {credits && (
+            <span className="text-xs text-neutral-500">
+              {credits.unlimited
+                ? 'Unlimited refreshes (dev)'
+                : `${credits.limit} refreshes / month`}
+            </span>
+          )}
+          {snapshotAt && (
+            <span className="ml-auto text-xs text-neutral-400">
+              Updated {new Date(snapshotAt).toLocaleString()}
+            </span>
+          )}
+        </Card>
+      )}
+
+      <FeedHistoryDrawer
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        feeds={feedHistory}
+        isLoading={isHistoryLoading}
+        activeFeedId={feedId}
+        onSelect={(id) => loadHistoricalFeed(id)}
+        onSelectCurrent={() => loadCurrentFeed()}
+      />
+
+      {/* Channel context + filters */}
+      {(channelContext || activeSearch) && (
+        <Card variant="elevated" padding="sm" className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          {activeSearch ? (
+            <div className="flex flex-wrap items-center gap-3">
+              <div>
+                <p className="text-xs text-neutral-500">Search results for</p>
+                <p className="text-sm font-medium text-neutral-900">&ldquo;{activeSearch}&rdquo;</p>
+              </div>
+              <Button variant="ghost" size="sm" onClick={handleClearSearch}>
+                Back to my feed
+              </Button>
+            </div>
+          ) : channelContext ? (
+            <div className="flex min-w-0 items-center gap-3">
+              {channelContext.thumbnail_url ? (
+                <img
+                  src={channelContext.thumbnail_url}
+                  alt=""
+                  className="h-9 w-9 shrink-0 rounded-full object-cover"
+                />
+              ) : (
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-100 text-brand-600">
+                  <User className="h-4 w-4" />
+                </div>
+              )}
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-neutral-900">
+                  {channelContext.name ?? 'Your channel'}
+                  {channelContext.subscriber_count > 0 && (
+                    <span className="ml-2 text-neutral-400">
+                      · {formatSubs(channelContext.subscriber_count)} subs
                     </span>
+                  )}
+                </p>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {channelContext.niches.slice(0, 4).map((niche) => (
+                    <Badge key={niche} variant="brand">
+                      {niche}
+                    </Badge>
                   ))}
                 </div>
-                <h3 className="text-4xl font-black font-sora text-neutral-900 leading-tight tracking-tighter group-hover:text-brand-600 transition-colors pr-24">
-                  {trend.topic}
-                </h3>
-                
-                {/* Growth Advice Section */}
-                <div className="mt-8 p-6 bg-neutral-900 rounded-[32px] text-white relative overflow-hidden group/advice">
-                   <div className="flex items-start gap-4">
-                      <div className="w-10 h-10 rounded-full bg-brand-600 flex items-center justify-center shrink-0">
-                         <Sparkles className="w-5 h-5" />
-                      </div>
-                      <div className="space-y-1">
-                         <p className="text-[10px] font-black text-brand-400 uppercase tracking-widest">Growth Strategy</p>
-                         <p className="text-sm font-bold leading-relaxed">{trend.growth_tip}</p>
-                      </div>
-                   </div>
-                   <div className="absolute top-0 right-0 p-4 opacity-10 group-hover/advice:rotate-12 transition-transform">
-                      <Target className="w-12 h-12" />
-                   </div>
-                </div>
-             </div>
+              </div>
+            </div>
+          ) : null}
 
-             {/* Metric Intelligence Row */}
-             <div className="grid grid-cols-2 gap-8 mb-10 pb-10 border-b border-neutral-100">
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-[9px] font-black text-neutral-300 uppercase tracking-widest flex items-center gap-2 mb-2">
-                      <Activity className="w-3 h-3" />
-                      Stability Index
-                    </p>
-                    <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden w-full">
-                       <div className="h-full bg-success-600 transition-all duration-1000" style={{ width: `${trend.stability_score}%` }}></div>
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-[9px] font-black text-neutral-300 uppercase tracking-widest flex items-center gap-2 mb-2">
-                      <Target className="w-3 h-3" />
-                      Saturation
-                    </p>
-                    <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden w-full">
-                       <div className="h-full bg-brand-600 transition-all duration-1000" style={{ width: `${trend.saturation_index}%` }}></div>
-                    </div>
-                  </div>
-                </div>
-                <div className="pl-6 border-l border-neutral-100">
-                   <p className="text-[10px] font-black text-neutral-300 uppercase tracking-widest flex items-center gap-2 mb-2">
-                     <TrendingUp className="w-3 h-3" />
-                     Velocity
-                   </p>
-                   <p className="text-3xl font-black text-neutral-900 font-sora">
-                     {trend.velocity}
-                   </p>
-                </div>
-             </div>
-
-             <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                   <p className="text-[10px] font-black text-neutral-300 uppercase tracking-widest">Est. Reach</p>
-                   <p className="text-2xl font-black text-neutral-900 font-mono tracking-tighter">{trend.volume}</p>
-                </div>
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleSaveTrend(trend.id);
-                  }}
-                  className={`flex items-center gap-4 px-10 py-5 ${trend.saved ? 'bg-success-600' : 'bg-neutral-900'} text-white rounded-[24px] font-black text-xs uppercase tracking-widest hover:scale-105 transition-all shadow-2xl shadow-neutral-900/10 active:scale-95 group/btn overflow-hidden relative`}
-                >
-                   <span className="relative z-10">{trend.saved ? 'Blueprint Locked' : 'Map Blueprint'}</span>
-                   <PlayCircle className="w-6 h-6 relative z-10 group-hover/btn:translate-x-1 transition-transform" />
-                   <div className="absolute inset-0 bg-success-600 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
-                </button>
-             </div>
+          <div className="flex items-center gap-1 rounded-xl border border-neutral-200 bg-neutral-50/80 p-1 shadow-inner">
+            {FORMAT_TABS.map(({ key, label, Icon }) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setFormatFilter(key)}
+                className={cn(
+                  'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                  activeFormatFilter === key
+                    ? 'bg-white text-neutral-900 shadow-sm'
+                    : 'text-neutral-500 hover:text-neutral-700'
+                )}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {label}
+              </button>
+            ))}
           </div>
-        ))}
+        </Card>
+      )}
+
+      {error && <Alert variant="error">Could not load trends — {error}</Alert>}
+
+      {isLoading && (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <SkeletonCard key={i} />
+          ))}
         </div>
+      )}
+
+      {!isLoading && (
+        <>
+          {filteredTrends.length === 0 ? (
+            <Card className="py-16 text-center" variant="elevated">
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 ring-1 ring-brand-200/50">
+                <TrendingUp className="h-6 w-6 text-neutral-400" />
+              </div>
+              <h3 className="text-base font-semibold text-neutral-900">
+                {activeFormatFilter !== 'all' ? 'No trends match this filter' : 'No opportunities yet'}
+              </h3>
+              <p className="mx-auto mt-2 max-w-md text-sm text-neutral-500">
+                {emptyReason ??
+                  (activeFormatFilter !== 'all'
+                    ? 'Try switching to All or a different format.'
+                    : 'Trend data is still collecting. Refresh in a few minutes or search a topic.')}
+              </p>
+              {activeFormatFilter !== 'all' && (
+                <Button className="mt-6" size="sm" onClick={() => setFormatFilter('all')}>
+                  Show all formats
+                </Button>
+              )}
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              {filteredTrends.map((trend) => (
+                <Card
+                  key={trend.id}
+                  variant="elevated"
+                  hover
+                  className="group flex cursor-pointer flex-col gap-4 transition-transform duration-200 hover:-translate-y-0.5"
+                  onClick={() => navigate(`/app/trends/detail/${trend.id}`)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      navigate(`/app/trends/detail/${trend.id}`);
+                    }
+                  }}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex flex-wrap gap-1.5">
+                      {trend.niches.slice(0, 2).map((tag) => (
+                        <Badge key={tag} variant="brand">
+                          {tag}
+                        </Badge>
+                      ))}
+                      <Badge variant="neutral">{trend.archetype}</Badge>
+                    </div>
+                    {trend.opportunity_score != null && (
+                      <span className="shrink-0 text-sm font-semibold text-neutral-900">
+                        {Math.round(trend.opportunity_score ?? trend.tvs_score)}
+                      </span>
+                    )}
+                  </div>
+
+                  <div>
+                    <h3 className="text-base font-semibold text-neutral-900 group-hover:text-brand-600">
+                      {trend.topic}
+                    </h3>
+                    {trend.headline && trend.headline !== trend.topic && (
+                      <p className="mt-1 text-sm text-neutral-600">{trend.headline}</p>
+                    )}
+                    {trend.is_youtube_video && trend.channel_name && (
+                      <p className="mt-2 text-xs text-neutral-500">
+                        {trend.channel_name}
+                        {trend.video_url && (
+                          <>
+                            {' · '}
+                            <a
+                              href={trend.video_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-0.5 text-brand-600 hover:underline"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              Watch <ExternalLink className="h-3 w-3" />
+                            </a>
+                          </>
+                        )}
+                      </p>
+                    )}
+                  </div>
+
+                  <p className="line-clamp-2 text-sm text-neutral-600">
+                    {trend.content_angle || trend.growth_tip || trend.why_trending}
+                  </p>
+
+                  <div className="grid grid-cols-3 gap-3 border-t border-neutral-100 pt-4 text-sm">
+                    <div>
+                      <p className="text-xs text-neutral-500">Velocity</p>
+                      <p className="font-medium text-neutral-900">{trend.velocity}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-neutral-500">Reach</p>
+                      <p className="font-medium text-neutral-900">{trend.volume}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-neutral-500">Stability</p>
+                      <p className="font-medium text-neutral-900">{Math.round(trend.stability_score ?? 50)}%</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 border-t border-neutral-100 pt-4">
+                    {trend.key_indicator ? (
+                      <span className="min-w-0 truncate text-xs text-neutral-500">{trend.key_indicator}</span>
+                    ) : (
+                      <span />
+                    )}
+                    <div className="flex shrink-0 items-center gap-2">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={(e) => handleQuickStrategy(trend, e)}
+                        title="Generate AI strategy for this topic"
+                      >
+                        <Lightbulb className="h-3.5 w-3.5" />
+                        Strategy
+                      </Button>
+                      <Button
+                        variant={trend.saved ? 'primary' : 'secondary'}
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleSaveTrend(trend.id);
+                        }}
+                      >
+                        <Bookmark className="h-3.5 w-3.5" />
+                        {trend.saved ? 'Saved' : 'Save'}
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

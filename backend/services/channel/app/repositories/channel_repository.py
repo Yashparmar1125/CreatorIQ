@@ -89,3 +89,46 @@ class ChannelRepository:
             )
         )
         return res.scalar_one_or_none()
+
+    async def get_primary_channel_for_user(self, db: AsyncSession, user_id: uuid.UUID) -> Channel | None:
+        return await self.get_primary_channel_context(db, user_id)
+
+    async def get_primary_channel_by_user(self, db: AsyncSession, user_id: uuid.UUID) -> Channel | None:
+        """Return primary channel, or first channel if no primary flagged."""
+        primary = await self.get_primary_channel_context(db, user_id)
+        if primary:
+            return primary
+        channels = await self.list_channels_for_user(db, user_id)
+        return channels[0] if channels else None
+
+    async def patch_channel_analysis(
+        self,
+        db: AsyncSession,
+        user_id: uuid.UUID,
+        *,
+        engagement_rate: float | None,
+        niches: list[str],
+    ) -> Channel | None:
+        channel = await self.get_primary_channel_by_user(db, user_id)
+        if not channel:
+            return None
+        if engagement_rate is not None:
+            channel.engagement_rate = engagement_rate
+        if niches:
+            channel.niches = list(dict.fromkeys((channel.niches or []) + niches))[:5]
+        await db.flush()
+        return channel
+
+    async def patch_channel_geo(
+        self,
+        db: AsyncSession,
+        user_id: uuid.UUID,
+        *,
+        audience_geo_weights: dict[str, float],
+    ) -> Channel | None:
+        channel = await self.get_primary_channel_by_user(db, user_id)
+        if not channel:
+            return None
+        channel.audience_geo_weights = audience_geo_weights
+        await db.flush()
+        return channel

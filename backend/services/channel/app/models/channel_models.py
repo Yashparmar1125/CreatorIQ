@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import BIGINT, INTEGER, BOOLEAN, TIMESTAMP, Enum, String, Text, func, Numeric
-from sqlalchemy.dialects.postgresql import ARRAY, NUMERIC, UUID
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB, NUMERIC, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
@@ -45,6 +45,7 @@ class Channel(Base):
     niches: Mapped[list[str]] = mapped_column(ARRAY(String(64)), nullable=False)
     content_formats: Mapped[list[ContentFormat]] = mapped_column(ARRAY(Enum(ContentFormat, name="channel_content_format")), nullable=False)
     tone: Mapped[ChannelTone] = mapped_column(Enum(ChannelTone, name="channel_tone"), default=ChannelTone.mixed, nullable=False)
+    audience_geo_weights: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     metrics_last_refreshed: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True)
     is_primary: Mapped[bool] = mapped_column(BOOLEAN, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)

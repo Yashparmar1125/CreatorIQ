@@ -128,3 +128,45 @@ class TrendRepository:
     async def list_saved_ids(self, db: AsyncSession, user_id: uuid.UUID) -> list[uuid.UUID]:
         res = await db.execute(select(SavedTrend.trend_id).where(SavedTrend.user_id == user_id))
         return list(res.scalars().all())
+
+    async def upsert_live_trend(self, db: AsyncSession, trend_id: uuid.UUID, data: dict) -> Trend:
+        """
+        Upsert a live/ad-hoc trend (from SerpApi) into the DB so it can be saved by the user.
+        The trend_id is deterministic (uuid.uuid5) so repeated calls are idempotent.
+        """
+        res = await db.execute(select(Trend).where(Trend.id == trend_id))
+        existing = res.scalar_one_or_none()
+        if existing:
+            # Refresh scores if provided
+            if "tvs_score" in data:
+                existing.tvs_score = float(data["tvs_score"])
+            if "prediction_confidence" in data:
+                existing.prediction_confidence = float(data["prediction_confidence"])
+            existing.scored_at = datetime.now(timezone.utc)
+            return existing
+
+        now   = datetime.now(timezone.utc)
+        today = date.today()
+        formats = data.get("supported_formats") or ["long_form", "shorts"]
+        slug = data.get("topic_slug") or data.get("topic", "").lower().replace(" ", "-")[:500] or str(trend_id)
+
+        t = Trend(
+            id=trend_id,
+            topic=data.get("topic", "Unknown"),
+            topic_slug=slug,
+            niches=data.get("niches") or [],
+            tvs_score=float(data.get("tvs_score", 50.0)),
+            prediction_confidence=float(data.get("prediction_confidence", 0.75)),
+            peak_window_start=today,
+            peak_window_end=today,
+            status=TrendStatus(data.get("status", "emerging")),
+            sentiment=TrendSentiment(data.get("sentiment", "positive")),
+            supported_formats=[SupportedFormat(x) for x in formats if x in SupportedFormat._value2member_map_],
+            top_keywords=data.get("top_keywords") or [],
+            description=data.get("description") or data.get("growth_tip"),
+            data_sources=data.get("data_sources") or ["serpapi_live"],
+            scored_at=now,
+        )
+        db.add(t)
+        await db.flush()
+        return t

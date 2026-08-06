@@ -1,3 +1,6 @@
+import asyncio
+import math
+import time
 import uuid
 from typing import Any
 
@@ -9,257 +12,503 @@ from app.core.config import settings
 from app.core.deps import UserContext
 from app.models.trend_models import Trend
 from app.repositories.trend_repository import TrendRepository
+from app.services.feed_service import FeedService
+from app.services.concept_collector import ConceptCollector
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Niche → google_trends_trending_now category_id mapping
+# IDs verified from LIVE API responses (different from google_trends engine!):
+#   0  = All Topics   4  = Entertainment   5  = Food & Drink
+#   7  = Health       8  = Hobbies         17 = Sports
+# ─────────────────────────────────────────────────────────────────────────────
+_NICHE_CATEGORY_MAP: dict[str, str] = {
+    # Entertainment (4)
+    "entertainment": "4",
+    "music":         "4",
+    "movies":        "4",
+    "anime":         "4",
+    "comedy":        "4",
+    "memes":         "4",
+    # Sports (17)
+    "sports":   "17",
+    "cricket":  "17",
+    "football": "17",
+    "esports":  "17",
+    # Health / Fitness (7)
+    "health":        "7",
+    "fitness":       "7",
+    "wellness":      "7",
+    "mental health": "7",
+    # Food & Drink (5)
+    "food":     "5",
+    "cooking":  "5",
+    "recipes":  "5",
+    # Hobbies & Leisure (8)
+    "gaming":    "8",
+    "games":     "8",
+    "travel":    "8",
+    "lifestyle": "8",
+    "fashion":   "8",
+    "beauty":    "8",
+    # All Topics (0) — tech/finance not well-covered by trending_now categories in IN
+    "tech":                    "0",
+    "technology":              "0",
+    "ai":                      "0",
+    "artificial intelligence": "0",
+    "software":                "0",
+    "programming":             "0",
+    "coding":                  "0",
+    "gadgets":                 "0",
+    "apps":                    "0",
+    "creator economy":         "0",
+    "finance":                 "0",
+    "investing":               "0",
+    "crypto":                  "0",
+    "stocks":                  "0",
+    "business":                "0",
+    "education":               "0",
+    "learning":                "0",
+    "career":                  "0",
+    "vlogging":                "0",
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Niche → relevant keywords (for post-fetch relevance scoring)
+# Used to rank the same pool of trends differently per user's niche
+# ─────────────────────────────────────────────────────────────────────────────
+_NICHE_KEYWORDS: dict[str, list[str]] = {
+    "tech":           ["tech", "technology", "software", "app", "gadget", "phone", "computer", "digital", "ai", "robot", "startup"],
+    "technology":     ["tech", "technology", "software", "digital", "innovation", "computer"],
+    "ai":             ["ai", "artificial intelligence", "machine learning", "gpt", "chatbot", "model", "openai", "gemini"],
+    "gaming":         ["game", "gaming", "esports", "playstation", "xbox", "nintendo", "steam", "tournament", "streamer"],
+    "entertainment":  ["movie", "film", "series", "actor", "actress", "show", "ott", "netflix", "disney", "bollywood"],
+    "music":          ["music", "song", "album", "singer", "band", "concert", "playlist", "spotify"],
+    "sports":         ["cricket", "football", "ipl", "match", "team", "player", "tournament", "score", "league"],
+    "cricket":        ["cricket", "ipl", "test", "odi", "t20", "bcci", "match", "batsman", "bowler"],
+    "finance":        ["finance", "stock", "market", "investment", "money", "bank", "economy", "trading", "nifty", "sensex"],
+    "crypto":         ["crypto", "bitcoin", "ethereum", "blockchain", "defi", "nft", "token", "web3"],
+    "health":         ["health", "fitness", "medicine", "doctor", "disease", "hospital", "wellness", "diet", "exercise"],
+    "fitness":        ["fitness", "gym", "workout", "exercise", "muscle", "weight", "yoga", "run"],
+    "food":           ["food", "recipe", "cook", "restaurant", "cuisine", "dish", "meal", "chef"],
+    "education":      ["study", "exam", "school", "college", "university", "learn", "course", "upsc", "jee", "neet"],
+    "travel":         ["travel", "trip", "tour", "destination", "hotel", "flight", "visa", "holiday"],
+    "beauty":         ["beauty", "skincare", "makeup", "fashion", "style", "outfit"],
+    "lifestyle":      ["lifestyle", "motivation", "productivity", "routine", "self", "personal"],
+    "vlogging":       ["vlog", "daily", "day in life", "experience", "journey"],
+    "creator economy":["creator", "youtube", "content", "social media", "influencer", "brand", "sponsorship"],
+    "business":       ["business", "startup", "entrepreneur", "company", "product", "market", "revenue"],
+    "comedy":         ["comedy", "funny", "meme", "joke", "stand up", "roast", "humor"],
+    "anime":          ["anime", "manga", "naruto", "demon slayer", "one piece", "jujutsu"],
+    "movies":         ["movie", "film", "trailer", "review", "director", "actor", "release", "bollywood", "hollywood"],
+    "esports":        ["esports", "tournament", "gaming", "valorant", "pubg", "bgmi", "streamer"],
+}
+
+
+def _niche_to_category(niche: str) -> str:
+    """Map user niche to a google_trends_trending_now category_id. Falls back to '0' (All)."""
+    return _NICHE_CATEGORY_MAP.get(niche.lower().strip(), "0")
+
+
+def _relevance_score(query: str, related_terms: list[str], niche: str) -> float:
+    """
+    Returns 0.0–1.0: how well the trending item matches the creator's niche.
+    Helps differentiate results even when multiple niches share the same category bucket.
+    """
+    keywords = _NICHE_KEYWORDS.get(niche.lower().strip(), [niche.lower()])
+    text = (query + " " + " ".join(related_terms)).lower()
+    hits = sum(1 for kw in keywords if kw in text)
+    # 30% keyword hit rate → full score (avoids penalizing broad topics)
+    return min(1.0, hits / max(1, len(keywords) * 0.3))
+
+# Tone → Format & Strategy mapping
+# ─────────────────────────────────────────────────────────────────────────────
+_TONE_FORMAT_MAP = {
+    "educational":    ("long_form",  "Create a deep-dive tutorial. Educational audiences reward long-form watch-time."),
+    "authoritative":  ("long_form",  "Publish an in-depth analysis or opinion piece — authority channels win on depth."),
+    "entertaining":   ("shorts",     "Drop a rapid-fire Short to ride this signal fast before it saturates."),
+    "conversational": ("both",       "Start a conversation with a community post + short video to spark engagement."),
+    "mixed":          ("both",       "Use a dual strategy — a teaser Short to capture attention + long-form for depth."),
+}
+
+# Size tiers for channel-aware growth advice
+def _size_tier(subs: int) -> str:
+    if subs < 1_000:       return "nano"
+    if subs < 10_000:      return "micro"
+    if subs < 100_000:     return "mid"
+    if subs < 1_000_000:   return "macro"
+    return "mega"
+
+_SIZE_PREFIX = {
+    "nano":  "As a rising creator, this is your window — move fast.",
+    "micro": "Micro-channels who act early on this can 3x their subscriber rate.",
+    "mid":   "Your audience size can amplify this trend significantly.",
+    "macro": "Your established reach gives this topic 10x reach potential.",
+    "mega":  "Your platform reach can own this conversation outright.",
+}
 
 
 class TrendService:
     _cache: dict[str, Any] = {}
-    _cache_ttl = 900 # 15 minutes
+    _cache_ttl = 900  # 15 minutes
 
     def __init__(self) -> None:
         self.repo = TrendRepository()
+        self.feed = FeedService()
+        self.collector = ConceptCollector()
 
     def health(self) -> dict:
         return {"data": self.repo.health_payload(), "meta": {"request_id": "local-dev"}}
 
-    def _serialize_trend(self, t: Trend, *, saved: bool | None = None) -> dict[str, Any]:
-        # UI-friendly formatting
-        velocity = f"+{int(t.tvs_score * 5)}%" if t.tvs_score > 0 else "0%"
-        volume = f"{(t.prediction_confidence * 10):.1f}M"
-
-        out: dict[str, Any] = {
-            "id": str(t.id),
-            "topic": t.topic,
-            "topic_slug": t.topic_slug,
-            "niches": t.niches,
-            "tvs_score": float(t.tvs_score),
-            "velocity": velocity,
-            "volume": volume,
-            "prediction_confidence": float(t.prediction_confidence),
-            "peak_window_start": t.peak_window_start.isoformat(),
-            "peak_window_end": t.peak_window_end.isoformat(),
-            "status": t.status.value,
-            "sentiment": t.sentiment.value,
-            "supported_formats": [x.value for x in t.supported_formats],
-            "top_keywords": t.top_keywords,
-            "description": t.description,
-            "data_sources": t.data_sources,
-            "scored_at": t.scored_at.isoformat(),
+    # ─────────────────────────────────────────────────────────────────────────
+    # Rich Channel Context
+    # ─────────────────────────────────────────────────────────────────────────
+    async def _get_rich_channel_context(self, user_id: uuid.UUID) -> dict:
+        """
+        Fetch full channel context from Channel service.
+        Returns a dict with:
+          - niches:           list[str]
+          - content_formats:  list[str]
+          - tone:             str
+          - subscriber_count: int
+          - engagement_rate:  float | None
+          - channel_name:     str | None
+          - thumbnail_url:    str | None
+        Falls back gracefully on any error.
+        """
+        defaults = {
+            "niches": ["AI", "Creator Economy", "Tech"],
+            "content_formats": ["long_form", "shorts"],
+            "tone": "mixed",
+            "subscriber_count": 0,
+            "engagement_rate": None,
+            "channel_name": None,
+            "thumbnail_url": None,
         }
-        if saved is not None:
-            out["saved"] = saved
-        return out
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                # 1. Get niches, formats, tone from /context endpoint
+                ctx_r = await client.get(
+                    f"{settings.channel_service_url}/internal/channels/user/{user_id}/context",
+                    headers={"X-Internal-Service-Token": settings.internal_service_token},
+                )
+                if ctx_r.status_code == 200:
+                    ctx = ctx_r.json().get("data", {})
+                    defaults["niches"]          = ctx.get("niches") or defaults["niches"]
+                    defaults["content_formats"] = ctx.get("content_formats") or defaults["content_formats"]
+                    defaults["tone"]            = ctx.get("tone") or defaults["tone"]
 
+                # 2. Get subscriber_count, engagement_rate, channel_name, thumbnail from /channels
+                ch_r = await client.get(
+                    f"{settings.channel_service_url}/channels",
+                    headers={
+                        "X-Internal-Service-Token": settings.internal_service_token,
+                        "X-User-Id": str(user_id),
+                    },
+                )
+                if ch_r.status_code == 200:
+                    channels = ch_r.json().get("data", {}).get("channels", [])
+                    primary = next((c for c in channels if c.get("is_primary")), channels[0] if channels else None)
+                    if primary:
+                        defaults["subscriber_count"] = primary.get("subscriber_count", 0)
+                        defaults["engagement_rate"]  = primary.get("engagement_rate")
+                        defaults["channel_name"]     = primary.get("name")
+                        defaults["thumbnail_url"]    = primary.get("thumbnail_url")
+        except Exception as e:
+            print(f"[trend] Channel context fetch failed: {e}")
+        return defaults
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # SerpApi — google_trends_trending_now  (real live data, per category)
+    # ─────────────────────────────────────────────────────────────────────────
+    async def _fetch_trending_now(
+        self,
+        niche: str,
+        *,
+        geo: str = "IN",
+        hours: str = "24",
+    ) -> list[dict] | None:
+        """
+        Fetches real trending searches from Google Trends Trending Now engine.
+        Maps the niche string to a Google Trends category_id.
+        Returns a normalised list of trending items or None on failure.
+
+        Real SerpApi response shape per item:
+        {
+          "query":               str,          ← trending topic
+          "search_volume":       int,          ← approx search volume (e.g. 20000)
+          "increase_percentage": int,          ← % growth (e.g. 1000 = +1000%)
+          "active":              bool,         ← is trend currently live?
+          "start_timestamp":     int,          ← Unix epoch when it started
+          "end_timestamp":       int | None,   ← present if trend ended
+          "categories":          [{id, name}], ← Google topic categories
+          "trend_breakdown":     [str, ...],   ← related search terms (NOT time-series!)
+          "serpapi_news_link":   str,          ← link to fetch news articles
+        }
+        """
+        category_id = _niche_to_category(niche)
+        cache_key   = f"trending_now:{geo}:{hours}:{category_id}"
+        now         = time.time()
+
+        if cache_key in self._cache:
+            entry = self._cache[cache_key]
+            if now - entry["ts"] < self._cache_ttl:
+                return entry["data"]
+
+        try:
+            from app.integrations.serpapi_client import search_trending_now
+
+            raw = await search_trending_now(
+                geo=geo,
+                hours=hours,
+                category_id=category_id,
+                hl="en",
+            )
+
+            items: list[dict] = []
+            for ts in raw.get("trending_searches", []):
+                if not isinstance(ts, dict):
+                    continue
+
+                query = ts.get("query", "").strip()
+                if not query:
+                    continue
+
+                # trend_breakdown = list of related SEARCH STRINGS (not numbers!)
+                # e.g. ["jananayagan", "jana nayagan release date"]
+                raw_breakdown = ts.get("trend_breakdown") or []
+                related_terms: list[str] = [
+                    t for t in raw_breakdown if isinstance(t, str) and t
+                ]
+
+                # Categories (may include the actual topic: Entertainment, Sports, etc.)
+                categories: list[str] = [
+                    c.get("name", "") for c in (ts.get("categories") or [])
+                    if isinstance(c, dict) and c.get("name")
+                ]
+
+                items.append({
+                    "query":               query,
+                    "search_volume":       int(ts.get("search_volume") or 0),
+                    "increase_percentage": int(ts.get("increase_percentage") or 0),
+                    "active":              bool(ts.get("active", True)),
+                    "start_timestamp":     int(ts.get("start_timestamp") or 0),
+                    "end_timestamp":       ts.get("end_timestamp"),   # None if still active
+                    "related_terms":       related_terms,             # from trend_breakdown strings
+                    "categories":          categories,
+                    "niche":               niche,
+                })
+
+            self._cache[cache_key] = {"ts": now, "data": items}
+            return items
+
+        except Exception as e:
+            print(f"[trend] google_trends_trending_now error (niche='{niche}', cat={category_id}): {e}")
+            return None
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Personalized Growth Tip Generator
+    # ─────────────────────────────────────────────────────────────────────────
+    def _build_growth_tip(
+        self,
+        *,
+        query: str,
+        niche: str,
+        tvs_score: float,
+        saturation: float,
+        stability: float,
+        tone: str,
+        subscriber_count: int,
+        content_formats: list[str],
+    ) -> tuple[str, str, str]:
+        """
+        Returns (archetype, growth_tip, best_format).
+        The tip is channel-aware: considers tone, size tier, and content_formats.
+        """
+        size         = _size_tier(subscriber_count)
+        size_prefix  = _SIZE_PREFIX[size]
+        tone_fmt, tone_advice = _TONE_FORMAT_MAP.get(tone, _TONE_FORMAT_MAP["mixed"])
+
+        # Determine best format for this user
+        user_formats = set(content_formats)
+        if "long_form" in user_formats and "shorts" in user_formats:
+            best_format = "both"
+        elif "long_form" in user_formats:
+            best_format = "long_form"
+        elif "shorts" in user_formats:
+            best_format = "shorts"
+        else:
+            best_format = tone_fmt
+
+        # Archetype logic
+        if tvs_score > 90 and stability > 70 and saturation < 30:
+            archetype = "The Greenlight"
+            tip = (
+                f"{size_prefix} This '{query}' signal is uncrowded and rapidly accelerating. "
+                f"{tone_advice} Massive SEO opportunity — publish now."
+            )
+        elif tvs_score > 85 and stability < 40:
+            archetype = "The Viral Spike"
+            tip = (
+                f"{size_prefix} '{query}' is a breakout spike in {niche}. "
+                f"Drop Shorts immediately to ride the attention wave before it peaks."
+            )
+        elif saturation > 70:
+            archetype = "Peaking"
+            tip = (
+                f"'{query}' is saturating fast. Pivot with a unique counter-angle or reaction video. "
+                f"{'Use Shorts for quick takes.' if 'shorts' in user_formats else 'Long-form analysis still wins if differentiated.'}"
+            )
+        elif tvs_score > 70 and stability > 60:
+            archetype = "The Evergreen"
+            tip = (
+                f"{size_prefix} '{query}' is a stable, consistent performer in {niche}. "
+                f"{tone_advice} Build a pillar content series around it."
+            )
+        else:
+            archetype = "The Discovery"
+            tip = (
+                f"Early signal detected for '{query}'. "
+                f"Create a comparison vs a competitor to test engagement — "
+                f"{'Shorts work best for fast discovery.' if 'shorts' in user_formats else 'Long-form exploration wins here.'}"
+            )
+
+        return archetype, tip, best_format
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Main — list_trends (fully personalized, 100% live)
+    # ─────────────────────────────────────────────────────────────────────────
     async def list_trends(
         self,
         db: AsyncSession,
         user: UserContext,
         *,
         q: str | None = None,
-        limit: int = 20,
+        limit: int = 5,
         cursor: str | None = None,
     ) -> dict:
-        """Advanced Intelligence: Triple-handshake with SerpApi to provide growth strategies."""
-        # 1. Fetch user context (niches)
-        user_niches = []
+        """Return latest Top-5 feed snapshot, or search concepts when q is set."""
         if q:
-            user_niches = [q]
-        else:
+            payload = await self.feed.search_concepts(db, user.user_id, q.strip(), limit=min(limit, 5))
+            return {"data": payload, "meta": {"request_id": "trend-engine"}}
+
+        feed = await self.feed.get_latest_feed(db, user.user_id)
+        if not feed:
             try:
-                async with httpx.AsyncClient(timeout=5.0) as client:
-                    r = await client.get(
-                        f"{settings.channel_service_url}/internal/channels/user/{user.user_id}/context",
-                        headers={"X-Internal-Service-Token": settings.internal_service_token},
-                    )
-                    if r.status_code == 200:
-                        ctx = r.json().get("data", {})
-                        user_niches = ctx.get("niches", [])
-            except Exception: pass
-            if not user_niches: user_niches = ["AI", "Creator Economy", "Tech"]
+                feed = await self.feed.generate_feed(
+                    db, user.user_id, is_first_feed=True, consume_credit=False
+                )
+            except HTTPException as exc:
+                if exc.status_code == status.HTTP_503_SERVICE_UNAVAILABLE:
+                    return {
+                        "data": {
+                            "trends": [],
+                            "personalized": True,
+                            "channel": None,
+                            "geo": {"source": "global_default", "badge": None},
+                            "credits": {"plan": "free", "limit": 2},
+                            "empty_reason": exc.detail.get("message") if isinstance(exc.detail, dict) else str(exc.detail),
+                        },
+                        "meta": {"request_id": "trend-engine"},
+                    }
+                raise
 
-        # 2. Parallel Triple-Signals Fetch for Top Niches (with Cache)
-        from app.integrations.serpapi_client import search_google_trends
-        import time
-        import asyncio
+        return {"data": feed, "meta": {"request_id": "trend-engine"}}
 
-        async def fetch_intelligence(niche: str):
-            cache_key = f"intel:{niche}"
-            now = time.time()
-            if cache_key in self._cache:
-                entry = self._cache[cache_key]
-                if now - entry["ts"] < self._cache_ttl:
-                    return entry["data"]
+    async def refresh_feed(self, db: AsyncSession, user: UserContext, *, plan: str = "free") -> dict:
+        feed = await self.feed.generate_feed(
+            db, user.user_id, is_first_feed=False, consume_credit=True, plan=plan
+        )
+        return {"data": feed, "meta": {"request_id": "trend-engine"}}
 
-            try:
-                import random
-                # Optimized: Only fetch RELATED_QUERIES to save SerpApi credits (1 call instead of 3)
-                # Removed gprop="youtube" because it often returns empty lists for broad niches, triggering our mock fallback
-                q_res = await search_google_trends(q=niche, data_type="RELATED_QUERIES")
-                
-                # Safely get queries
-                rq = q_res.get("related_queries", {})
-                rising = rq.get("rising", [])
-                top_q = rq.get("top", [])
+    async def feed_history(self, db: AsyncSession, user: UserContext, *, limit: int = 10) -> dict:
+        data = await self.feed.list_history(db, user.user_id, limit=limit)
+        return {"data": data, "meta": {"request_id": "trend-engine"}}
 
-                # Fallback if rising is empty (some niches don't have rising data today)
-                if not rising:
-                    rising = top_q
-                if not rising:
-                    rising = [
-                        {"query": f"{niche} tips and tricks", "value": "Breakout"},
-                        {"query": f"best {niche} secrets", "value": "+850%"},
-                        {"query": f"why {niche} is trending", "value": "+300%"}
-                    ]
+    async def get_feed_snapshot(self, db: AsyncSession, user: UserContext, feed_id: uuid.UUID) -> dict:
+        feed = await self.feed.get_feed_snapshot(db, user.user_id, feed_id)
+        return {"data": feed, "meta": {"request_id": "trend-engine"}}
 
-                # Use top queries to fake the 'topics' so it looks exceptionally realistic
-                mock_topics = [{"topic": {"title": t.get("query")}} for t in top_q[:3]]
-                if not mock_topics:
-                    mock_topics = [
-                        {"topic": {"title": f"{niche} news"}},
-                        {"topic": {"title": f"{niche} strategy"}}
-                    ]
-                
-                # Randomize timeline so that Stability and Archetypes vary beautifully per topic
-                mock_timeline = [
-                    {"values": [{"extracted_value": random.randint(30, 100)}]}
-                    for _ in range(6)
-                ]
+    async def generate_first_feed(self, db: AsyncSession, user_id: uuid.UUID) -> dict:
+        existing = await self.feed.feed_repo.get_latest_snapshot(db, user_id)
+        if existing:
+            return {"data": {"skipped": True, "feed_id": str(existing.id)}, "meta": {"request_id": "trend-engine"}}
+        try:
+            feed = await self.feed.generate_feed(
+                db, user_id, is_first_feed=True, consume_credit=False
+            )
+            return {"data": {"generated": True, "feed_id": feed.get("feed_id")}, "meta": {"request_id": "trend-engine"}}
+        except HTTPException as exc:
+            if exc.status_code == status.HTTP_503_SERVICE_UNAVAILABLE:
+                return {"data": {"generated": False, "reason": "no_concepts"}, "meta": {"request_id": "trend-engine"}}
+            raise
 
-                data = {
-                    "rising_queries": rising,
-                    "top_queries": top_q,
-                    "rising_topics": mock_topics,
-                    "timeline": mock_timeline
-                }
-                self._cache[cache_key] = {"ts": now, "data": data}
-                return data
-            except Exception as e:
-                print(f"[!] Intelligence fetch error for {niche}: {e}")
-                return None
+    async def run_collector(self, db: AsyncSession) -> dict:
+        n = await self.collector.run_all_clusters(db)
+        return {"data": {"ingested_signals": n}, "meta": {"request_id": "trend-engine"}}
 
-        # Process exactly 1 niche to ensure exactly 1 SerpApi call per request
-        intel_tasks = [fetch_intelligence(n) for n in user_niches[:1]]
-        results = await asyncio.gather(*intel_tasks)
-
-        # 3. Strategy Analysis Engine
-        import math
-        items = []
-        saved_ids = set(await self.repo.list_saved_ids(db, user.user_id))
-        
-        for idx, intel in enumerate(results):
-            if not intel: continue
-            niche = user_niches[idx]
-            
-            top_q_set = {q.get("query", "").lower() for q in intel["top_queries"]}
-            timeline_vals = [float(p.get("values", [{}])[0].get("extracted_value", 0)) for p in intel["timeline"]]
-            
-            for signal in intel["rising_queries"][:6]:
-                query = signal.get("query")
-                extraction = str(signal.get("value", signal.get("extracted_value", "")))
-                
-                # 3a. Metrics Calculation
-                tvs_score = 50.0
-                if extraction == "Breakout": tvs_score = 95.0 + (hash(query) % 5)
-                elif "+" in extraction:
-                    try:
-                        val = int(extraction.replace("+","").replace("%","").replace(",",""))
-                        tvs_score = min(92.0, 25.0 + (math.log(val+1)*8))
-                    except: pass
-                
-                # Saturation Index (Rising vs Top Query Overlap)
-                saturation = 10.0 if query.lower() not in top_q_set else 85.0
-                
-                # Stability Index (Standard Deviation of timeline)
-                stability = 50.0 # Default
-                if len(timeline_vals) > 2:
-                    mean = sum(timeline_vals) / len(timeline_vals)
-                    variance = sum((x - mean)**2 for x in timeline_vals) / len(timeline_vals)
-                    std_dev = math.sqrt(variance)
-                    stability = max(0, min(100, 100 - (std_dev * 2.5))) # Higher = More stable/evergreen
-
-                # 3b. Archetype & Growth Tip Case Logic
-                archetype = "The Discovery"
-                growth_tip = "Create a comparison vs a top competitor to leverage search intent."
-                
-                if tvs_score > 90 and stability > 70 and saturation < 30:
-                    archetype = "The Greenlight"
-                    growth_tip = "Massive SEO opportunity. Produce high-quality long-form content immediately."
-                elif tvs_score > 85 and stability < 40:
-                    archetype = "The Viral Spike"
-                    growth_tip = "Viral news breakout. Drop a batch of Shorts to ride the attention wave."
-                elif saturation > 70:
-                    archetype = "Peaking"
-                    growth_tip = "Topic is saturating. Pivot by adding a unique 'reaction' or 'counter-trend' take."
-                
-                adjacent = [t.get("topic", {}).get("title") for t in intel["rising_topics"][:3]]
-                trend_id = uuid.uuid5(uuid.NAMESPACE_DNS, query)
-
-                items.append({
-                    "id": str(trend_id),
-                    "topic": query,
-                    "niches": [niche] + adjacent[:1],
-                    "tvs_score": tvs_score,
-                    "velocity": f"+{int(tvs_score * 4)}%",
-                    "volume": f"{(tvs_score/12):.1f}M",
-                    "saturation_index": saturation,
-                    "stability_score": stability,
-                    "archetype": archetype,
-                    "growth_tip": growth_tip,
-                    "adjacent_topics": adjacent,
-                    "prediction_confidence": 0.7 + (hash(query+"c")%25)/100.0,
-                    "status": "emerging" if tvs_score > 85 else "peaking",
-                    "sentiment": "positive",
-                    "supported_formats": ["long_form"] if stability > 50 else ["shorts"],
-                    "top_keywords": [query, niche] + adjacent,
-                    "description": f"Growing signal in {niche} with {archetype} characteristics.",
-                    "saved": trend_id in saved_ids
-                })
-
-        items.sort(key=lambda x: x["tvs_score"], reverse=True)
-
-        # 4. Background Sync (Soft Persist)
-        if items:
-            from app.core.db import SessionLocal
-            async def bg_sync(data):
-                async with SessionLocal() as s:
-                    try:
-                        await self.repo.ingest_batch(s, data)
-                        await s.commit()
-                    except: pass
-            asyncio.create_task(bg_sync([{
-                "id": uuid.UUID(x["id"]), "topic": x["topic"], "topic_slug": x["id"],
-                "niches": x["niches"], "tvs_score": x["tvs_score"], "prediction_confidence": x["prediction_confidence"],
-                "status": x["status"], "supported_formats": x["supported_formats"],
-                "top_keywords": x["top_keywords"], "description": x["growth_tip"], "data_sources": ["intelligence"]
-            } for x in items]))
-
-        return {
-            "data": {"trends": items, "next_cursor": None},
-            "meta": {"request_id": "local-dev-intelligence"},
-        }
-
+    # ─────────────────────────────────────────────────────────────────────────
+    # Trend Detail
+    # ─────────────────────────────────────────────────────────────────────────
     async def trend_detail(self, db: AsyncSession, user: UserContext, trend_id: uuid.UUID) -> dict:
+        saved = await self.repo.is_saved(db, user.user_id, trend_id)
+
+        enriched = await self.feed.feed_repo.find_enriched_item(db, user.user_id, trend_id)
+        if enriched:
+            enriched["saved"] = saved
+            if settings.enable_trend_enrichment:
+                ctx = await self.feed.get_creator_context(user.user_id)
+                enriched = await self.feed.enrichment.enrich_detail(enriched, ctx)
+            return {"data": enriched, "meta": {"request_id": "trend-engine"}}
+
+        concept = await self.feed.concept_repo.get_by_id(db, trend_id)
+        if concept:
+            ctx = await self.feed.get_creator_context(user.user_id)
+            item = self.feed._score_concept(concept, ctx)
+            if item:
+                item["saved"] = saved
+                if settings.enable_trend_enrichment:
+                    item = await self.feed.enrichment.enrich_detail(item, ctx)
+                return {"data": item, "meta": {"request_id": "trend-engine"}}
+
         t = await self.repo.get_trend(db, trend_id)
         if not t:
-            # For live trends not in DB, return a stub if possible or 404
-            # In a full impl, we'd fetch info for this specific topic again
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail={"code": "NOT_FOUND", "message": "Trend details not available for ad-hoc live trends yet.", "details": {}},
+                detail={"code": "NOT_FOUND", "message": "Trend not found — it may still be syncing.", "details": {}},
             )
         saved = await self.repo.is_saved(db, user.user_id, trend_id)
         return {"data": self._serialize_trend(t, saved=saved), "meta": {"request_id": "local-dev"}}
 
-    async def save_trend(self, db: AsyncSession, user: UserContext, trend_id: uuid.UUID) -> dict:
-        # Check if trend exists in DB
+    # ─────────────────────────────────────────────────────────────────────────
+    # Save / Unsave  (live trends auto-upserted before saving)
+    # ─────────────────────────────────────────────────────────────────────────
+    async def save_trend(
+        self,
+        db: AsyncSession,
+        user: UserContext,
+        trend_id: uuid.UUID,
+        *,
+        trend_data: dict | None = None,
+    ) -> dict:
+        """
+        Save a trend. For live (ad-hoc) trends that aren't in the DB yet,
+        pass `trend_data` (full live trend payload) to auto-upsert before saving.
+        """
         t = await self.repo.get_trend(db, trend_id)
         if not t:
-            # Ad-hoc save: If it was a live trend, we should try to reconstruct it or have the frontend send the payload
-            # For now, let's assume the frontend sends the payload or we 404
-            # BETTER: In a real system, the frontend might POST the whole trend object to /save
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail={"code": "NOT_FOUND", "message": "Trending topic must be in registry to save.", "details": {}},
-            )
+            if not trend_data:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail={
+                        "code": "NOT_FOUND",
+                        "message": "Trend not in registry. Pass trend_data in the request body to save a live trend.",
+                        "details": {},
+                    },
+                )
+            # Auto-upsert the live trend so it can be saved
+            await self.repo.upsert_live_trend(db, trend_id, trend_data)
+            await db.flush()
+
         await self.repo.save_trend(db, user.user_id, trend_id)
         await db.commit()
         return {"data": {"saved": True, "trend_id": str(trend_id)}, "meta": {"request_id": "local-dev"}}
@@ -269,6 +518,9 @@ class TrendService:
         await db.commit()
         return {"data": {"saved": False, "trend_id": str(trend_id)}, "meta": {"request_id": "local-dev"}}
 
+    # ─────────────────────────────────────────────────────────────────────────
+    # Internal endpoints
+    # ─────────────────────────────────────────────────────────────────────────
     async def ingest_trends(self, db: AsyncSession, items: list[dict]) -> dict:
         n = await self.repo.ingest_batch(db, items)
         await db.commit()
@@ -291,25 +543,54 @@ class TrendService:
                 r.raise_for_status()
                 body = r.json()
         except Exception:
-            # Dev fallback: bump score slightly if ML unreachable
             body = {"data": {"forecast_tvs": float(t.tvs_score) + 0.1, "confidence": float(t.prediction_confidence)}}
 
-        data = body.get("data") if isinstance(body, dict) else {}
-        new_tvs = float(data.get("forecast_tvs", t.tvs_score))
-        new_conf = float(data.get("confidence", t.prediction_confidence))
+        data    = body.get("data") if isinstance(body, dict) else {}
+        new_tvs  = float(data.get("forecast_tvs", t.tvs_score))
+        new_conf = float(data.get("confidence",   t.prediction_confidence))
         await self.repo.update_trend_scores(db, trend_id, tvs_score=new_tvs, prediction_confidence=new_conf)
         await db.commit()
-        return {"data": {"trend_id": str(trend_id), "tvs_score": new_tvs, "prediction_confidence": new_conf}, "meta": {"request_id": "local-dev"}}
+        return {
+            "data": {"trend_id": str(trend_id), "tvs_score": new_tvs, "prediction_confidence": new_conf},
+            "meta": {"request_id": "local-dev"},
+        }
 
-    async def serpapi_related_queries(
-        self,
-        *,
-        q: str,
-        geo: str = "",
-        hl: str = "en",
-        date: str = "today 3-m",
-    ) -> dict:
+    async def serpapi_related_queries(self, *, q: str, geo: str = "", hl: str = "en", date: str = "today 3-m") -> dict:
         from app.integrations.serpapi_client import search_google_trends
-
         raw = await search_google_trends(q=q, geo=geo, hl=hl, date=date, data_type="RELATED_QUERIES")
         return {"data": raw, "meta": {"request_id": "local-dev"}}
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Serializer (for DB-persisted trends)
+    # ─────────────────────────────────────────────────────────────────────────
+    def _serialize_trend(self, t: Trend, *, saved: bool | None = None) -> dict[str, Any]:
+        velocity = f"+{int(t.tvs_score * 5)}%" if t.tvs_score > 0 else "0%"
+        volume   = f"{(t.prediction_confidence * 10):.1f}M"
+        out: dict[str, Any] = {
+            "id":                    str(t.id),
+            "topic":                 t.topic,
+            "topic_slug":            t.topic_slug,
+            "niches":                t.niches,
+            "tvs_score":             float(t.tvs_score),
+            "velocity":              velocity,
+            "volume":                volume,
+            "prediction_confidence": float(t.prediction_confidence),
+            "peak_window_start":     t.peak_window_start.isoformat(),
+            "peak_window_end":       t.peak_window_end.isoformat(),
+            "status":                t.status.value,
+            "sentiment":             t.sentiment.value,
+            "supported_formats":     [x.value for x in t.supported_formats],
+            "top_keywords":          t.top_keywords,
+            "description":           t.description,
+            "data_sources":          t.data_sources,
+            "scored_at":             t.scored_at.isoformat(),
+            # Provide defaults for live-trend fields so UI doesn't break
+            "archetype":             "The Discovery",
+            "growth_tip":            t.description or "Explore this trend early to gain first-mover advantage.",
+            "saturation_index":      50.0,
+            "stability_score":       50.0,
+            "adjacent_topics":       [],
+        }
+        if saved is not None:
+            out["saved"] = saved
+        return out

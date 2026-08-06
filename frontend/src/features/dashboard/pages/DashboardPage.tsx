@@ -1,7 +1,18 @@
 import React, { useEffect } from 'react';
 import { useDashboardStore } from '../../../stores/useDashboardStore';
-import { BarChart2, Calendar, ChevronRight, Activity, TrendingUp, Sparkles } from 'lucide-react';
+import { BarChart2, Calendar, ChevronRight, Sparkles } from 'lucide-react';
+import { renderStatIcon } from '../../../lib/stat-icons';
 import { useAuthStore } from '../../../stores/useAuthStore';
+import { PageHeader } from '../../../components/ui/PageHeader';
+import { Card } from '../../../components/ui/Card';
+import { Button } from '../../../components/ui/Button';
+import { Badge } from '../../../components/ui/Badge';
+import { StatCard } from '../../../components/ui/StatCard';
+import { MiniBarChart } from '../../../components/ui/MiniBarChart';
+import { Link } from 'react-router';
+
+const ACCENTS = ['brand', 'cyan', 'emerald', 'violet'] as const;
+const FORECAST_DATA = [42, 58, 45, 72, 68, 85, 78];
 
 export const DashboardPage: React.FC = () => {
   const { stats, insights, isLoading, fetchDashboard } = useDashboardStore();
@@ -13,130 +24,116 @@ export const DashboardPage: React.FC = () => {
 
   if (isLoading && stats.length === 0) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 animate-pulse">
-        {[1, 2, 3, 4].map(i => (
-          <div key={i} className="h-48 bg-white/50 rounded-[32px] border border-neutral-100 shadow-sm" />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="h-32 rounded-xl border border-neutral-200 skeleton-shimmer" />
         ))}
       </div>
     );
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-        <div className="space-y-1">
-           <div className="inline-flex items-center gap-2 px-3 py-1 bg-brand-600/5 text-brand-600 rounded-lg text-[10px] font-bold uppercase tracking-wider border border-brand-600/10">
-             <Activity className="w-3 h-3" />
-             Channel Status
-           </div>
-           <h2 className="text-3xl font-bold text-neutral-900 tracking-tight font-sora">
-             Hey, <span className="text-neutral-400">{user?.full_name?.split(' ')[0] || 'there'}</span>
-           </h2>
-           <p className="text-neutral-500 text-sm font-medium">
-             Your performance is <span className="text-brand-600 font-bold">14.2% up</span> this week.
-           </p>
-        </div>
-        
-        <div className="flex gap-3">
-           <button className="px-5 py-2.5 bg-white border border-neutral-200 rounded-xl font-bold text-xs shadow-sm hover:bg-neutral-50 transition-all flex items-center gap-2">
-             <Calendar className="w-3.5 h-3.5 text-neutral-400" />
-             Report
-           </button>
-           <button className="px-5 py-2.5 bg-neutral-900 text-white rounded-xl font-bold text-xs shadow-lg hover:bg-neutral-800 transition-all">
-             Strategy
-           </button>
-        </div>
-      </header>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, i) => (
-          <div key={i} className="bg-white p-6 rounded-2xl border border-neutral-100 shadow-sm hover:shadow-md transition-all group flex flex-col justify-between">
-            <div className="flex justify-between items-start">
-               <div className="space-y-1">
-                  <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">{stat.label}</p>
-                  <h3 className="text-2xl font-bold font-sora text-neutral-900 tracking-tight">{stat.value}</h3>
-               </div>
-               <div className="p-2.5 rounded-xl bg-neutral-50 text-neutral-400 group-hover:bg-brand-50 group-hover:text-brand-600 transition-colors">
-                 {stat.icon}
-               </div>
-            </div>
-            
-            <div className="mt-4 flex items-center justify-between">
-               <div className="inline-flex items-center gap-1 text-success-600 text-[10px] font-bold">
-                 <TrendingUp className="w-3 h-3" />
-                 {stat.trend}
-               </div>
-               <div className="flex gap-0.5">
-                  {[1,2,3,4,5].map(dot => <div key={dot} className={`w-1 h-2 rounded-full ${dot <= 3 ? 'bg-brand-600' : 'bg-neutral-100'}`} />)}
-               </div>
-            </div>
+    <div className="space-y-8 animate-in">
+      <PageHeader
+        title={
+          <>
+            Welcome back,{' '}
+            <span className="text-gradient-brand">
+              {user?.full_name?.split(' ')[0] || 'there'}
+            </span>
+          </>
+        }
+        description="Your channel performance overview and recommended next steps."
+        actions={
+          <div className="flex gap-2">
+            <Button variant="secondary" size="sm">
+              <Calendar className="h-4 w-4" />
+              Report
+            </Button>
+            <Link to="/app/strategy">
+              <Button size="sm">Strategy</Button>
+            </Link>
           </div>
+        }
+      />
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {stats.map((stat, i) => (
+          <StatCard
+            key={i}
+            label={stat.label}
+            value={stat.value}
+            trend={stat.trend}
+            icon={renderStatIcon(stat.icon)}
+            accent={ACCENTS[i % ACCENTS.length]}
+          />
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <div className="lg:col-span-8 bg-white p-8 rounded-3xl border border-neutral-100 shadow-sm hover:shadow-md transition-all relative overflow-hidden group">
-           <div className="flex items-center justify-between gap-6 mb-8">
-             <div className="space-y-0.5">
-               <h3 className="text-xl font-bold font-sora text-neutral-900 tracking-tight">Performance Forecast</h3>
-               <p className="text-neutral-400 text-xs font-medium">Estimated growth based on recent performance</p>
-             </div>
-             <div className="flex p-1 bg-neutral-50 rounded-xl border border-neutral-100">
-               {['28d', '90d', 'ALL'].map(tab => (
-                 <button key={tab} className={`px-4 py-1.5 text-[10px] font-bold rounded-lg transition-all ${tab === '28d' ? 'bg-white text-neutral-900 shadow-sm border border-neutral-100' : 'text-neutral-500 hover:text-neutral-900'}`}>
-                   {tab}
-                 </button>
-               ))}
-             </div>
-           </div>
-           
-           <div className="relative h-64 w-full bg-neutral-50 rounded-2xl border border-neutral-100 flex flex-col items-center justify-center overflow-hidden">
-             <BarChart2 className="w-12 h-12 text-neutral-200" />
-             <p className="text-sm font-bold font-sora text-neutral-300 mt-4">Loading Channel Data...</p>
-             
-             <div className="absolute bottom-8 left-8 right-8 h-20 flex items-end justify-between px-2 pointer-events-none">
-                {[40, 70, 45, 90, 65, 80, 55, 100, 75, 40].map((h, i) => (
-                  <div key={i} className="w-1 bg-brand-600/10 rounded-full transition-all duration-1000 group-hover:bg-brand-600/30" style={{ height: `${h}%` }} />
-                ))}
-             </div>
-           </div>
-        </div>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+        <Card variant="elevated" className="lg:col-span-8">
+          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-sm font-semibold text-neutral-900">Performance forecast</h2>
+              <p className="text-xs text-neutral-500">Estimated growth from recent performance</p>
+            </div>
+            <div className="flex gap-1 rounded-xl border border-neutral-200 bg-neutral-50/80 p-1 shadow-inner">
+              {['28d', '90d', 'ALL'].map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
+                    tab === '28d'
+                      ? 'bg-white text-neutral-900 shadow-sm'
+                      : 'text-neutral-500 hover:text-neutral-700'
+                  }`}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+          </div>
+          <MiniBarChart data={FORECAST_DATA} highlightIndex={5} />
+          <div className="mt-4 flex items-center justify-between rounded-lg border border-brand-100 bg-gradient-to-r from-brand-50/80 to-transparent px-4 py-3">
+            <div className="flex items-center gap-2 text-sm text-brand-700">
+              <BarChart2 className="h-4 w-4" />
+              <span className="font-medium">+12.4% projected</span>
+              <span className="text-brand-600/70">vs last period</span>
+            </div>
+          </div>
+        </Card>
 
-        <div className="lg:col-span-4 bg-neutral-900 p-8 rounded-3xl shadow-xl text-white relative overflow-hidden flex flex-col group">
-           <div className="relative z-10 flex-1">
-             <div className="flex items-center gap-3 mb-8">
-               <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-brand-400 border border-white/5">
-                 <Sparkles className="w-5 h-5" />
-               </div>
-               <div>
-                 <h3 className="text-lg font-bold font-sora tracking-tight">AI Insights</h3>
-                 <p className="text-[10px] font-bold text-brand-500 uppercase tracking-wider mt-0.5">3 Actions Available</p>
-               </div>
-             </div>
-             
-             <div className="space-y-4">
-               {insights.map((item, j) => (
-                 <div key={j} className="p-4 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/10 transition-all cursor-pointer flex flex-col gap-2 group/item">
-                   <div className="flex items-center justify-between">
-                      <div className="px-2 py-0.5 bg-white/10 rounded-md text-[9px] font-bold text-white uppercase tracking-wider border border-white/5">
-                         Priority {j + 1}
-                      </div>
-                      <ChevronRight className="w-3 h-3 text-neutral-600 group-hover/item:text-white transition-all" />
-                   </div>
-                   <p className="text-xs font-bold text-neutral-200 leading-snug">{item.title}</p>
-                   <div className="flex items-center gap-1.5">
-                     <div className="w-1 h-1 rounded-full bg-success-500" />
-                     <p className="text-[8px] text-neutral-500 font-bold uppercase tracking-wider">{item.impact}</p>
-                   </div>
-                 </div>
-               ))}
-             </div>
-           </div>
-           
-           <button className="w-full mt-8 py-3.5 bg-white text-neutral-900 rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-neutral-100 transition-all shadow-lg">
-              View Insights
-           </button>
-        </div>
+        <Card variant="dark" className="lg:col-span-4">
+          <div className="mb-5 flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500/30 to-brand-600/10 ring-1 ring-white/10">
+              <Sparkles className="h-4 w-4 text-brand-300" />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold">Insights</h2>
+              <p className="text-xs text-neutral-400">{insights.length} actions available</p>
+            </div>
+          </div>
+          <div className="space-y-2">
+            {insights.map((item, j) => (
+              <div
+                key={j}
+                className="group rounded-xl border border-white/10 bg-white/5 p-3.5 transition-all duration-200 hover:border-white/20 hover:bg-white/10"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <Badge variant="neutral" className="border-0 bg-white/10 text-neutral-300">
+                    Priority {j + 1}
+                  </Badge>
+                  <ChevronRight className="h-3.5 w-3.5 text-neutral-500 transition-transform group-hover:translate-x-0.5" />
+                </div>
+                <p className="mt-2 text-sm text-neutral-200">{item.title}</p>
+                <p className="mt-1 text-xs text-neutral-500">{item.impact}</p>
+              </div>
+            ))}
+          </div>
+          <Button variant="secondary" className="mt-5 w-full bg-white text-neutral-900 hover:bg-neutral-100">
+            View insights
+          </Button>
+        </Card>
       </div>
     </div>
   );

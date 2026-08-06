@@ -3,5 +3,6 @@ uvicorn[standard]
 pydantic-settings
 sqlalchemy
 asyncpg
+psycopg2-binary
 alembic
 httpx

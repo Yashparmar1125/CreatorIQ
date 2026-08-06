@@ -1,119 +1,35 @@
 name: creatoriq-backend
 
+# Shared environment for all services (overrides .env host-specific values like Azure DB / 127.0.0.1 URLs)
+x-common-env: &common-env
+  ENVIRONMENT: development
+  LOG_LEVEL: INFO
+  DATABASE_URL: postgresql+asyncpg://creatoriq:creatoriq@postgres:5432/creatoriq
+  REDIS_URL: redis://redis:6379/0
+  JWT_ISSUER: creatoriq-auth
+  JWT_AUDIENCE: creatoriq-api
+  JWT_PUBLIC_KEY_PATH: /run/secrets/jwt_public.pem
+  JWT_PRIVATE_KEY_PATH: /run/secrets/jwt_private.pem
+  AUTH_SERVICE_URL: http://auth:8001
+  CHANNEL_SERVICE_URL: http://channel:8002
+  TREND_SERVICE_URL: http://trend:8003
+  STRATEGY_SERVICE_URL: http://strategy:8004
+  PLANNER_SERVICE_URL: http://planner:8005
+  ANALYTICS_SERVICE_URL: http://analytics:8006
+  ML_SERVICE_URL: http://ml:8007
+  FRONTEND_URL: http://localhost:5173
+  GOOGLE_OAUTH_REDIRECT_URI: http://localhost:8000/v1/auth/google/callback
+
+x-service-defaults: &service-defaults
+  env_file:
+    - ./.env
+  environment:
+    <<: *common-env
+  networks:
+    - creatoriq-net
+  restart: unless-stopped
+
 services:
-  api-gateway:
-    build: ./services/api-gateway
-    container_name: ciq-api-gateway
-    env_file:
-      - ./.env
-    volumes:
-      - ./secrets:/run/secrets:ro
-    ports:
-      - "8000:8000"
-    depends_on:
-      - auth
-      - channel
-      - trend
-      - strategy
-      - planner
-      - analytics
-      - ml
-    networks:
-      - creatoriq-net
-
-  auth:
-    build: ./services/auth
-    container_name: ciq-auth
-    env_file:
-      - ./.env
-    volumes:
-      - ./secrets:/run/secrets:ro
-    ports:
-      - "8001:8001"
-    depends_on:
-      - postgres
-      - redis
-    networks:
-      - creatoriq-net
-
-  channel:
-    build: ./services/channel
-    container_name: ciq-channel
-    env_file:
-      - ./.env
-    ports:
-      - "8002:8002"
-    depends_on:
-      - postgres
-      - redis
-    networks:
-      - creatoriq-net
-
-  trend:
-    build: ./services/trend
-    container_name: ciq-trend
-    env_file:
-      - ./.env
-    ports:
-      - "8003:8003"
-    depends_on:
-      - postgres
-      - redis
-      - ml
-    networks:
-      - creatoriq-net
-
-  strategy:
-    build: ./services/strategy
-    container_name: ciq-strategy
-    env_file:
-      - ./.env
-    ports:
-      - "8004:8004"
-    depends_on:
-      - postgres
-      - redis
-      - ml
-    networks:
-      - creatoriq-net
-
-  planner:
-    build: ./services/planner
-    container_name: ciq-planner
-    env_file:
-      - ./.env
-    ports:
-      - "8005:8005"
-    depends_on:
-      - postgres
-    networks:
-      - creatoriq-net
-
-  analytics:
-    build: ./services/analytics
-    container_name: ciq-analytics
-    env_file:
-      - ./.env
-    ports:
-      - "8006:8006"
-    depends_on:
-      - postgres
-      - redis
-    networks:
-      - creatoriq-net
-
-  ml:
-    build: ./services/ml
-    container_name: ciq-ml
-    env_file:
-      - ./.env
-    ports:
-      - "8007:8007"
-    depends_on:
-      - postgres
-    networks:
-      - creatoriq-net
-
   postgres:
     image: postgres:16-alpine
     container_name: ciq-postgres
@@ -127,6 +43,13 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - creatoriq-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U creatoriq -d creatoriq"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
 
   redis:
     image: redis:7-alpine
@@ -135,6 +58,183 @@ services:
       - "6379:6379"
     networks:
       - creatoriq-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  auth:
+    <<: *service-defaults
+    build: ./services/auth
+    container_name: ciq-auth
+    volumes:
+      - ./secrets:/run/secrets:ro
+    ports:
+      - "8001:8001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  channel:
+    <<: *service-defaults
+    build: ./services/channel
+    container_name: ciq-channel
+    ports:
+      - "8002:8002"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  ml:
+    <<: *service-defaults
+    build: ./services/ml
+    container_name: ciq-ml
+    ports:
+      - "8007:8007"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  trend:
+    <<: *service-defaults
+    build: ./services/trend
+    container_name: ciq-trend
+    ports:
+      - "8003:8003"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ml:
+        condition: service_started
+
+  strategy:
+    <<: *service-defaults
+    build: ./services/strategy
+    container_name: ciq-strategy
+    ports:
+      - "8004:8004"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ml:
+        condition: service_started
+
+  planner:
+    <<: *service-defaults
+    build: ./services/planner
+    container_name: ciq-planner
+    ports:
+      - "8005:8005"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  analytics:
+    <<: *service-defaults
+    build: ./services/analytics
+    container_name: ciq-analytics
+    ports:
+      - "8006:8006"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  api-gateway:
+    <<: *service-defaults
+    build: ./services/api-gateway
+    container_name: ciq-api-gateway
+    volumes:
+      - ./secrets:/run/secrets:ro
+    ports:
+      - "8000:8000"
+    depends_on:
+      auth:
+        condition: service_started
+      channel:
+        condition: service_started
+      trend:
+        condition: service_started
+      strategy:
+        condition: service_started
+      planner:
+        condition: service_started
+      analytics:
+        condition: service_started
+      ml:
+        condition: service_started
+
+  # One-shot migration runners (use: docker compose --profile migrate run --rm migrate-auth)
+  migrate-auth:
+    profiles: ["migrate"]
+    <<: *service-defaults
+    restart: "no"
+    build: ./services/auth
+    command: ["alembic", "-c", "alembic.ini", "upgrade", "head"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  migrate-channel:
+    profiles: ["migrate"]
+    <<: *service-defaults
+    restart: "no"
+    build: ./services/channel
+    command: ["alembic", "-c", "alembic.ini", "upgrade", "head"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  migrate-trend:
+    profiles: ["migrate"]
+    <<: *service-defaults
+    restart: "no"
+    build: ./services/trend
+    command: ["alembic", "-c", "alembic.ini", "upgrade", "head"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  migrate-strategy:
+    profiles: ["migrate"]
+    <<: *service-defaults
+    restart: "no"
+    build: ./services/strategy
+    command: ["alembic", "-c", "alembic.ini", "upgrade", "head"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  migrate-planner:
+    profiles: ["migrate"]
+    <<: *service-defaults
+    restart: "no"
+    build: ./services/planner
+    command: ["alembic", "-c", "alembic.ini", "upgrade", "head"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  migrate-analytics:
+    profiles: ["migrate"]
+    <<: *service-defaults
+    restart: "no"
+    build: ./services/analytics
+    command: ["alembic", "-c", "alembic.ini", "upgrade", "head"]
+    depends_on:
+      postgres:
+        condition: service_healthy
 
 volumes:
   postgres_data:

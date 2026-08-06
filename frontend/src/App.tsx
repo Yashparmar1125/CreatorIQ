@@ -13,9 +13,11 @@ import { Toaster } from './components/Toaster';
 // Feature Pages
 import { DashboardPage } from './features/dashboard/pages/DashboardPage';
 import { TrendsPage } from './features/trends/pages/TrendsPage';
+import { TrendDetailPage } from './features/trends/pages/TrendDetailPage';
 import { StrategyPage } from './features/strategy/pages/StrategyPage';
 import { PlannerPage } from './features/planner/pages/PlannerPage';
 import { AnalyticsPage } from './features/analytics/pages/AnalyticsPage';
+import { SettingsPage } from './features/settings/pages/SettingsPage';
 
 // Public Pages
 import { ProductPage } from './pages/ProductPage';
@@ -108,6 +110,10 @@ const router = createBrowserRouter([
         element: <TrendsPage />,
       },
       {
+        path: 'trends/detail/:trendId',
+        element: <TrendDetailPage />,
+      },
+      {
         path: 'strategy',
         element: <StrategyPage />,
       },
@@ -118,6 +124,10 @@ const router = createBrowserRouter([
       {
         path: 'analytics',
         element: <AnalyticsPage />,
+      },
+      {
+        path: 'settings',
+        element: <SettingsPage />,
       },
       {
         path: '*',

@@ -1,6 +1,9 @@
 import React from 'react';
 import { usePlannerStore } from '../../../stores/usePlannerStore';
-import { Plus, ChevronLeft, ChevronRight, Layers } from 'lucide-react';
+import { Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { PageHeader } from '../../../components/ui/PageHeader';
+import { Card } from '../../../components/ui/Card';
+import { Button } from '../../../components/ui/Button';
 
 export const PlannerPage: React.FC = () => {
   const { events, addEvent } = usePlannerStore();
@@ -8,106 +11,94 @@ export const PlannerPage: React.FC = () => {
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
   const handleAddEvent = () => {
-    addEvent({ 
-      id: Date.now(), 
-      day: Math.floor(Math.random() * 28) + 1, 
-      title: 'Video Draft', 
-      type: 'primary' 
+    addEvent({
+      id: Date.now(),
+      day: Math.floor(Math.random() * 28) + 1,
+      title: 'Video Draft',
+      type: 'primary',
     });
   };
-  
-  return (
-    <div className="space-y-8 pb-10">
-      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-8">
-        <div className="space-y-1">
-           <div className="inline-flex items-center gap-2 px-3 py-1 bg-brand-600/5 text-brand-600 rounded-lg text-[10px] font-bold uppercase tracking-wider border border-brand-600/10">
-             <Layers className="w-3.5 h-3.5" />
-             Content Schedule
-           </div>
-           <h2 className="text-3xl font-bold text-neutral-900 tracking-tight font-sora">
-             Production <span className="text-neutral-400">Planner</span>
-           </h2>
-           <p className="text-neutral-500 text-sm font-medium">
-             Schedule and coordinate your upcoming videos.
-           </p>
-        </div>
-        
-        <div className="flex items-center gap-3">
-           <div className="flex bg-white rounded-xl p-1 border border-neutral-200 shadow-sm overflow-hidden group">
-             <button className="p-2 rounded-lg hover:bg-neutral-50 transition-all text-neutral-400">
-               <ChevronLeft className="w-4 h-4" />
-             </button>
-             <div className="px-4 flex items-center font-bold text-[10px] uppercase tracking-wider text-neutral-900 min-w-[120px] justify-center">
-               {currentMonth}
-             </div>
-             <button className="p-2 rounded-lg hover:bg-neutral-50 transition-all text-neutral-400">
-               <ChevronRight className="w-4 h-4" />
-             </button>
-           </div>
-           
-           <button 
-             onClick={handleAddEvent}
-             className="px-5 py-2.5 bg-neutral-900 text-white rounded-xl font-bold text-xs shadow-lg hover:bg-neutral-800 transition-all flex items-center gap-2"
-           >
-             <Plus className="w-4 h-4" />
-             Add Video
-           </button>
-        </div>
-      </header>
 
-      <div className="bg-white rounded-3xl border border-neutral-100 shadow-sm overflow-hidden relative">
-        <div className="grid grid-cols-7 border-b border-neutral-50 bg-neutral-50/50">
-          {days.map(day => (
-            <div key={day} className="py-4 text-center text-[10px] font-bold text-neutral-400 uppercase tracking-widest border-r border-neutral-50 last:border-0">
-              {day}
+  return (
+    <div className="space-y-6 pb-6 animate-in">
+      <PageHeader
+        title="Planner"
+        description="Schedule and coordinate your upcoming content."
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center rounded-lg border border-neutral-200 bg-white">
+              <button type="button" className="p-2 text-neutral-400 hover:text-neutral-700">
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <span className="min-w-[100px] px-2 text-center text-sm font-medium text-neutral-900">
+                {currentMonth}
+              </span>
+              <button type="button" className="p-2 text-neutral-400 hover:text-neutral-700">
+                <ChevronRight className="h-4 w-4" />
+              </button>
             </div>
-          ))}
-        </div>
-        
-        <div className="grid grid-cols-7 h-[640px]">
-          {Array.from({ length: 28 }).map((_, i) => {
-            const dayNum = i + 1;
-            const dayEvents = events.filter(e => e.day === dayNum);
-            const isToday = dayNum === 22;
-            
-            return (
-              <div 
-                key={i} 
-                className={`border-r border-b border-neutral-50 last:border-r-0 p-4 transition-all group relative cursor-pointer min-h-[120px] hover:bg-neutral-50/50 ${isToday ? 'bg-brand-50/10' : ''}`}
+            <Button onClick={handleAddEvent}>
+              <Plus className="h-4 w-4" />
+              Add video
+            </Button>
+          </div>
+        }
+      />
+
+      <Card padding="none" className="overflow-x-auto">
+        <div className="min-w-[640px]">
+          <div className="grid grid-cols-7 border-b border-neutral-200 bg-neutral-50">
+            {days.map((day) => (
+              <div
+                key={day}
+                className="border-r border-neutral-200 py-2 text-center text-xs font-medium text-neutral-500 last:border-r-0"
               >
-                <div className="flex justify-between items-start mb-2">
-                  <span className={`text-sm font-bold ${
-                    isToday ? 'text-brand-600' : 'text-neutral-300 group-hover:text-neutral-900'
-                  }`}>
+                {day}
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-7">
+            {Array.from({ length: 28 }).map((_, i) => {
+              const dayNum = i + 1;
+              const dayEvents = events.filter((e) => e.day === dayNum);
+              const isToday = dayNum === 22;
+
+              return (
+                <div
+                  key={i}
+                  className={`group relative min-h-[100px] border-b border-r border-neutral-100 p-2 last:border-r-0 sm:min-h-[120px] ${
+                    isToday ? 'bg-brand-50/30' : 'hover:bg-neutral-50/50'
+                  }`}
+                >
+                  <span
+                    className={`text-sm font-medium ${
+                      isToday ? 'text-brand-600' : 'text-neutral-400 group-hover:text-neutral-700'
+                    }`}
+                  >
                     {dayNum < 10 ? `0${dayNum}` : dayNum}
                   </span>
+                  <div className="mt-1 space-y-1">
+                    {dayEvents.map((event) => (
+                      <div
+                        key={event.id}
+                        className={`rounded px-2 py-1 text-xs font-medium ${
+                          event.type === 'primary'
+                            ? 'bg-neutral-900 text-white'
+                            : event.type === 'success'
+                            ? 'bg-brand-600 text-white'
+                            : 'bg-accent-500 text-white'
+                        }`}
+                      >
+                        {event.title}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                
-                <div className="space-y-1.5">
-                  {dayEvents.map(event => (
-                    <div 
-                      key={event.id} 
-                      className={`p-2.5 rounded-xl border transition-all text-[9px] font-bold tracking-tight uppercase ${
-                        event.type === 'primary' 
-                          ? 'bg-neutral-900 text-white border-neutral-800' 
-                          : event.type === 'success' 
-                            ? 'bg-brand-600 text-white border-brand-500' 
-                            : 'bg-accent-500 text-white border-accent-400'
-                      }`}
-                    >
-                      {event.title}
-                    </div>
-                  ))}
-                </div>
-
-                <button className="absolute bottom-2 right-2 w-7 h-7 rounded-lg bg-neutral-900 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-brand-600 transition-all shadow-md">
-                   <Plus className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
-      </div>
+      </Card>
     </div>
   );
 };

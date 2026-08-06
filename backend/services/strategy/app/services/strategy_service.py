@@ -165,8 +165,13 @@ class StrategyService:
         )
 
         # 3. Generate AI Brief
-        from app.core.openrouter import generate_unified_brief_json
-        brief_data = await generate_unified_brief_json(topic, channel_context)
+        from app.core.openrouter import _fallback_brief, _sanitize_topic, generate_unified_brief_json
+
+        try:
+            brief_data = await generate_unified_brief_json(topic, channel_context)
+        except Exception as exc:
+            print(f"[strategy] generate_unified_brief failed: {exc}")
+            brief_data = _fallback_brief(_sanitize_topic(topic), channel_context)
 
         # 4. Save generated items (Title and Strategy Insight as part of one object)
         await self.repo.add_generated(

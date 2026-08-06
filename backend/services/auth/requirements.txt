@@ -1,9 +1,11 @@
 fastapi
 uvicorn[standard]
 pydantic-settings
+email-validator
 python-jose[cryptography]
 passlib[bcrypt]
 sqlalchemy
 asyncpg
+psycopg2-binary
 alembic
 httpx

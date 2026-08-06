@@ -5,9 +5,24 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useNotificationStore } from '../stores/useNotificationStore';
-import { Youtube, Mail, User, Lock, Loader2, Sparkles, CheckCircle2, ChevronRight, AlertCircle } from 'lucide-react';
+import {
+  Youtube,
+  Mail,
+  User,
+  Lock,
+  Loader2,
+  Sparkles,
+  CheckCircle2,
+  AlertCircle,
+  TrendingUp,
+  BarChart2,
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import logo from '../assets/logo.png';
+import { Card } from '../components/ui/Card';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { Alert } from '../components/ui/Alert';
 
 const OAUTH_LOGIN_ERRORS: Record<string, string> = {
   missing_code: 'Sign-in was cancelled or incomplete.',
@@ -21,18 +36,24 @@ const OAUTH_LOGIN_ERRORS: Record<string, string> = {
 
 const authSchema = z.object({
   name: z.string().optional(),
-  email: z.string().email('Please enter a valid work email'),
+  email: z.string().email('Please enter a valid email'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
 });
 
 type AuthFormValues = z.infer<typeof authSchema>;
+
+const benefits = [
+  { icon: TrendingUp, text: 'Personalized Top 5 trend feed on day one' },
+  { icon: Sparkles, text: 'AI strategy briefs grounded in your niche' },
+  { icon: BarChart2, text: 'Analytics and planning in one workspace' },
+];
 
 export const AuthPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { addNotification } = useNotificationStore();
-  
+
   const isLoginPage = location.pathname === '/login';
   const mode = isLoginPage ? 'login' : 'signup';
 
@@ -68,7 +89,6 @@ export const AuthPage: React.FC = () => {
   }, [searchParams, addNotification]);
 
   const onFormSubmit = async (data: AuthFormValues) => {
-    // Manual validation for Name on signup mode
     if (mode === 'signup' && (!data.name || data.name.length < 2)) {
       setError('name', { type: 'manual', message: 'Full name must be at least 2 characters' });
       return;
@@ -82,260 +102,250 @@ export const AuthPage: React.FC = () => {
         navigate(from, { replace: true });
       } else {
         await register(data.name || '', data.email, data.password);
-        addNotification('success', 'Account Created', 'Welcome to CreatorIQ. Let\'s set up your profile.');
+        addNotification('success', 'Account Created', "Welcome to CreatorIQ. Let's set up your profile.");
         navigate('/onboarding');
       }
-    } catch (err: any) {
-       // Error handled by store and interceptor
+    } catch {
+      // Error handled by store
     }
   };
 
   const handleGoogle = async () => {
     try {
       await startGoogleOAuth();
-    } catch (err: any) {
+    } catch {
       addNotification('error', 'OAuth Error', 'Could not initiate Google sign-in.');
     }
   };
 
   return (
-    <div className="h-screen bg-neutral-950 flex overflow-hidden relative font-sora">
-      <div className="absolute inset-0 mesh-glow opacity-20 pointer-events-none" />
-
-      {/* Left Column: Branding/Value Prop */}
-      <div className="hidden lg:flex w-1/2 p-12 flex-col justify-between relative border-r border-white/5 bg-white/2 overflow-hidden">
-        <div className="absolute top-0 right-0 -mt-24 -mr-24 w-96 h-96 bg-brand-600/10 rounded-full blur-[100px] animate-breathe" />
-        <div className="absolute bottom-0 left-0 -mb-24 -ml-24 w-96 h-96 bg-accent-500/10 rounded-full blur-[100px]" />
+    <div className="flex min-h-screen">
+      {/* Brand panel */}
+      <div className="surface-dark relative hidden w-1/2 flex-col justify-between overflow-hidden p-10 lg:flex xl:p-12">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute -left-20 -top-20 h-72 w-72 rounded-full bg-brand-600/20 blur-3xl animate-breathe" />
+          <div className="absolute -bottom-20 -right-20 h-72 w-72 rounded-full bg-cyan-500/10 blur-3xl" />
+        </div>
 
         <div className="relative z-10">
-          <motion.div 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="mb-8 flex items-center gap-2.5"
-          >
-            <img src={logo} className="h-9 w-auto object-contain" alt="CreatorIQ" />
-            <span className="text-xl font-bold font-sora tracking-tight">
-              <span className="text-white">Creator</span>
-              <span className="text-neutral-500">IQ</span>
+          <Link to="/" className="inline-flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-white p-1">
+              <img src={logo} className="h-full w-full object-contain" alt="CreatorIQ" />
+            </div>
+            <span className="font-sora text-lg font-semibold text-white">
+              Creator<span className="text-neutral-500">IQ</span>
             </span>
-          </motion.div>
+          </Link>
 
-          <motion.h1 
-            initial={{ opacity: 0, y: 20 }}
+          <motion.h1
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="text-3xl font-black text-white leading-tight mb-6 tracking-tight"
+            className="mt-16 max-w-md font-sora text-3xl font-semibold leading-tight tracking-tight text-white xl:text-4xl"
           >
-            The <span className="text-brand-400">Standard</span> for <br />
-            YouTube Growth.
+            Grow your channel with{' '}
+            <span className="text-gradient-brand">clear signals</span>, not guesswork.
           </motion.h1>
 
-          <div className="space-y-5 max-w-sm">
-            {[
-              { icon: <Sparkles className="w-5 h-5" />, text: 'Spot trends before they go viral.' },
-              { icon: <CheckCircle2 className="w-5 h-5" />, text: 'Build videos that people click on.' },
-              { icon: <User className="w-5 h-5" />, text: 'Understand what your viewers love.' },
-            ].map((benefit, i) => (
-              <motion.div 
-                key={i}
-                initial={{ opacity: 0, x: -20 }}
+          <div className="mt-10 space-y-4">
+            {benefits.map((benefit, i) => (
+              <motion.div
+                key={benefit.text}
+                initial={{ opacity: 0, x: -12 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.2 + i * 0.1 }}
-                className="flex items-start gap-6 text-neutral-400 group"
+                transition={{ delay: 0.15 + i * 0.08 }}
+                className="flex items-center gap-4"
               >
-                <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-brand-400 flex-shrink-0 border border-white/5 group-hover:bg-brand-600 group-hover:text-white transition-all duration-500">
-                  {benefit.icon}
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-brand-300">
+                  <benefit.icon className="h-4 w-4" />
                 </div>
-                <p className="text-sm font-bold leading-relaxed mt-1 group-hover:text-white transition-colors">{benefit.text}</p>
+                <p className="text-sm text-neutral-300">{benefit.text}</p>
               </motion.div>
             ))}
           </div>
         </div>
 
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
-          className="relative z-10 glass-dark p-6 rounded-[32px] border border-white/10 backdrop-blur-xl group cursor-pointer hover:bg-white/5 transition-all mt-4 hidden xl:block"
+          transition={{ delay: 0.4 }}
+          className="relative z-10 glass-dark rounded-2xl p-6"
         >
-          <p className="text-white text-sm font-bold mb-4 italic leading-relaxed tracking-tight group-hover:text-brand-300 transition-colors">
-            &quot;This platform saved me 20 hours of research every week. It&apos;s a must-have for any serious creator.&quot;
+          <p className="text-sm leading-relaxed text-neutral-300">
+            &ldquo;CreatorIQ cut my research time in half. The trend feed actually matches my niche.&rdquo;
           </p>
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-neutral-800 border-2 border-brand-600 shadow-xl overflow-hidden">
-              <img
-                src="https://i.pravatar.cc/150?img=11"
-                className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700"
-                alt="Testimonial"
-              />
+          <div className="mt-4 flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-600/20 text-sm font-semibold text-brand-300">
+              JC
             </div>
             <div>
-              <p className="text-sm font-black text-white tracking-tight">James C.</p>
-              <p className="text-[10px] font-bold text-brand-400 uppercase tracking-widest">Tech Creator (1.2M Subs)</p>
+              <p className="text-sm font-medium text-white">James C.</p>
+              <p className="text-xs text-neutral-500">Tech creator · 1.2M subs</p>
             </div>
           </div>
         </motion.div>
       </div>
 
-      {/* Right Column: Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 lg:p-14 relative z-10 bg-white">
-        <div className="w-full max-w-md">
+      {/* Form panel */}
+      <div className="surface-app flex w-full flex-col items-center justify-center px-4 py-10 sm:px-6 lg:w-1/2">
+        <div className="mb-8 flex items-center gap-3 lg:hidden">
+          <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg bg-white p-0.5 shadow-sm">
+            <img src={logo} alt="CreatorIQ" className="h-full w-full object-contain" />
+          </div>
+          <span className="font-sora text-base font-semibold text-neutral-900">CreatorIQ</span>
+        </div>
+
+        <Card variant="elevated" className="w-full max-w-md shadow-xl shadow-neutral-900/5">
           <AnimatePresence mode="wait">
             <motion.div
               key={mode}
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.3 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2 }}
             >
-              <div className="mb-8 text-center lg:text-left">
-                <h2 className="text-3xl font-black text-neutral-900 tracking-tight">
-                  {mode === 'login' ? 'Welcome Back' : 'Create Account'}
+              <div className="mb-6">
+                <h2 className="font-sora text-2xl font-semibold tracking-tight text-neutral-900">
+                  {mode === 'login' ? 'Welcome back' : 'Create your account'}
                 </h2>
-                <p className="text-neutral-500 mt-1.5 font-bold text-sm uppercase tracking-wider opacity-60">
-                  {mode === 'login' ? 'Sign in to your account.' : 'Start growing your channel.'}
+                <p className="mt-1.5 text-sm text-neutral-500">
+                  {mode === 'login'
+                    ? 'Sign in to continue to your workspace.'
+                    : 'Start free — your first trend feed is on us.'}
                 </p>
               </div>
 
-              <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
-                {storeError && (
-                  <motion.div 
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    className="rounded-2xl bg-rose-50 border border-rose-100 p-4 text-sm font-black text-rose-700 shadow-sm mb-6 flex items-start gap-3"
-                  >
-                    <AlertCircle className="w-5 h-5 shrink-0" />
-                    {storeError}
-                  </motion.div>
-                )}
+              {storeError && (
+                <Alert variant="error" className="mb-5 flex items-start gap-2">
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                  {storeError}
+                </Alert>
+              )}
 
-                <div className="space-y-4">
-                  <AnimatePresence>
-                    {mode === 'signup' && (
-                      <motion.div 
-                        initial={{ opacity: 0, height: 0, marginBottom: 0 }}
-                        animate={{ opacity: 1, height: 'auto', marginBottom: 16 }}
-                        exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-                        className="space-y-1.5"
-                      >
-                        <label className="text-xs font-bold text-neutral-400 uppercase tracking-widest pl-1">Full Name</label>
-                        <div className="relative group">
-                          <User className={`w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${errors.name ? 'text-rose-500' : 'text-neutral-400 group-focus-within:text-brand-600'}`} />
-                          <input
-                            {...registerField('name')}
-                            type="text"
-                            placeholder="Elon Musk"
-                            className={`w-full pl-11 pr-4 py-3 rounded-2xl border bg-neutral-50/50 focus:bg-white text-neutral-900 text-sm font-bold outline-none transition-all placeholder:text-neutral-300 ${
-                              errors.name ? 'border-rose-200 focus:ring-rose-500/5 focus:border-rose-500/20' : 'border-neutral-100 focus:ring-brand-600/5 focus:border-brand-600/20'
-                            }`}
-                          />
-                        </div>
-                        {errors.name && (
-                          <p className="text-[10px] text-rose-500 font-bold mt-1 pl-1">{errors.name.message}</p>
-                        )}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
- 
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-neutral-400 uppercase tracking-widest pl-1">Work Email</label>
-                    <div className="relative group">
-                      <Mail className={`w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${errors.email ? 'text-rose-500' : 'text-neutral-400 group-focus-within:text-brand-600'}`} />
-                      <input
-                        {...registerField('email')}
-                        type="email"
-                        placeholder="name@creatoriq.ai"
-                        className={`w-full pl-11 pr-4 py-3 rounded-2xl border bg-neutral-50/50 focus:bg-white text-neutral-900 text-sm font-bold outline-none transition-all placeholder:text-neutral-300 ${
-                          errors.email ? 'border-rose-200 focus:ring-rose-500/5 focus:border-rose-500/20' : 'border-neutral-100 focus:ring-brand-600/5 focus:border-brand-600/20'
-                        }`}
+              <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-4">
+                <AnimatePresence>
+                  {mode === 'signup' && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="space-y-1.5 overflow-hidden"
+                    >
+                      <label className="text-xs font-medium text-neutral-600">Full name</label>
+                      <Input
+                        {...registerField('name')}
+                        icon={<User className="h-4 w-4" />}
+                        placeholder="Your name"
+                        className={errors.name ? 'border-red-300' : ''}
                       />
-                    </div>
-                    {errors.email && (
-                      <p className="text-[10px] text-rose-500 font-bold mt-1 pl-1">{errors.email.message}</p>
-                    )}
-                  </div>
- 
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between items-end pl-1">
-                      <label className="text-xs font-bold text-neutral-400 uppercase tracking-widest">Password</label>
-                      {mode === 'login' && (
-                        <a href="#" className="text-[10px] font-bold text-brand-600 uppercase tracking-widest hover:text-brand-500 transition-colors">Forgot?</a>
+                      {errors.name && (
+                        <p className="text-xs text-red-600">{errors.name.message}</p>
                       )}
-                    </div>
-                    <div className="relative group">
-                      <Lock className={`w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${errors.password ? 'text-rose-500' : 'text-neutral-400 group-focus-within:text-brand-600'}`} />
-                      <input
-                        {...registerField('password')}
-                        type="password"
-                        placeholder="••••••••"
-                        className={`w-full pl-11 pr-4 py-3 rounded-2xl border bg-neutral-50/50 focus:bg-white text-neutral-900 text-sm font-bold outline-none transition-all placeholder:text-neutral-300 ${
-                          errors.password ? 'border-rose-200 focus:ring-rose-500/5 focus:border-rose-500/20' : 'border-neutral-100 focus:ring-brand-600/5 focus:border-brand-600/20'
-                        }`}
-                      />
-                    </div>
-                    {errors.password && (
-                      <p className="text-[10px] text-rose-500 font-bold mt-1 pl-1">{errors.password.message}</p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-neutral-600">Email</label>
+                  <Input
+                    {...registerField('email')}
+                    type="email"
+                    icon={<Mail className="h-4 w-4" />}
+                    placeholder="you@example.com"
+                    className={errors.email ? 'border-red-300' : ''}
+                  />
+                  {errors.email && (
+                    <p className="text-xs text-red-600">{errors.email.message}</p>
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium text-neutral-600">Password</label>
+                    {mode === 'login' && (
+                      <button type="button" className="text-xs font-medium text-brand-600 hover:text-brand-700">
+                        Forgot password?
+                      </button>
                     )}
                   </div>
+                  <Input
+                    {...registerField('password')}
+                    type="password"
+                    icon={<Lock className="h-4 w-4" />}
+                    placeholder="At least 8 characters"
+                    className={errors.password ? 'border-red-300' : ''}
+                  />
+                  {errors.password && (
+                    <p className="text-xs text-red-600">{errors.password.message}</p>
+                  )}
                 </div>
 
-                <div className="pt-2">
-                  <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="w-full py-3 bg-neutral-950 text-white rounded-2xl font-bold text-sm uppercase tracking-widest shadow-xl shadow-brand-600/10 hover:bg-neutral-800 transition-all flex items-center justify-center gap-2 active:scale-98 disabled:opacity-50"
-                  >
-                    {isLoading ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : (
-                      <>
-                        {mode === 'login' ? 'Log In' : 'Create Account'}
-                        <ChevronRight className="w-4 h-4 ml-1" />
-                      </>
-                    )}
-                  </button>
+                <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : mode === 'login' ? (
+                    'Sign in'
+                  ) : (
+                    'Create account'
+                  )}
+                </Button>
+
+                <div className="relative flex items-center gap-3 py-1">
+                  <div className="h-px flex-1 bg-neutral-200" />
+                  <span className="text-xs text-neutral-400">or</span>
+                  <div className="h-px flex-1 bg-neutral-200" />
                 </div>
 
-                <div className="relative flex items-center gap-4 py-2">
-                  <div className="flex-1 h-px bg-neutral-100" />
-                  <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-wider whitespace-nowrap">Secure Sign-On</span>
-                  <div className="flex-1 h-px bg-neutral-100" />
-                </div>
-
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
+                  className="w-full"
+                  size="lg"
                   onClick={() => void handleGoogle()}
                   disabled={isLoading}
-                  className="w-full py-3 border-2 border-neutral-100 rounded-2xl font-bold text-[10px] uppercase tracking-widest text-neutral-900 hover:bg-neutral-50 transition-all flex items-center justify-center gap-2 active:scale-98 disabled:opacity-50"
                 >
-                  <Youtube className="w-4 h-4 text-[#FF0000]" />
+                  <Youtube className="h-4 w-4 text-red-600" />
                   Continue with YouTube
-                </button>
+                </Button>
               </form>
 
-              <div className="mt-8 text-center">
-                <p className="text-[11px] font-black text-neutral-400 uppercase tracking-widest">
-                  {mode === 'login' ? 'New here?' : 'Already have an account?'}
-                  {' '}
-                  <button 
-                    onClick={() => navigate(mode === 'login' ? '/signup' : '/login')}
-                    className="text-brand-600 hover:text-brand-400 transition-colors ml-2"
-                  >
-                    {mode === 'login' ? 'Sign Up' : 'Sign In'}
-                  </button>
-                </p>
-              </div>
+              <p className="mt-6 text-center text-sm text-neutral-500">
+                {mode === 'login' ? "Don't have an account?" : 'Already have an account?'}{' '}
+                <button
+                  type="button"
+                  onClick={() => navigate(mode === 'login' ? '/signup' : '/login')}
+                  className="font-medium text-brand-600 hover:text-brand-700"
+                >
+                  {mode === 'login' ? 'Sign up' : 'Sign in'}
+                </button>
+              </p>
 
               {mode === 'signup' && (
-                <p className="mt-10 text-center text-[10px] text-neutral-300 font-bold leading-relaxed max-w-xs mx-auto uppercase tracking-tighter">
-                  By signing up, you agree to our <br />
-                  <Link to="/terms" className="text-neutral-400 hover:text-neutral-900 transition-colors underline underline-offset-4">Terms</Link>
-                  {' & '}
-                  <Link to="/privacy" className="text-neutral-400 hover:text-neutral-900 transition-colors underline underline-offset-4">Privacy</Link>
+                <p className="mt-6 text-center text-xs leading-relaxed text-neutral-400">
+                  By signing up, you agree to our{' '}
+                  <Link to="/terms" className="text-neutral-600 hover:text-neutral-900">
+                    Terms
+                  </Link>{' '}
+                  and{' '}
+                  <Link to="/privacy" className="text-neutral-600 hover:text-neutral-900">
+                    Privacy Policy
+                  </Link>
+                  .
                 </p>
               )}
             </motion.div>
           </AnimatePresence>
+        </Card>
+
+        <div className="mt-6 hidden items-center gap-6 text-xs text-neutral-400 lg:flex">
+          <span className="flex items-center gap-1.5">
+            <CheckCircle2 className="h-3.5 w-3.5 text-success-600" />
+            Free first feed
+          </span>
+          <span className="flex items-center gap-1.5">
+            <CheckCircle2 className="h-3.5 w-3.5 text-success-600" />
+            No credit card
+          </span>
         </div>
       </div>
     </div>
