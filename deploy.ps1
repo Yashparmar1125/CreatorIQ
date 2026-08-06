@@ -23,40 +23,65 @@ if (-Not (Test-Path ".\backend\secrets\jwt_private.pem") -or -Not (Test-Path ".\
     exit 1
 }
 
-# 2. SSH command prefix
-$sshCmd = "ssh -i $IdentityFile -o StrictHostKeyChecking=accept-new $VmUser@$VmHost"
-$scpCmd = "scp -i $IdentityFile -o StrictHostKeyChecking=accept-new"
+# 2. SSH command parameters
+$sshArgs = @("-i", $IdentityFile, "-o", "StrictHostKeyChecking=accept-new", "${VmUser}@${VmHost}")
+$scpArgs = @("-i", $IdentityFile, "-o", "StrictHostKeyChecking=accept-new")
 
 # 3. Create directories on the VM if they don't exist
 Write-Host "Ensuring directories exist on VM..."
-Invoke-Expression "$sshCmd `"mkdir -p ~/CreatorIQ/backend/secrets`""
+& ssh $sshArgs "mkdir -p ~/CreatorIQ/backend/secrets"
 
 # 4. Copy secrets to the VM
 Write-Host "Copying secrets to VM..."
-Invoke-Expression "$scpCmd .\backend\.env.production ${VmUser}@${VmHost}:~/CreatorIQ/backend/.env"
-Invoke-Expression "$scpCmd .\backend\secrets\jwt_private.pem ${VmUser}@${VmHost}:~/CreatorIQ/backend/secrets/"
-Invoke-Expression "$scpCmd .\backend\secrets\jwt_public.pem ${VmUser}@${VmHost}:~/CreatorIQ/backend/secrets/"
+& scp $scpArgs ".\backend\.env.production" "${VmUser}@${VmHost}:~/CreatorIQ/backend/.env"
+& scp $scpArgs ".\backend\secrets\jwt_private.pem" "${VmUser}@${VmHost}:~/CreatorIQ/backend/secrets/"
+& scp $scpArgs ".\backend\secrets\jwt_public.pem" "${VmUser}@${VmHost}:~/CreatorIQ/backend/secrets/"
 
-# 5. Execute the deployment script on the VM
+# 5. Create deployment script and transfer it
 $deployScript = @"
+set -e
+echo "➡️ Navigating to repository..."
 cd ~/CreatorIQ || { echo 'Repo not found. Clone it first!'; exit 1; }
+
+echo "➡️ Pulling latest code..."
 git fetch --all
 git reset --hard origin/main
+
+echo "➡️ Setting permissions..."
 cd backend
 chmod 600 secrets/*.pem
+
+echo "➡️ Stopping existing containers..."
 docker compose down
+
+echo "➡️ Building and starting new containers..."
 docker compose up -d --build
+
+echo "➡️ Cleaning up unused images..."
 docker image prune -f
+
+echo "➡️ Running Database Migrations..."
 docker compose --profile migrate run --rm migrate-auth
 docker compose --profile migrate run --rm migrate-channel
 docker compose --profile migrate run --rm migrate-trend
 docker compose --profile migrate run --rm migrate-strategy
 docker compose --profile migrate run --rm migrate-planner
 docker compose --profile migrate run --rm migrate-analytics
+
+echo "✅ Deployment script finished successfully!"
 "@
 
-Write-Host "Running deployment commands on VM..."
-$encodedScript = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($deployScript))
-Invoke-Expression "$sshCmd `"echo $encodedScript | base64 --decode | bash`""
+Write-Host "Preparing deployment script..."
+$tmpScript = [System.IO.Path]::GetTempFileName()
+# Convert to Unix line endings just in case
+$deployScript = $deployScript -replace "`r`n", "`n"
+[System.IO.File]::WriteAllText($tmpScript, $deployScript, [System.Text.Encoding]::UTF8)
+
+& scp $scpArgs $tmpScript "${VmUser}@${VmHost}:~/deploy_run.sh"
+Remove-Item $tmpScript
+
+Write-Host "Running deployment on VM (streaming output)..." -ForegroundColor Yellow
+# Run script with real-time output
+& ssh $sshArgs "bash ~/deploy_run.sh && rm ~/deploy_run.sh"
 
 Write-Host "Deployment completed successfully!" -ForegroundColor Green
