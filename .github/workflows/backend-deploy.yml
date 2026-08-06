@@ -1,0 +1,63 @@
+name: Deploy Backend to Azure VM
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-deploy.yml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to Azure VM
+        uses: appleboy/ssh-action@master
+        env:
+          ENV_FILE: ${{ secrets.ENV_FILE }}
+          JWT_PRIVATE_KEY: ${{ secrets.JWT_PRIVATE_KEY }}
+          JWT_PUBLIC_KEY: ${{ secrets.JWT_PUBLIC_KEY }}
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USERNAME }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          envs: ENV_FILE,JWT_PRIVATE_KEY,JWT_PUBLIC_KEY
+          script: |
+            # Ensure the directory exists
+            if [ ! -d "~/CreatorIQ" ]; then
+              echo "Repository not found at ~/CreatorIQ. Please clone it manually first."
+              exit 1
+            fi
+            
+            # Navigate to repo directory
+            cd ~/CreatorIQ
+            
+            # Discard any local changes and pull the latest code
+            git fetch --all
+            git reset --hard origin/main
+            
+            # Create environment file
+            echo "$ENV_FILE" > backend/.env
+            
+            # Create secrets directory and JWT keys
+            mkdir -p backend/secrets
+            echo "$JWT_PRIVATE_KEY" > backend/secrets/jwt_private.pem
+            echo "$JWT_PUBLIC_KEY" > backend/secrets/jwt_public.pem
+            chmod 600 backend/secrets/*.pem
+            
+            # Build and restart Docker containers
+            cd backend
+            docker compose down
+            docker compose up -d --build
+            
+            # Clean up dangling images to save space
+            docker image prune -f
+            
+            # Run database migrations
+            docker compose --profile migrate run --rm migrate-auth
+            docker compose --profile migrate run --rm migrate-channel
+            docker compose --profile migrate run --rm migrate-trend
+            docker compose --profile migrate run --rm migrate-strategy
+            docker compose --profile migrate run --rm migrate-planner
+            docker compose --profile migrate run --rm migrate-analytics
