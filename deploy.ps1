@@ -60,6 +60,9 @@ docker compose up -d --build
 echo "➡️ Cleaning up unused images..."
 docker image prune -f
 
+echo "➡️ Building migration containers..."
+docker compose --profile migrate build
+
 echo "➡️ Running Database Migrations..."
 docker compose --profile migrate run --rm migrate-auth
 docker compose --profile migrate run --rm migrate-channel
