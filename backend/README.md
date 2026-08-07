@@ -13,7 +13,7 @@ This script will:
 1. Generate JWT keys in `secrets/` (if missing)
 2. Build all service images
 3. Start Postgres + Redis
-4. Run Alembic migrations for all services
+4. Sync database schema via db-push (`create_all` from SQLAlchemy models — no Alembic)
 5. Start all 8 microservices + API gateway
 6. Run health checks
 
@@ -51,7 +51,7 @@ python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().d
 .\scripts\generate-jwt-keys.ps1
 ```
 
-> **Note:** `docker-compose.yml` overrides `DATABASE_URL`, `REDIS_URL`, and service URLs to use Docker internal networking. Your Azure DB URL in `.env` is ignored when running via Docker.
+> **Note:** `docker-compose.yml` uses `DATABASE_URL` / `REDIS_URL` from your shell environment when you run Compose. `docker-up.ps1` forces the local Docker Postgres/Redis URLs so an Azure URL in `.env` does not break local dev. For production deploy, use `deploy.ps1` with `backend/.env.production`.
 
 ## Manual Docker commands
 
@@ -72,16 +72,28 @@ docker compose down
 docker compose down -v
 ```
 
-### Run migrations only
+### Sync schema only (db push)
 
 ```powershell
 docker compose up -d postgres
-docker compose --profile migrate run --rm migrate-auth
-docker compose --profile migrate run --rm migrate-channel
-docker compose --profile migrate run --rm migrate-trend
-docker compose --profile migrate run --rm migrate-strategy
-docker compose --profile migrate run --rm migrate-planner
-docker compose --profile migrate run --rm migrate-analytics
+docker compose --profile db-push run --rm db-push-auth
+docker compose --profile db-push run --rm db-push-channel
+docker compose --profile db-push run --rm db-push-trend
+docker compose --profile db-push run --rm db-push-strategy
+docker compose --profile db-push run --rm db-push-planner
+docker compose --profile db-push run --rm db-push-analytics
+```
+
+Or sync all services in one go:
+
+```powershell
+.\scripts\docker-up.ps1 -SkipDbPush:$false
+```
+
+Prime trend data after startup:
+
+```powershell
+.\scripts\docker-up.ps1 -PrimeTrends
 ```
 
 ## Services
