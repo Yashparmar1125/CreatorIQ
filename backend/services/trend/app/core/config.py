@@ -14,6 +14,10 @@ class Settings(BaseSettings):
     ml_service_url: str = "http://127.0.0.1:8007"
     channel_service_url: str = "http://127.0.0.1:8002"
 
+    # Qdrant Vector Database
+    qdrant_url: str = "http://qdrant:6333"
+    enable_vector_search: bool = True
+
     # Max niches to query in parallel per request (controls SerpApi credit usage)
     max_trend_niches: int = 2
 

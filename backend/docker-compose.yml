@@ -17,6 +17,7 @@ x-common-env: &common-env
   PLANNER_SERVICE_URL: ${PLANNER_SERVICE_URL:-http://planner:8005}
   ANALYTICS_SERVICE_URL: ${ANALYTICS_SERVICE_URL:-http://analytics:8006}
   ML_SERVICE_URL: ${ML_SERVICE_URL:-http://ml:8007}
+  QDRANT_URL: ${QDRANT_URL:-http://qdrant:6333}
   FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
   GOOGLE_OAUTH_REDIRECT_URI: ${GOOGLE_OAUTH_REDIRECT_URI:-http://localhost:8000/v1/auth/google/callback}
 
@@ -62,6 +63,23 @@ services:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  qdrant:
+    image: qdrant/qdrant:v1.11.0
+    container_name: ciq-qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks:
+      - creatoriq-net
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 5 bash -c '</dev/tcp/localhost/6333' || exit 1"]
+      interval: 5s
+      timeout: 5s
       retries: 10
     restart: unless-stopped
 
@@ -238,6 +256,7 @@ services:
 
 volumes:
   postgres_data:
+  qdrant_data:
 
 networks:
   creatoriq-net:
