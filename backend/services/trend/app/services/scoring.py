@@ -2,8 +2,8 @@
 
 from app.services.quality_filters import has_creator_topic_signal
 
-NICHE_FIT_THRESHOLD = 0.65
-GEO_RELEVANCE_THRESHOLD = 0.20
+NICHE_FIT_THRESHOLD = 0.45
+GEO_RELEVANCE_THRESHOLD = 0.15
 GLOBAL_FALLBACK_GEO = {"US": 0.55, "IN": 0.35, "UK": 0.10}
 
 # Tag match alone is weak — title must reinforce niche relevance

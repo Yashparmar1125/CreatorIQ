@@ -17,6 +17,7 @@ from app.repositories.concept_repository import ConceptRepository
 from app.repositories.feed_repository import FeedRepository
 from app.services.concept_collector import ConceptCollector
 from app.services.trend_enrichment_service import TrendEnrichmentService
+from app.services.vector_service import VectorService
 from app.services.niche_taxonomy import NICHE_KEYWORDS, PLAN_CREDITS
 from app.services.quality_filters import passes_feed_quality, passes_ingest_quality
 from app.services.scoring import (
@@ -71,6 +72,7 @@ class FeedService:
         self.feed_repo = FeedRepository()
         self.collector = ConceptCollector()
         self.enrichment = TrendEnrichmentService()
+        self.vector_service = VectorService()
 
     async def get_creator_context(self, user_id: uuid.UUID) -> dict[str, Any]:
         defaults: dict[str, Any] = {
@@ -267,13 +269,14 @@ class FeedService:
         return selected[:top_n]
 
     def _matches_user_clusters(self, concept: TrendConcept, user_niches: list[str]) -> bool:
-        """Only surface concepts from clusters aligned with the creator's niches."""
+        """Surface concepts aligned with creator niches by tag or title keyword match."""
         if not user_niches:
             return True
         tags = {t.lower() for t in (concept.niche_tags or [])}
+        title_l = (concept.canonical_title or "").lower()
         for niche in user_niches:
             n = niche.lower().strip()
-            if n in tags or any(n in t or t in n for t in tags):
+            if n in tags or any(n in t or t in n for t in tags) or n in title_l:
                 return True
         return False
 
@@ -286,13 +289,45 @@ class FeedService:
     ) -> list[dict[str, Any]]:
         concepts = await self.concept_repo.list_active_concepts(db, max_age_days=7, limit=200)
         user_niches = ctx.get("niches") or []
+        
+        # Index active concepts to Qdrant Vector DB (best effort)
+        if settings.enable_vector_search:
+            try:
+                for c in concepts[:100]:
+                    self.vector_service.upsert_concept_vector(
+                        concept_id=str(c.id),
+                        title=c.canonical_title,
+                        niche_tags=c.niche_tags or [],
+                        raw_momentum=float(c.raw_momentum or 0.0),
+                    )
+            except Exception as e:
+                logger.warning(f"Vector indexing skipped: {e}")
+
+        # Vector semantic similarity search for creator context
+        vector_hits = {}
+        if settings.enable_vector_search and user_niches:
+            try:
+                query_str = " ".join(user_niches) + " " + ctx.get("tone", "")
+                hits = self.vector_service.search_similar(query_str, niche_tags=user_niches, limit=30)
+                for h in hits:
+                    vector_hits[h["concept_id"]] = h["score"]
+            except Exception as e:
+                logger.warning(f"Vector similarity query skipped: {e}")
+
         scored: list[dict[str, Any]] = []
         for c in concepts:
-            if not self._matches_user_clusters(c, user_niches):
+            cid = str(c.id)
+            is_vector_match = cid in vector_hits
+            if not is_vector_match and not self._matches_user_clusters(c, user_niches) and strict:
                 continue
             item = self._score_concept(c, ctx, strict=strict)
             if item:
+                if is_vector_match:
+                    v_boost = vector_hits[cid] * 15.0
+                    item["opportunity_score"] = min(100.0, round(item["opportunity_score"] + v_boost, 2))
+                    item["vector_similarity"] = round(vector_hits[cid], 3)
                 scored.append(item)
+
         scored.sort(
             key=lambda x: (
                 x.get("is_youtube_video", False),
