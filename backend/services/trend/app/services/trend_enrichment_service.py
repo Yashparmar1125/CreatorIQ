@@ -14,6 +14,27 @@ logger = logging.getLogger(__name__)
 _ARCHETYPES = ("The Greenlight", "The Viral Spike", "The Evergreen", "The Discovery", "Peaking")
 
 
+import re
+
+def _clean_title(text: str | None) -> str:
+    if not text:
+        return "Trending Opportunity"
+    cleaned = re.sub(r'#\w+', '', text)
+    cleaned = re.sub(r'#', '', cleaned)
+    cleaned = re.sub(r'_', ' ', cleaned)
+    cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+    return cleaned.title() if cleaned else "Trending Opportunity"
+
+
+def _clean_text(text: str | None) -> str:
+    if not text:
+        return ""
+    cleaned = re.sub(r'#\w+', '', text)
+    cleaned = re.sub(r'#', '', cleaned)
+    cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+    return cleaned
+
+
 class TrendEnrichmentService:
     async def enrich_feed_items(
         self,
@@ -95,17 +116,20 @@ class TrendEnrichmentService:
             "- Return EXACTLY one JSON object per input id (same id string). Never return an empty items array.\n"
             "- ALWAYS set keep=true. Filtering already happened upstream.\n"
             "- Fix grammar, clarify cryptic names (e.g. '67 meme' → explain the meme trend in plain English).\n"
-            "- topic: clean Title Case opportunity name.\n"
-            "- headline: punchy hook under 12 words for the card.\n"
-            "- why_trending: 1-2 sentences on why this is rising on YouTube.\n"
-            "- growth_tip: personalized advice for THIS creator's tone and format.\n"
-            "- content_angle: one specific video they could film today.\n"
+            "- NEVER include hashtags, # symbols, or raw video tags in the topic, headline, why_predicted, or action_plan.\n"
+            "- topic: clean Title Case logical opportunity name (NO HASHTAGS).\n"
+            "- headline: punchy hook under 12 words for the card (NO HASHTAGS).\n"
+            "- why_trending: 1-2 sentences on why this is rising on YouTube (NO HASHTAGS).\n"
+            "- why_predicted: personalized 1-sentence explanation why this specific trend was predicted for THIS creator's niche and geography (NO HASHTAGS).\n"
+            "- growth_tip: personalized advice for THIS creator's tone and format (NO HASHTAGS).\n"
+            "- content_angle: one specific video concept they could film today (NO HASHTAGS).\n"
+            "- action_plan: step-by-step 1-sentence content creation action for this video (NO HASHTAGS).\n"
             "- key_indicator: one metric line using the provided velocity/volume.\n"
             "- archetype: one of " + ", ".join(_ARCHETYPES) + ".\n"
             "Reply with ONLY valid JSON, no markdown.\n"
             'Schema: {"items": [{"id": string, "keep": true, "topic": string, "headline": string, '
-            '"why_trending": string, "growth_tip": string, "content_angle": string, '
-            '"key_indicator": string, "archetype": string}]}'
+            '"why_trending": string, "why_predicted": string, "growth_tip": string, '
+            '"content_angle": string, "action_plan": string, "key_indicator": string, "archetype": string}]}'
         )
 
         user = (
@@ -154,10 +178,10 @@ class TrendEnrichmentService:
         subs: int,
     ) -> dict[str, Any] | None:
         system = (
-            "Transform this raw YouTube trend search into a creator-ready opportunity. "
+            "Transform this raw YouTube trend search into a creator-ready opportunity without any hashtags. "
             "Reply ONLY JSON: {\"id\": string, \"topic\": string, \"headline\": string, "
-            "\"why_trending\": string, \"growth_tip\": string, \"content_angle\": string, "
-            "\"key_indicator\": string, \"archetype\": string}. "
+            "\"why_trending\": string, \"why_predicted\": string, \"growth_tip\": string, \"content_angle\": string, "
+            "\"action_plan\": string, \"key_indicator\": string, \"archetype\": string}. "
             f"Archetype must be one of: {', '.join(_ARCHETYPES)}."
         )
         user = (
@@ -180,12 +204,14 @@ class TrendEnrichmentService:
     def _merge(self, raw: dict[str, Any], ai: dict[str, Any]) -> dict[str, Any]:
         out = dict(raw)
         out["raw_topic"] = raw.get("topic")
-        out["topic"] = (ai.get("topic") or raw.get("topic") or "").strip()
-        out["headline"] = (ai.get("headline") or out["topic"]).strip()
-        out["why_trending"] = (ai.get("why_trending") or raw.get("why_trending") or "").strip()
-        out["growth_tip"] = (ai.get("growth_tip") or raw.get("growth_tip") or "").strip()
-        out["content_angle"] = (ai.get("content_angle") or "").strip()
-        out["key_indicator"] = (ai.get("key_indicator") or raw.get("key_indicator") or "").strip()
+        out["topic"] = _clean_title(ai.get("topic") or raw.get("topic"))
+        out["headline"] = _clean_title(ai.get("headline") or out["topic"])
+        out["why_trending"] = _clean_text(ai.get("why_trending") or raw.get("why_trending"))
+        out["why_predicted"] = _clean_text(ai.get("why_predicted") or f"Predicted for your channel based on high similarity and momentum.")
+        out["growth_tip"] = _clean_text(ai.get("growth_tip") or raw.get("growth_tip"))
+        out["content_angle"] = _clean_text(ai.get("content_angle"))
+        out["action_plan"] = _clean_text(ai.get("action_plan") or ai.get("content_angle") or ai.get("growth_tip"))
+        out["key_indicator"] = _clean_text(ai.get("key_indicator") or raw.get("key_indicator"))
         if ai.get("archetype") in _ARCHETYPES:
             out["archetype"] = ai["archetype"]
         out["description"] = out["why_trending"]
@@ -196,9 +222,9 @@ class TrendEnrichmentService:
     def _rule_based_enrich(self, raw: dict[str, Any], ctx: dict[str, Any]) -> dict[str, Any]:
         """Deterministic fallback when LLM is unavailable or returns nothing."""
         out = dict(raw)
-        title = (raw.get("topic") or "Trending Topic").strip()
+        title = _clean_title(raw.get("topic") or "Trending Topic")
         out["raw_topic"] = title
-        out["topic"] = title.title()
+        out["topic"] = title
         niche = (ctx.get("niches") or ["your niche"])[0]
         fmt = ctx.get("content_format") or "shorts"
         fmt_label = {"both": "short or long-form", "long_form": "long-form", "shorts": "Short"}.get(fmt, fmt)
@@ -209,11 +235,15 @@ class TrendEnrichmentService:
             f"'{title}' is gaining traction on YouTube with {vol}. "
             f"Creators in {niche} are starting to cover this angle."
         )
+        out["why_predicted"] = (
+            f"Matched to your channel because '{title}' has high search velocity in {niche} and strong audience relevance."
+        )
         out["growth_tip"] = (
             f"As a {tone} {niche} creator, test this with a quick {fmt} — "
             "your audience may discover you through search before the topic saturates."
         )
         out["content_angle"] = f"React to or remix the '{title}' trend with your own {tone} spin."
+        out["action_plan"] = f"Film a {fmt_label} video testing '{title}' using a {tone} hook in the first 5 seconds."
         out["description"] = out["why_trending"]
         out["ai_enriched"] = False
         return out

@@ -258,6 +258,39 @@ class ChannelService:
             )
         return {"data": self.pipeline.serialize_profile(profile), "meta": {"request_id": "local-dev"}}
 
+    async def update_creator_profile(
+        self,
+        db: AsyncSession,
+        user_id: uuid.UUID,
+        *,
+        niches: list[str] | None = None,
+        content_format: str | None = None,
+        tone: str | None = None,
+        target_country: str | None = None,
+    ) -> dict:
+        profile = await self.profile_repo.get_by_user_id(db, user_id)
+        if not profile:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={"code": "NOT_FOUND", "message": "Creator profile not found. Complete onboarding first.", "details": {}},
+            )
+
+        if niches is not None:
+            profile.niches_onboarding = niches
+            profile.niches_effective = niches
+            from app.models.creator_profile_models import NicheSource
+            profile.niche_source = NicheSource.onboarding
+        if content_format is not None:
+            profile.content_format = content_format
+        if tone is not None:
+            profile.tone = tone
+        if target_country is not None:
+            profile.geo_target_country = target_country
+
+        await db.commit()
+        await db.refresh(profile)
+        return {"data": self.pipeline.serialize_profile(profile), "meta": {"request_id": "local-dev"}}
+
     def _format_for_pipeline(self, content_format: str) -> str:
         if content_format == "long_form":
             return "long-form"

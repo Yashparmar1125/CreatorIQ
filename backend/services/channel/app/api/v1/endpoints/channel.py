@@ -70,9 +70,33 @@ async def get_analysis_status(user: UserContext = Depends(get_user_context), db:
     return await service.get_analysis_status(db, user.user_id)
 
 
+class UpdateProfileRequest(BaseModel):
+    niches: list[str] | None = None
+    content_format: str | None = None
+    tone: str | None = None
+    target_country: str | None = None
+
+
 @router.get("/channels/profile")
 async def get_creator_profile(user: UserContext = Depends(get_user_context), db: AsyncSession = Depends(get_db)) -> dict:
     return await service.get_creator_profile(db, user.user_id)
+
+
+@router.put("/channels/profile")
+@router.post("/channels/profile/update")
+async def update_creator_profile(
+    payload: UpdateProfileRequest,
+    user: UserContext = Depends(get_user_context),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    return await service.update_creator_profile(
+        db,
+        user_id=user.user_id,
+        niches=payload.niches,
+        content_format=payload.content_format,
+        tone=payload.tone,
+        target_country=payload.target_country,
+    )
 
 
 @router.post("/channels/profile/reconfigure")
