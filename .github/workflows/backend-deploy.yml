@@ -25,8 +25,8 @@ jobs:
           envs: ENV_FILE,JWT_PRIVATE_KEY,JWT_PUBLIC_KEY
           script: |
             # Ensure the directory exists
-            if [ ! -d "~/CreatorIQ" ]; then
-              echo "Repository not found at ~/CreatorIQ. Please clone it manually first."
+            if [ ! -d "$HOME/CreatorIQ" ]; then
+              echo "Repository not found at $HOME/CreatorIQ. Please clone it manually first."
               exit 1
             fi
             
