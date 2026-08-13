@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useTrendsStore } from '../../../stores/useTrendsStore';
+import { AIScannerLoader } from '../../../components/ui/AIScannerLoader';
 import { FeedHistoryDrawer } from '../components/FeedHistoryDrawer';
 import { PageHeader } from '../../../components/ui/PageHeader';
 import { Card } from '../../../components/ui/Card';
@@ -26,6 +27,7 @@ import {
   Bookmark,
 } from 'lucide-react';
 import { sanitizeStrategyTopic } from '../../../lib/strategyTopic';
+import { cleanTrendTitle, cleanTrendText } from '../../../lib/cleanTrendTitle';
 import { cn } from '../../../lib/utils';
 
 const FORMAT_TABS = [
@@ -40,18 +42,7 @@ function formatSubs(n: number): string {
   return String(n);
 }
 
-const SkeletonCard = () => (
-  <div className="surface-card-elevated animate-pulse space-y-4 rounded-xl p-5 md:p-6">
-    <div className="h-4 w-24 rounded bg-neutral-100" />
-    <div className="h-6 w-3/4 rounded bg-neutral-100" />
-    <div className="h-16 w-full rounded-lg bg-neutral-50" />
-    <div className="grid grid-cols-3 gap-3">
-      <div className="h-10 rounded bg-neutral-50" />
-      <div className="h-10 rounded bg-neutral-50" />
-      <div className="h-10 rounded bg-neutral-50" />
-    </div>
-  </div>
-);
+
 
 export const TrendsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -126,7 +117,7 @@ export const TrendsPage: React.FC = () => {
     <div className="space-y-6 animate-in">
       <PageHeader
         title={<span className="text-gradient-brand">Trends</span>}
-        description="Your personalized Top 5 opportunities ranked by niche fit, momentum, and audience geography."
+        description="Your personalized Top 15 opportunities ranked by vector similarity, niche fit, momentum, and audience geography."
         badge={
           <div className="mb-2 flex flex-wrap items-center gap-2">
             {isPersonalized && <Badge variant="brand">Personalized</Badge>}
@@ -313,11 +304,7 @@ export const TrendsPage: React.FC = () => {
       {error && <Alert variant="error">Could not load trends — {error}</Alert>}
 
       {isLoading && (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <SkeletonCard key={i} />
-          ))}
-        </div>
+        <AIScannerLoader message={activeSearch ? `Searching vectors for "${activeSearch}"...` : undefined} />
       )}
 
       {!isLoading && (
@@ -344,7 +331,7 @@ export const TrendsPage: React.FC = () => {
             </Card>
           ) : (
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              {filteredTrends.map((trend) => (
+              {filteredTrends.map((trend: any) => (
                 <Card
                   key={trend.id}
                   variant="elevated"
@@ -361,26 +348,31 @@ export const TrendsPage: React.FC = () => {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex flex-wrap gap-1.5">
-                      {trend.niches.slice(0, 2).map((tag) => (
+                      {trend.niches?.slice(0, 2).map((tag: string) => (
                         <Badge key={tag} variant="brand">
                           {tag}
                         </Badge>
                       ))}
                       <Badge variant="neutral">{trend.archetype}</Badge>
+                      {trend.vector_similarity && (
+                        <Badge variant="neutral" className="bg-emerald-50 text-emerald-700 border-emerald-200">
+                          {Math.round(trend.vector_similarity * 100)}% Vector Match
+                        </Badge>
+                      )}
                     </div>
                     {trend.opportunity_score != null && (
-                      <span className="shrink-0 text-sm font-semibold text-neutral-900">
-                        {Math.round(trend.opportunity_score ?? trend.tvs_score)}
+                      <span className="shrink-0 rounded-lg bg-neutral-900 px-2.5 py-1 text-xs font-bold text-white shadow-sm">
+                        {Math.round(trend.opportunity_score ?? trend.tvs_score)} Fit
                       </span>
                     )}
                   </div>
 
                   <div>
                     <h3 className="text-base font-semibold text-neutral-900 group-hover:text-brand-600">
-                      {trend.topic}
+                      {cleanTrendTitle(trend.topic)}
                     </h3>
                     {trend.headline && trend.headline !== trend.topic && (
-                      <p className="mt-1 text-sm text-neutral-600">{trend.headline}</p>
+                      <p className="mt-1 text-sm font-medium text-neutral-700">{trend.headline}</p>
                     )}
                     {trend.is_youtube_video && trend.channel_name && (
                       <p className="mt-2 text-xs text-neutral-500">
@@ -403,9 +395,21 @@ export const TrendsPage: React.FC = () => {
                     )}
                   </div>
 
-                  <p className="line-clamp-2 text-sm text-neutral-600">
-                    {trend.content_angle || trend.growth_tip || trend.why_trending}
-                  </p>
+                  {/* Why Predicted For You Insight */}
+                  {trend.why_predicted && (
+                    <div className="rounded-lg border border-brand-100 bg-brand-50/60 p-2.5 text-xs text-brand-800">
+                      <span className="font-semibold text-brand-900">Why Predicted: </span>
+                      {cleanTrendText(trend.why_predicted)}
+                    </div>
+                  )}
+
+                  {/* Action Plan */}
+                  {(trend.action_plan || trend.growth_tip || trend.content_angle) && (
+                    <div className="rounded-lg border border-neutral-200/80 bg-neutral-50/80 p-2.5 text-xs text-neutral-700">
+                      <span className="font-semibold text-neutral-900">Action Plan: </span>
+                      {cleanTrendText(trend.action_plan || trend.growth_tip || trend.content_angle)}
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-3 gap-3 border-t border-neutral-100 pt-4 text-sm">
                     <div>

@@ -1,5 +1,4 @@
 import { createBrowserRouter, RouterProvider, Navigate } from 'react-router';
-import { Analytics } from '@vercel/analytics/react';
 import { MainLayout } from './layouts/MainLayout';
 import { OnboardingWizard } from './features/onboarding/components/OnboardingWizard';
 import { LandingPage } from './pages/LandingPage';
@@ -152,7 +151,7 @@ function App() {
     <>
       <RouterProvider router={router} />
       <Toaster />
-      <Analytics />
+      {/* <Analytics /> */}
     </>
   );
 }

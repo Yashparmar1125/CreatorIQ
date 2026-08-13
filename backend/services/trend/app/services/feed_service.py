@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 _POLITICS_KEYWORDS = {"election", "politics", "parliament", "minister", "government", "vote", "congress"}
 _RELAXED_NICHE_FIT_THRESHOLD = 0.42
-_FEED_TARGET = 5
+_FEED_TARGET = 15
 
 
 def _volume_display(vol: int) -> str:
@@ -242,7 +242,7 @@ class FeedService:
         ranked: list[dict[str, Any]],
         previous_ids: set[str],
         *,
-        top_n: int = 5,
+        top_n: int = 15,
     ) -> list[dict[str, Any]]:
         if not previous_ids:
             return ranked[:top_n]
@@ -308,7 +308,7 @@ class FeedService:
         if settings.enable_vector_search and user_niches:
             try:
                 query_str = " ".join(user_niches) + " " + ctx.get("tone", "")
-                hits = self.vector_service.search_similar(query_str, niche_tags=user_niches, limit=30)
+                hits = self.vector_service.search_similar(query_str, niche_tags=user_niches, limit=50)
                 for h in hits:
                     vector_hits[h["concept_id"]] = h["score"]
             except Exception as e:
@@ -470,17 +470,17 @@ class FeedService:
 
         prev = await self.feed_repo.get_latest_snapshot(db, user_id)
         prev_ids = set(prev.concept_ids) if prev else set()
-        top5 = self._apply_freshness(ranked, prev_ids, top_n=5)
+        top15 = self._apply_freshness(ranked, prev_ids, top_n=15)
 
         if settings.enable_trend_enrichment and settings.openrouter_api_key:
-            top5 = await self.enrichment.enrich_feed_items(top5, ctx, ranked_backup=ranked)
+            top15 = await self.enrichment.enrich_feed_items(top15, ctx, ranked_backup=ranked)
 
         credits_used = 0 if is_first_feed else (1 if consume_credit else 0)
         snap = await self.feed_repo.save_snapshot(
             db,
             user_id=user_id,
-            items=top5,
-            concept_ids=[x["id"] for x in top5],
+            items=top15,
+            concept_ids=[x["id"] for x in top15],
             credits_used=credits_used,
             is_first_feed=is_first_feed,
             geo_source=ctx.get("geo_source"),
@@ -489,7 +489,7 @@ class FeedService:
             await self.feed_repo.increment_credits(db, user_id, credits_used)
 
         await db.commit()
-        return self._wrap_feed_response(top5, snap, ctx, plan=plan)
+        return self._wrap_feed_response(top15, snap, ctx, plan=plan)
 
     def _wrap_feed_response(
         self,

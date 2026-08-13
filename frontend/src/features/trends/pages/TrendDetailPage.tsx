@@ -16,6 +16,8 @@ import {
   Bookmark,
 } from 'lucide-react';
 
+import { cleanTrendTitle } from '../../../lib/cleanTrendTitle';
+
 export const TrendDetailPage: React.FC = () => {
   const { trendId } = useParams<{ trendId: string }>();
   const navigate = useNavigate();
@@ -64,7 +66,7 @@ export const TrendDetailPage: React.FC = () => {
       </Button>
 
       <PageHeader
-        title={trend.topic}
+        title={cleanTrendTitle(trend.topic)}
         description={trend.headline && trend.headline !== trend.topic ? trend.headline : undefined}
         badge={
           <div className="mb-2 flex flex-wrap gap-2">
