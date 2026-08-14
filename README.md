@@ -156,7 +156,7 @@ VITE_API_URL=http://localhost:8000/v1
 ```powershell
 npm run dev
 ```
-
+..
 **App URL:** `http://localhost:5173`
 
 ### 3. First-time user flow
