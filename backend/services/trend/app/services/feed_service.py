@@ -23,6 +23,8 @@ from app.services.quality_filters import passes_feed_quality, passes_ingest_qual
 from app.services.scoring import (
     GEO_RELEVANCE_THRESHOLD,
     NICHE_FIT_THRESHOLD,
+    classify_creator_tier,
+    detect_momentum_outliers,
     format_fit_score,
     geo_weighted_relevance,
     niche_fit_score,
@@ -129,6 +131,7 @@ class FeedService:
         ctx: dict[str, Any],
         *,
         strict: bool = True,
+        all_volumes: list[int] | None = None,
     ) -> dict[str, Any] | None:
         title = concept.canonical_title
         title_l = title.lower()
@@ -234,6 +237,7 @@ class FeedService:
             "is_youtube_video": is_youtube_video,
             "video_url": f"https://www.youtube.com/watch?v={video_id}" if video_id else None,
             "channel_name": channel_name,
+            "creator_tier": classify_creator_tier(vol, all_volumes or []),
             "saved": False,
         }
 
@@ -266,7 +270,14 @@ class FeedService:
                 if len(selected) >= top_n:
                     break
 
-        return selected[:top_n]
+        result = selected[:top_n]
+        # Soft diversity: ensure top-5 isn't exclusively big creators if smaller creators exist
+        if len(result) >= 5 and all(x.get("creator_tier") == "big" for x in result[:5]):
+            alt = next((x for x in ranked if x.get("creator_tier") in ("small", "medium") and x["id"] not in {r["id"] for r in result[:4]}), None)
+            if alt is not None:
+                result[4] = alt
+
+        return result
 
     def _matches_user_clusters(self, concept: TrendConcept, user_niches: list[str]) -> bool:
         """Surface concepts aligned with creator niches by tag or title keyword match."""
@@ -289,19 +300,10 @@ class FeedService:
     ) -> list[dict[str, Any]]:
         concepts = await self.concept_repo.list_active_concepts(db, max_age_days=7, limit=200)
         user_niches = ctx.get("niches") or []
-        
-        # Index active concepts to Qdrant Vector DB (best effort)
-        if settings.enable_vector_search:
-            try:
-                for c in concepts[:100]:
-                    self.vector_service.upsert_concept_vector(
-                        concept_id=str(c.id),
-                        title=c.canonical_title,
-                        niche_tags=c.niche_tags or [],
-                        raw_momentum=float(c.raw_momentum or 0.0),
-                    )
-            except Exception as e:
-                logger.warning(f"Vector indexing skipped: {e}")
+
+        # Outlier detection (μ + 2σ) across active pool
+        outlier_ids = detect_momentum_outliers(concepts)
+        all_volumes = [int(c.search_volume_est or 0) for c in concepts]
 
         # Vector semantic similarity search for creator context
         vector_hits = {}
@@ -320,8 +322,13 @@ class FeedService:
             is_vector_match = cid in vector_hits
             if not is_vector_match and not self._matches_user_clusters(c, user_niches) and strict:
                 continue
-            item = self._score_concept(c, ctx, strict=strict)
+            item = self._score_concept(c, ctx, strict=strict, all_volumes=all_volumes)
             if item:
+                is_outlier = cid in outlier_ids
+                item["is_momentum_outlier"] = is_outlier
+                if is_outlier:
+                    item["opportunity_score"] = min(100.0, round(item["opportunity_score"] + 8.0, 2))
+
                 if is_vector_match:
                     v_boost = vector_hits[cid] * 15.0
                     item["opportunity_score"] = min(100.0, round(item["opportunity_score"] + v_boost, 2))

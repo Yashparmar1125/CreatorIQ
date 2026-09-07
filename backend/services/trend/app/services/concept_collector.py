@@ -14,6 +14,7 @@ from app.services.youtube_video_collector import YouTubeVideoCollector
 from app.services.niche_taxonomy import NICHE_CLUSTERS, NICHE_KEYWORDS, ON_DEMAND_QUERIES
 from app.services.quality_filters import passes_ingest_quality
 from app.services.scoring import compute_raw_momentum
+from app.services.vector_service import VectorService
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +53,22 @@ def _lifecycle_from_growth(pct: int) -> ConceptLifecycle:
 class ConceptCollector:
     def __init__(self) -> None:
         self.repo = ConceptRepository()
-        self.youtube = YouTubeVideoCollector()
+        self.vector_service = VectorService()
+        self.youtube = YouTubeVideoCollector(vector_service=self.vector_service)
+
+    def _upsert_vector(self, concept) -> None:
+        """Best-effort vector upsert on write path — never blocks collection."""
+        if not settings.enable_vector_search:
+            return
+        try:
+            self.vector_service.upsert_concept_vector(
+                concept_id=str(concept.id),
+                title=concept.canonical_title,
+                niche_tags=concept.niche_tags or [],
+                raw_momentum=float(concept.raw_momentum or 0.0),
+            )
+        except Exception:
+            pass  # vector indexing is always best-effort
 
     async def run_all_clusters(self, db: AsyncSession) -> int:
         ingested = 0
@@ -158,6 +174,7 @@ class ConceptCollector:
                 key_indicator=f"+{value}% search growth",
                 sources=["google_trends", "youtube_search"],
             )
+            self._upsert_vector(concept)
             await self.repo.add_signal(
                 db,
                 concept_id=concept.id,
@@ -209,6 +226,7 @@ class ConceptCollector:
                         key_indicator=f"+{value}% search growth",
                         sources=["google_trends", "youtube_search"],
                     )
+                    self._upsert_vector(concept)
                     await self.repo.add_signal(
                         db,
                         concept_id=concept.id,
@@ -274,6 +292,7 @@ class ConceptCollector:
                     sources=["google_trends", "youtube_video"],
                     aliases=related,
                 )
+                self._upsert_vector(concept)
                 await self.repo.add_signal(
                     db,
                     concept_id=concept.id,

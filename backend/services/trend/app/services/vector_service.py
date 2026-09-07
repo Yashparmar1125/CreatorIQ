@@ -3,19 +3,13 @@
 from __future__ import annotations
 
 import logging
-import math
-import re
 from typing import Any
-import numpy as np
 
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
     Distance,
     VectorParams,
     PointStruct,
-    Filter,
-    FieldCondition,
-    MatchValue,
 )
 
 from app.core.config import settings
@@ -23,72 +17,43 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 COLLECTION_NAME = "trend_concepts"
-VECTOR_DIM = 128
+VECTOR_DIM = 384  # all-MiniLM-L6-v2 output dimension
+
+# Lazy-loaded singleton — model is ~90MB, only loaded once per process
+_sentence_model = None
+
+
+def _get_model():
+    """Returns the loaded SentenceTransformer model (lazy singleton)."""
+    global _sentence_model
+    if _sentence_model is None:
+        try:
+            from sentence_transformers import SentenceTransformer
+            logger.info("Loading SentenceTransformer model 'all-MiniLM-L6-v2'...")
+            _sentence_model = SentenceTransformer("all-MiniLM-L6-v2")
+            logger.info("SentenceTransformer model loaded successfully.")
+        except Exception as e:
+            logger.error(f"Failed to load SentenceTransformer model: {e}")
+            raise
+    return _sentence_model
 
 
 def generate_semantic_vector(text: str, tags: list[str] | None = None) -> list[float]:
     """
-    Fast, lightweight semantic feature vectorization (128-dimensional).
-    Maps text tokens, n-grams, and niche semantic clusters to a normalized unit hypersphere.
+    Deterministic 384-dim embedding using all-MiniLM-L6-v2.
+    Replaces the broken hash()-based vectorizer which produced random vectors
+    across process restarts (due to PYTHONHASHSEED randomization).
     """
-    clean_text = (text + " " + " ".join(tags or [])).lower().strip()
-    words = re.findall(r"\w+", clean_text)
-    
-    vec = np.zeros(VECTOR_DIM, dtype=np.float32)
-    
-    # 1. Word hashing into 96 dimensions
-    for word in words:
-        if len(word) < 2:
-            continue
-        h = abs(hash(word)) % 96
-        vec[h] += 1.0
-        # Character trigrams for typo/inflection robustness
-        for i in range(len(word) - 2):
-            th = abs(hash(word[i : i + 3])) % 96
-            vec[th] += 0.3
-
-    # 2. Semantic Cluster Highlighting (Dimensions 96-127 for explicit niche domain anchors)
-    cluster_anchors = {
-        "tech": range(96, 99),
-        "ai": range(96, 99),
-        "gadget": range(96, 99),
-        "phone": range(96, 99),
-        "gaming": range(99, 102),
-        "game": range(99, 102),
-        "esports": range(99, 102),
-        "finance": range(102, 105),
-        "stock": range(102, 105),
-        "investing": range(102, 105),
-        "money": range(102, 105),
-        "fitness": range(105, 108),
-        "health": range(105, 108),
-        "workout": range(105, 108),
-        "entertainment": range(108, 111),
-        "movie": range(108, 111),
-        "show": range(108, 111),
-        "education": range(111, 114),
-        "study": range(111, 114),
-        "tutorial": range(111, 114),
-        "travel": range(114, 117),
-        "beauty": range(117, 120),
-        "cooking": range(120, 123),
-        "food": range(120, 123),
-        "music": range(123, 126),
-        "vlog": range(126, 128),
-    }
-
-    for word in words:
-        for kw, dim_range in cluster_anchors.items():
-            if kw in word or word in kw:
-                for d in dim_range:
-                    vec[d] += 2.5
-
-    # L2 normalization to unit vector
-    norm = np.linalg.norm(vec)
-    if norm > 0:
-        vec = vec / norm
-
-    return vec.tolist()
+    combined = (text + " " + " ".join(tags or [])).strip()
+    if not combined:
+        return [0.0] * VECTOR_DIM
+    try:
+        model = _get_model()
+        embedding = model.encode([combined])[0]
+        return embedding.tolist()
+    except Exception as e:
+        logger.error(f"Embedding generation failed: {e}")
+        return [0.0] * VECTOR_DIM
 
 
 class VectorService:
@@ -100,8 +65,7 @@ class VectorService:
         if self._client is not None:
             return self._client
         try:
-            url = settings.qdrant_url
-            self._client = QdrantClient(url=url, timeout=5.0)
+            self._client = QdrantClient(url=settings.qdrant_url, timeout=5.0)
             return self._client
         except Exception as e:
             logger.warning(f"Could not connect to Qdrant at {settings.qdrant_url}: {e}")
@@ -112,13 +76,30 @@ class VectorService:
         if not client:
             return False
         try:
-            collections = [c.name for c in client.get_collections().collections]
-            if COLLECTION_NAME not in collections:
+            existing = [c.name for c in client.get_collections().collections]
+
+            if COLLECTION_NAME in existing:
+                # Check for dimension mismatch — old collection (128-dim hash) must be recreated
+                try:
+                    info = client.get_collection(COLLECTION_NAME)
+                    existing_dim = info.config.params.vectors.size
+                    if existing_dim != VECTOR_DIM:
+                        logger.warning(
+                            f"Qdrant collection '{COLLECTION_NAME}' has dim={existing_dim} "
+                            f"but expected {VECTOR_DIM}. Dropping and recreating."
+                        )
+                        client.delete_collection(COLLECTION_NAME)
+                        existing = []  # Force recreation below
+                except Exception as e:
+                    logger.warning(f"Could not inspect existing collection dim: {e}")
+
+            if COLLECTION_NAME not in existing:
                 client.create_collection(
                     collection_name=COLLECTION_NAME,
                     vectors_config=VectorParams(size=VECTOR_DIM, distance=Distance.COSINE),
                 )
                 logger.info(f"Created Qdrant collection '{COLLECTION_NAME}' (dim={VECTOR_DIM})")
+
             self._initialized = True
             return True
         except Exception as e:
@@ -169,8 +150,7 @@ class VectorService:
                 self.ensure_collection()
 
             query_vector = generate_semantic_vector(query_text, niche_tags)
-            
-            # Perform vector similarity search
+
             results = client.search(
                 collection_name=COLLECTION_NAME,
                 query_vector=query_vector,
@@ -178,16 +158,16 @@ class VectorService:
                 with_payload=True,
             )
 
-            hits = []
-            for res in results:
-                hits.append({
+            return [
+                {
                     "concept_id": str(res.id),
                     "score": float(res.score),
                     "title": res.payload.get("title", ""),
                     "niche_tags": res.payload.get("niche_tags", []),
                     "raw_momentum": res.payload.get("raw_momentum", 0.0),
-                })
-            return hits
+                }
+                for res in results
+            ]
         except Exception as e:
             logger.warning(f"Vector search failed: {e}")
             return []
@@ -202,6 +182,9 @@ class VectorService:
                 "status": "healthy",
                 "collection": COLLECTION_NAME,
                 "vectors_count": info.points_count,
+                "vector_dim": VECTOR_DIM,
+                "embedding_model": "all-MiniLM-L6-v2",
             }
         except Exception:
             return {"status": "degraded", "reason": "collection_not_created"}
+

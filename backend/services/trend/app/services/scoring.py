@@ -1,5 +1,8 @@
 """Trend opportunity scoring — spec section 6."""
 
+from __future__ import annotations
+
+from typing import Any
 from app.services.quality_filters import has_creator_topic_signal
 
 NICHE_FIT_THRESHOLD = 0.45
@@ -114,3 +117,46 @@ def opportunity_score(
         + 0.20 * geo_relevance
         + 0.05 * format_fit
     ) * 100.0
+
+
+def detect_momentum_outliers(concepts: list[Any], *, sigma: float = 2.0) -> set[str]:
+    """
+    Returns IDs of concepts whose raw_momentum is > μ + sigma*σ of the pool.
+    Statistical outlier detection adapted from CreatorIQ-main pipeline engine.
+    """
+    import numpy as np
+
+    if len(concepts) < 3:
+        return set()
+    values = [float(getattr(c, "raw_momentum", 0.0) or 0.0) for c in concepts]
+    mean = float(np.mean(values))
+    std = float(np.std(values))
+    if std == 0.0:
+        return set()
+    threshold = mean + sigma * std
+    return {
+        str(getattr(c, "id"))
+        for c in concepts
+        if float(getattr(c, "raw_momentum", 0.0) or 0.0) > threshold
+    }
+
+
+def classify_creator_tier(
+    search_volume: int,
+    all_volumes: list[int],
+) -> str:
+    """
+    Classifies channel/concept size relative to the pool using Q25/Q75 percentiles.
+    Returns: 'small' | 'medium' | 'big'
+    """
+    import numpy as np
+
+    if not all_volumes or len(all_volumes) < 2:
+        return "medium"
+    q25 = float(np.percentile(all_volumes, 25))
+    q75 = float(np.percentile(all_volumes, 75))
+    if search_volume < q25:
+        return "small"
+    if search_volume < q75:
+        return "medium"
+    return "big"

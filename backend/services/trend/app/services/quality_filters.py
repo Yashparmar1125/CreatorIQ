@@ -4,6 +4,12 @@ from __future__ import annotations
 
 import re
 
+try:
+    from langdetect import detect as _detect_lang
+    _LANGDETECT_AVAILABLE = True
+except ImportError:
+    _LANGDETECT_AVAILABLE = False
+
 # Titles matching these patterns are news scandals, not content opportunities
 _REJECT_PATTERNS: list[re.Pattern[str]] = [
     re.compile(p, re.I)
@@ -63,11 +69,27 @@ def has_creator_topic_signal(title: str) -> bool:
     return any(sig in t for sig in _CREATOR_TOPIC_SIGNALS)
 
 
+def is_english_title(title: str) -> bool:
+    """Returns True if title is detected as English, or if langdetect is unavailable (fail-open)."""
+    if not _LANGDETECT_AVAILABLE:
+        return True
+    try:
+        # Strip non-alphanumeric noise to avoid false detections
+        cleaned = re.sub(r"[^\w\s]", " ", title).strip()
+        if not cleaned:
+            return True
+        return _detect_lang(cleaned) == "en"
+    except Exception:
+        return True  # fail-open: allow on detection error
+
+
 def passes_ingest_quality(title: str, *, search_volume: int = 0) -> bool:
     """Collector gate — skip junk before it enters the concept store."""
     if is_low_quality_title(title):
         return False
     if search_volume > 0 and search_volume < 100:
+        return False
+    if not is_english_title(title):
         return False
     return True
 
