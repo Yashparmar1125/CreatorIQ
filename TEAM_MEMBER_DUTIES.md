@@ -18,29 +18,41 @@ Your responsibility is to take these changes through local container build, fron
 
 ## Detailed Step-by-Step Instructions
 
-### Duty 1: Container Image Rebuild & Qdrant Verification
+### Duty 1: Container Images Rebuild & ML Prophet Verification
 
 1. Navigate to the backend directory:
    ```bash
    cd backend
    ```
-2. Build the updated `trend` Docker image (installs `sentence-transformers` and `langdetect`):
+2. Build the updated `trend` and `ml` Docker images:
+   - `trend` (installs `sentence-transformers` and `langdetect`)
+   - `ml` (installs `prophet`, `pandas`, `numpy`, and `httpx`)
    ```bash
-   docker compose build trend
+   docker compose build trend ml
    ```
-3. Restart the service:
+3. Restart both services:
    ```bash
-   docker compose up -d trend
+   docker compose up -d trend ml
    ```
 4. Verify the startup logs:
    ```bash
-   docker compose logs trend --tail 50
+   docker compose logs trend --tail 30
+   docker compose logs ml --tail 30
    ```
    **Expected Log Signals**:
-   - `Created Qdrant collection 'trend_concepts' (dim=384)` (or collection dimension verified)
-   - `Uvicorn running on http://0.0.0.0:8003`
+   - `trend`: `Created Qdrant collection 'trend_concepts' (dim=384)` (or collection dimension verified)
+   - `ml`: `Uvicorn running on http://0.0.0.0:8007`
 
-5. Verify Qdrant Vector Collection Health directly:
+5. Verify Prophet Forecast API via internal health/endpoint test:
+   ```bash
+   curl -X POST http://localhost:8007/internal/ml/trend-forecast \
+     -H "Content-Type: application/json" \
+     -H "X-Internal-Service-Token: change-me" \
+     -d '{"topic": "AI Agents", "tvs_score": 75.0, "periods": 90}'
+   ```
+   Confirm that the response contains `"model_used": "Prophet_Additive"` and 90-day trajectory points with `yhat_lower` and `yhat_upper`.
+
+6. Verify Qdrant Vector Collection Health directly:
    ```bash
    curl -s http://localhost:6333/collections/trend_concepts
    ```

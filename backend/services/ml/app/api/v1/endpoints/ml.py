@@ -15,6 +15,11 @@ class TrendForecastBody(BaseModel):
     trend_id: str | None = None
     topic: str | None = None
     tvs_score: float | None = None
+    lifecycle: str | None = None
+    growth: float | None = None
+    velocity: float | None = None
+    history: list[dict[str, Any]] | None = None
+    periods: int | None = 90
 
 
 class ScoreIdeaBody(BaseModel):

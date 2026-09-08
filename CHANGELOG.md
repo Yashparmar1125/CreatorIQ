@@ -117,3 +117,123 @@ interface TrendItem {
    - Validated outlier detection with diverse concept pools. Breakout spikes correctly receive `is_momentum_outlier = True`.
 4. **Percentile Bucket Unit Test**:
    - Validated volume quartiles accurately assign `small`, `medium`, and `big` tiers across skewed creator distributions.
+
+---
+
+# CHANGELOG — Prophet Time-Series Trajectory Forecasting Integration
+
+**Release / Patch Version**: `v1.3.0-prophet-forecast`  
+**Date**: September 8, 2026  
+**Scope**: `backend/services/ml/`, `backend/services/trend/`, `frontend/`  
+**Component**: Machine Learning Inference, Trajectory Analytics & UI Visualization  
+
+---
+
+## 1. Executive Summary
+
+This release productionizes the predictive time-series research from `Prophet/` into CreatorIQ's internal `ml` microservice and connects it to the user interface. It replaces mock hash stubs with Facebook Prophet time-series models capable of projecting 1-Week, 1-Month, and 3-Month trend trajectories with 95% Bayesian credible intervals, growth velocity, and acceleration.
+
+---
+
+## 2. Detailed File-by-File Changes
+
+### `backend/services/ml/requirements.txt`
+- Added `prophet>=1.1.5`, `pandas>=2.0.0`, `numpy>=1.26.0`, and `httpx`.
+
+### `backend/services/ml/app/services/forecast_engine.py` (New File)
+- Implemented `ForecastEngine` class:
+  - Model configurations: Linear growth, additive seasonality, changepoint prior scale `0.05`, and 95% credible intervals (`interval_width=0.95`).
+  - Synthetic prior generation: Automatically generates calibrated priors when historical points are sparse (< 7 points).
+  - Horizon extractions: Predicts exact scores, lower bounds, upper bounds, and directional classifications for 1-Week (D+7), 1-Month (D+30), and 3-Months (D+90).
+  - First and second derivative tracking: Calculates trajectory velocity and acceleration.
+  - Heuristic fallback: Gracefully handles missing libraries or computation exceptions.
+
+### `backend/services/ml/app/services/ml_service.py`
+- Replaced the pseudo-random SHA256 hash stub in `trend_forecast()` with direct execution of `ForecastEngine.generate_forecast()`.
+
+### `backend/services/ml/app/api/v1/endpoints/ml.py`
+- Updated `TrendForecastBody` schema to accept optional `history` (`[{"ds": "...", "y": float}]`) and `periods: int`.
+
+### `backend/services/trend/app/services/trend_service.py`
+- Added `get_trend_forecast(db, trend_id)`: Fetches concept momentum, queries `http://ml:8007/internal/ml/trend-forecast`, and returns the 90-day forecast payload with fallback safety.
+
+### `backend/services/trend/app/api/v1/endpoints/trend.py`
+- Exposed endpoint `GET /trends/{trend_id}/forecast`.
+
+### `frontend/src/stores/useTrendsStore.ts`
+- Added `TrendForecastData`, `HorizonForecast`, and `TrajectoryPoint` interfaces.
+- Added `trendForecast`, `isForecastLoading`, and `forecastError` store state.
+- Implemented `fetchTrendForecast(trendId: string)` and wired cleanup into `clearTrendDetail()`.
+
+### `frontend/src/features/trends/components/TrendForecastChart.tsx` (New File)
+- Built a responsive SVG visualization component displaying:
+  - 95% Bayesian credible interval shaded gradient band.
+  - Expected trend trajectory curve with horizon markers.
+  - Summary cards for 1-Week, 1-Month, and 3-Month horizons with direction icons.
+  - Uncertainty confidence indicators (High / Moderate / Broad Uncertainty).
+
+### `frontend/src/features/trends/pages/TrendDetailPage.tsx`
+- Embedded `<TrendForecastChart />` in the main view.
+- Added badges for `creator_tier` and `is_momentum_outlier` (`Breakout Spike`).
+
+---
+
+## 3. API Contract Additions
+
+### `GET /api/v1/trend/trends/{trend_id}/forecast`
+```json
+{
+  "data": {
+    "topic": "AI Video Editing",
+    "origin_date": "2026-09-08",
+    "current_score": 74.5,
+    "horizons": {
+      "1_week": {
+        "target_date": "2026-09-15",
+        "forecast_score": 73.28,
+        "lower_bound": 65.82,
+        "upper_bound": 80.38,
+        "direction": "relatively stable",
+        "change_pct": -1.6
+      },
+      "1_month": {
+        "target_date": "2026-10-08",
+        "forecast_score": 69.21,
+        "lower_bound": 55.4,
+        "upper_bound": 82.5,
+        "direction": "moderate decrease",
+        "change_pct": -7.1
+      },
+      "3_months": {
+        "target_date": "2026-12-07",
+        "forecast_score": 58.98,
+        "lower_bound": 40.0,
+        "upper_bound": 78.0,
+        "direction": "strong decrease",
+        "change_pct": -20.8
+      }
+    },
+    "trajectory": [
+      { "ds": "2026-09-09", "yhat": 74.2, "yhat_lower": 71.0, "yhat_upper": 77.4 }
+    ],
+    "metrics": {
+      "avg_velocity": -0.1725,
+      "avg_acceleration": 0.0007,
+      "uncertainty": "moderate"
+    },
+    "model_used": "Prophet_Additive"
+  },
+  "meta": { "request_id": "trend-engine" }
+}
+```
+
+---
+
+## 4. Verification Completed
+1. **Python Bytecode Compilation**: Verified `forecast_engine.py`, `ml_service.py`, `ml.py`, `trend_service.py`, and `trend.py`.
+2. **ML Prophet Inference Test**: Verified real CmdStanPy/Prophet fitting and predictions on 90-day periods.
+3. **Dual-Mode History Verification**:
+   - **Mode 1 (Empirical Signals)**: Verified fitting on 730 real time-series observations from `Prophet/sample-dataset-creatoriq.csv` (`data_source: "real_history"`, `observations_count: 730`).
+   - **Mode 2 (Cold-Start Synthetic Fallback)**: Verified fallback triggering when history is empty or sparse (<7 observations), synthesizing a 14-day calibrated prior (`data_source: "synthetic_prior_fallback"`, `observations_count: 15`).
+   - **Mode 3 (Linear Heuristic Fallback)**: Verified graceful degradation when Prophet/C++ dependencies are missing.
+4. **Frontend Production Build**: `npm run build` completed successfully (`tsc -b && vite build`) with zero TypeScript errors.

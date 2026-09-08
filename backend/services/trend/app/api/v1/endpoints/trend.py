@@ -87,6 +87,15 @@ async def trend_detail(
     return await service.trend_detail(db, user, uuid.UUID(trend_id))
 
 
+@router.get("/trends/{trend_id}/forecast")
+async def get_trend_forecast(
+    trend_id: str,
+    user: UserContext = Depends(get_user_context),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    return await service.get_trend_forecast(db, uuid.UUID(trend_id))
+
+
 @router.post("/trends/{trend_id}/save")
 async def save_trend(
     trend_id: str,

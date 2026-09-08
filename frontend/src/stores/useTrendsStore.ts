@@ -33,6 +33,44 @@ export interface Trend {
   ai_enriched?: boolean;
   title_ideas?: string[];
   description?: string;
+  creator_tier?: 'small' | 'medium' | 'big';
+  is_momentum_outlier?: boolean;
+}
+
+export interface HorizonForecast {
+  target_date: string;
+  forecast_score: number;
+  lower_bound: number;
+  upper_bound: number;
+  direction: string;
+  change_pct: number;
+}
+
+export interface TrajectoryPoint {
+  ds: string;
+  yhat: number;
+  yhat_lower: number;
+  yhat_upper: number;
+}
+
+export interface TrendForecastData {
+  topic: string;
+  origin_date: string;
+  current_score: number;
+  horizons: {
+    '1_week'?: HorizonForecast;
+    '1_month'?: HorizonForecast;
+    '3_months'?: HorizonForecast;
+  };
+  trajectory: TrajectoryPoint[];
+  metrics: {
+    avg_velocity: number;
+    avg_acceleration: number;
+    uncertainty: 'low' | 'moderate' | 'high';
+  };
+  model_used: string;
+  data_source?: 'real_history' | 'synthetic_prior_fallback' | 'heuristic_fallback';
+  observations_count?: number;
 }
 
 export interface ChannelContext {
@@ -114,12 +152,16 @@ interface TrendsState {
   trendDetail: Trend | null;
   isDetailLoading: boolean;
   detailError: string | null;
+  trendForecast: TrendForecastData | null;
+  isForecastLoading: boolean;
+  forecastError: string | null;
   fetchTrends: (query?: string) => Promise<void>;
   refreshFeed: () => Promise<void>;
   fetchFeedHistory: () => Promise<void>;
   loadHistoricalFeed: (feedId: string) => Promise<void>;
   loadCurrentFeed: () => Promise<void>;
   fetchTrendDetail: (trendId: string) => Promise<void>;
+  fetchTrendForecast: (trendId: string) => Promise<void>;
   clearTrendDetail: () => void;
   toggleSaveTrend: (id: string) => Promise<void>;
   setFormatFilter: (filter: 'all' | 'long_form' | 'shorts') => void;
@@ -146,6 +188,9 @@ export const useTrendsStore = create<TrendsState>((set, get) => ({
   trendDetail: null,
   isDetailLoading: false,
   detailError: null,
+  trendForecast: null,
+  isForecastLoading: false,
+  forecastError: null,
 
   setFormatFilter: (filter) => set({ activeFormatFilter: filter }),
 
@@ -223,7 +268,25 @@ export const useTrendsStore = create<TrendsState>((set, get) => ({
     }
   },
 
-  clearTrendDetail: () => set({ trendDetail: null, detailError: null, isDetailLoading: false }),
+  fetchTrendForecast: async (trendId: string) => {
+    set({ isForecastLoading: true, forecastError: null });
+    try {
+      const { data } = await api.get(`/trends/${trendId}/forecast`);
+      set({ trendForecast: data.data as TrendForecastData, isForecastLoading: false });
+    } catch (err) {
+      set({ forecastError: extractError(err), isForecastLoading: false });
+    }
+  },
+
+  clearTrendDetail: () =>
+    set({
+      trendDetail: null,
+      detailError: null,
+      isDetailLoading: false,
+      trendForecast: null,
+      forecastError: null,
+      isForecastLoading: false,
+    }),
 
   toggleSaveTrend: async (trendId: string) => {
     const trend = get().trends.find((t) => t.id === trendId) ?? get().trendDetail;

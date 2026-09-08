@@ -14,19 +14,33 @@ import {
   Loader2,
   Sparkles,
   Bookmark,
+  Flame,
 } from 'lucide-react';
 
 import { cleanTrendTitle } from '../../../lib/cleanTrendTitle';
+import { TrendForecastChart } from '../components/TrendForecastChart';
 
 export const TrendDetailPage: React.FC = () => {
   const { trendId } = useParams<{ trendId: string }>();
   const navigate = useNavigate();
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
-  const { trendDetail, isDetailLoading, detailError, fetchTrendDetail, clearTrendDetail, toggleSaveTrend } =
-    useTrendsStore();
+  const {
+    trendDetail,
+    isDetailLoading,
+    detailError,
+    trendForecast,
+    isForecastLoading,
+    fetchTrendDetail,
+    fetchTrendForecast,
+    clearTrendDetail,
+    toggleSaveTrend,
+  } = useTrendsStore();
 
   useEffect(() => {
-    if (trendId) fetchTrendDetail(trendId);
+    if (trendId) {
+      fetchTrendDetail(trendId);
+      fetchTrendForecast(trendId);
+    }
     return () => clearTrendDetail();
   }, [trendId]);
 
@@ -76,6 +90,17 @@ export const TrendDetailPage: React.FC = () => {
               </Badge>
             ))}
             <Badge variant="neutral">{trend.archetype}</Badge>
+            {trend.creator_tier && (
+              <Badge variant="neutral" className="capitalize">
+                {trend.creator_tier} creator
+              </Badge>
+            )}
+            {trend.is_momentum_outlier && (
+              <Badge variant="warning" className="gap-1 border-amber-500/30 text-amber-600 dark:text-amber-400">
+                <Flame className="h-3 w-3" />
+                Breakout Spike
+              </Badge>
+            )}
             {trend.ai_enriched && (
               <Badge variant="neutral">
                 <Sparkles className="h-3 w-3" />
@@ -113,6 +138,17 @@ export const TrendDetailPage: React.FC = () => {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
+          {isForecastLoading ? (
+            <Card variant="elevated" className="flex items-center justify-center p-8">
+              <div className="flex items-center gap-2 text-sm text-neutral-500">
+                <Loader2 className="h-4 w-4 animate-spin text-brand-600" />
+                Generating Prophet trajectory forecast...
+              </div>
+            </Card>
+          ) : trendForecast ? (
+            <TrendForecastChart forecast={trendForecast} />
+          ) : null}
+
           <Card variant="elevated">
             <h2 className="text-sm font-semibold text-neutral-900">Why it&apos;s trending</h2>
             <p className="mt-2 text-sm leading-relaxed text-neutral-600">

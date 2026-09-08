@@ -61,13 +61,37 @@ All configurations reside in [`backend/services/trend/app/core/config.py`](file:
 | :--- | :--- | :--- |
 | `QDRANT_URL` | `http://qdrant:6333` | Internal Docker hostname and port for Qdrant |
 | `ENABLE_VECTOR_SEARCH` | `True` | Master toggle for semantic embedding and vector similarity |
+| `ML_SERVICE_URL` | `http://ml:8007` | Internal Docker endpoint for Prophet ML forecasting service |
 | `YOUTUBE_API_KEY` | *(Secret)* | Server key for YouTube Data API v3 video lookups |
 | `SERPAPI_API_KEY` | *(Secret)* | Key for Google Trends search and rising queries |
 | `COLLECTOR_INTERVAL_HOURS` | `4` | Frequency of background cron collection runs |
 
 ---
 
-## 4. Failure Modes & Troubleshooting Runbook
+## 4. Machine Learning & Prophet Time-Series Architecture
+
+The `backend/services/ml` container runs an internal inference server on port `8007`.
+
+```mermaid
+sequenceDiagram
+    participant TrendService as Trend Service (:8003)
+    participant MLService as ML Service (:8007)
+    participant ProphetEngine as ForecastEngine (Prophet)
+
+    TrendService->>MLService: POST /internal/ml/trend-forecast { topic, tvs_score, periods: 90 }
+    MLService->>ProphetEngine: generate_forecast(topic, current_score, history, periods)
+    Note over ProphetEngine: Fits Prophet_Additive model<br/>Linear growth, weekly seasonality, changepoint scale 0.05
+    ProphetEngine-->>MLService: Return 95% Bayesian credible interval + horizons (1W, 1M, 3M)
+    MLService-->>TrendService: Return JSON payload with trajectory curve
+```
+
+- **Model**: Facebook Prophet with linear growth, weekly seasonality, changepoint prior scale `0.05`, and 95% Bayesian credible interval (`interval_width=0.95`).
+- **Cold Start & Sparse Data Safety**: When historical daily records are sparse (< 7 observations), `ForecastEngine` synthesizes calibrated Bayesian priors around the concept's current score so that inference never fails.
+- **Fail-Safe Heuristic Fallback**: If CmdStanPy or Prophet encounters a fitting exception, the service falls back to an analytic projection curve so the user experience is never interrupted.
+
+---
+
+## 5. Failure Modes & Troubleshooting Runbook
 
 ### Issue A: Qdrant Connection Failure
 - **Symptom**: Logs show `Could not connect to Qdrant at http://qdrant:6333`.
@@ -83,9 +107,14 @@ All configurations reside in [`backend/services/trend/app/core/config.py`](file:
 - **Explanation**: `all-MiniLM-L6-v2` is loaded into memory on first call (`_get_model()`). This is expected behavior.
 - **Safeguard**: Ensure the `trend` container has at least 512MB RAM allocated (the current Azure VM has 4GB total, which is plenty).
 
-### Issue C: Feed Response Takes > 5 Seconds
-- **Check**: Verify that the sync upsert loop was not reintroduced in `_build_ranked_pool()`.
-- **Diagnostic Command**:
+### Issue C: ML Service Trajectory Forecast Returns Fallback Extrapolation
+- **Symptom**: `model_used` in forecast response displays `Fallback_Extrapolation` or `Linear_Fallback`.
+- **Diagnosis**: Check if `ml` service is running and healthy:
   ```bash
-  curl -w "Time Total: %{time_total}s\n" -o /dev/null -s http://localhost:8003/health
+  docker compose logs ml --tail 50
+  curl -s http://localhost:8007/health
+  ```
+- **Recovery**: Rebuild the `ml` service container:
+  ```bash
+  docker compose build ml && docker compose up -d ml
   ```

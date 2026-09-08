@@ -6,11 +6,13 @@ from typing import Any
 
 import httpx
 from fastapi import HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.deps import UserContext
-from app.models.trend_models import Trend
+from app.models.trend_models import Trend, TrendSignal
+from app.models.concept_models import ConceptSignal
 from app.repositories.trend_repository import TrendRepository
 from app.services.feed_service import FeedService
 from app.services.concept_collector import ConceptCollector
@@ -478,6 +480,111 @@ class TrendService:
             )
         saved = await self.repo.is_saved(db, user.user_id, trend_id)
         return {"data": self._serialize_trend(t, saved=saved), "meta": {"request_id": "local-dev"}}
+
+    async def get_trend_forecast(self, db: AsyncSession, trend_id: uuid.UUID) -> dict:
+        """Fetches Prophet trajectory forecast for a trend/concept from ML service."""
+        topic = "Trend Opportunity"
+        score = 50.0
+        lifecycle = "emerging"
+        growth = 0.0
+        velocity = 0.0
+        history: list[dict[str, Any]] = []
+
+        # Try concept store first
+        concept = await self.feed.concept_repo.get_by_id(db, trend_id)
+        if concept:
+            topic = concept.canonical_title
+            score = float(concept.raw_momentum or 50.0)
+            lifecycle = str(concept.lifecycle.value if hasattr(concept.lifecycle, "value") else concept.lifecycle)
+            growth = float(concept.google_trends_growth or 0.0)
+            velocity = float(concept.youtube_search_velocity or concept.youtube_video_velocity or 0.0)
+
+            # Query real empirical signals if available
+            try:
+                sig_res = await db.execute(
+                    select(ConceptSignal)
+                    .where(ConceptSignal.concept_id == trend_id)
+                    .order_by(ConceptSignal.captured_at.asc())
+                )
+                for s in sig_res.scalars().all():
+                    val = score
+                    if isinstance(s.payload, dict):
+                        val = float(s.payload.get("raw_momentum") or s.payload.get("value") or score)
+                    history.append({"ds": s.captured_at.strftime("%Y-%m-%d"), "y": val})
+            except Exception:
+                pass
+        else:
+            # Check legacy trend table
+            t = await self.repo.get_trend(db, trend_id)
+            if t:
+                topic = t.topic
+                score = float(t.tvs_score or 50.0)
+                lifecycle = str(t.status.value if hasattr(t.status, "value") else t.status)
+                velocity = float(t.prediction_confidence or 0.5) * 2.0
+
+                # Query real empirical trend signals if available
+                try:
+                    ts_res = await db.execute(
+                        select(TrendSignal)
+                        .where(TrendSignal.trend_id == trend_id)
+                        .order_by(TrendSignal.recorded_at.asc())
+                    )
+                    for s in ts_res.scalars().all():
+                        history.append({"ds": s.recorded_at.strftime("%Y-%m-%d"), "y": float(s.relative_interest)})
+                except Exception:
+                    pass
+
+        # Call ML Service Prophet endpoint
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                r = await client.post(
+                    f"{settings.ml_service_url}/internal/ml/trend-forecast",
+                    json={
+                        "trend_id": str(trend_id),
+                        "topic": topic,
+                        "tvs_score": score,
+                        "lifecycle": lifecycle,
+                        "growth": growth,
+                        "velocity": velocity,
+                        "history": history,
+                        "periods": 90,
+                    },
+                    headers={"X-Internal-Service-Token": settings.internal_service_token},
+                )
+                r.raise_for_status()
+                payload = r.json()
+                forecast_data = payload.get("data", {})
+        except Exception as exc:
+            # Fallback in case ML service is unreachable
+            from datetime import date, timedelta
+            today = date.today()
+            trajectory = [
+                {
+                    "ds": (today + timedelta(days=i)).strftime("%Y-%m-%d"),
+                    "yhat": round(min(100.0, max(5.0, score + (i * 0.05))), 2),
+                    "yhat_lower": round(max(0.0, score - 5.0), 2),
+                    "yhat_upper": round(min(100.0, score + 8.0), 2),
+                }
+                for i in range(1, 91)
+            ]
+            w1 = trajectory[6]
+            m1 = trajectory[29]
+            m3 = trajectory[-1]
+            forecast_data = {
+                "topic": topic,
+                "origin_date": today.strftime("%Y-%m-%d"),
+                "current_score": score,
+                "horizons": {
+                    "1_week": {"target_date": w1["ds"], "forecast_score": w1["yhat"], "lower_bound": w1["yhat_lower"], "upper_bound": w1["yhat_upper"], "direction": "relatively stable", "change_pct": 0.5},
+                    "1_month": {"target_date": m1["ds"], "forecast_score": m1["yhat"], "lower_bound": m1["yhat_lower"], "upper_bound": m1["yhat_upper"], "direction": "moderate increase", "change_pct": 2.1},
+                    "3_months": {"target_date": m3["ds"], "forecast_score": m3["yhat"], "lower_bound": m3["yhat_lower"], "upper_bound": m3["yhat_upper"], "direction": "moderate increase", "change_pct": 3.8},
+                },
+                "trajectory": trajectory,
+                "metrics": {"avg_velocity": 0.05, "avg_acceleration": 0.0, "uncertainty": "moderate"},
+                "model_used": "Fallback_Extrapolation",
+            }
+
+        return {"data": forecast_data, "meta": {"request_id": "trend-engine"}}
 
     # ─────────────────────────────────────────────────────────────────────────
     # Save / Unsave  (live trends auto-upserted before saving)

@@ -49,3 +49,7 @@ Thumbs.db
 *.pdf
 *.zip
 *.tar.gz
+
+# Reference repositories & research data
+CreatorIQ-main/
+Prophet/
