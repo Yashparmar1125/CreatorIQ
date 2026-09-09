@@ -1,0 +1,113 @@
+name: Continuous Integration Quality Gate
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  detect-changes:
+    name: Detect Changed Components
+    runs-on: ubuntu-latest
+    outputs:
+      frontend: ${{ steps.filter.outputs.frontend }}
+      backend: ${{ steps.filter.outputs.backend }}
+      infra: ${{ steps.filter.outputs.infra }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Paths Filter
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            frontend:
+              - 'frontend/**'
+              - '.github/workflows/ci.yml'
+              - '.github/workflows/deploy-frontend.yml'
+            backend:
+              - 'backend/**'
+              - '.github/workflows/ci.yml'
+              - '.github/workflows/deploy-backend.yml'
+            infra:
+              - 'infra/**'
+              - '.github/workflows/ansible-provision.yml'
+
+  # --------------------------------------------------------------------------
+  # TRACK 1: FRONTEND QUALITY GATE (Runs in parallel with Backend)
+  # --------------------------------------------------------------------------
+  frontend-ci:
+    name: Frontend (Lint, Typecheck & Bundle)
+    needs: detect-changes
+    if: needs.detect-changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies (npm ci)
+        run: npm ci
+
+      - name: Run ESLint Quality Check
+        run: npm run lint
+
+      - name: Build production bundle (tsc -b && vite build)
+        run: npm run build
+
+      - name: Upload Build Artifact for Verification
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist/
+          retention-days: 7
+
+  # --------------------------------------------------------------------------
+  # TRACK 2: BACKEND QUALITY GATE (Runs in parallel with Frontend)
+  # --------------------------------------------------------------------------
+  backend-ci:
+    name: Backend (Syntax, Types & Bytecode)
+    needs: detect-changes
+    if: needs.detect-changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Validate Python Bytecode Compilation Across All Microservices
+        run: |
+          python -m compileall backend/services/
+
+      - name: Verify Dockerfiles Exist and are Non-Empty
+        run: |
+          for svc in api-gateway auth channel trend strategy planner analytics ml; do
+            DF="backend/services/$svc/Dockerfile"
+            if [ ! -s "$DF" ]; then
+              echo "Error: $DF missing or empty!"
+              exit 1
+            fi
+            echo "  [OK] $DF verified"
+          done

@@ -1,0 +1,85 @@
+name: Deploy Frontend to Vercel
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/deploy-frontend.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: cd-frontend-production
+  cancel-in-progress: true
+
+jobs:
+  quality-gate:
+    name: Frontend Quality Gate
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies (npm ci)
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Run TypeScript Compile & Vite Production Build
+        run: npm run build
+
+      - name: Upload production artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-production-bundle
+          path: frontend/dist/
+          retention-days: 7
+
+  deploy-vercel:
+    name: Deploy to Vercel Production
+    needs: quality-gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check for Vercel Credentials
+        id: check_creds
+        run: |
+          if [ -n "${{ secrets.VERCEL_TOKEN }}" ]; then
+            echo "has_token=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_token=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Deploy via Vercel Action (If Token Configured)
+        if: steps.check_creds.outputs.has_token == 'true'
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod'
+          working-directory: ./frontend
+
+      - name: Vercel Git Hook Notice (If Token Not Configured)
+        if: steps.check_creds.outputs.has_token != 'true'
+        run: |
+          echo "=========================================================================="
+          echo "  Vercel Token not set in GitHub Secrets.                                 "
+          echo "  Using Vercel Native Git Integration:                                    "
+          echo "  Vercel triggers automatic deployment on push to 'main'.                "
+          echo "  Quality gate in previous step passed 100% (Lint, Typecheck & Build OK). "
+          echo "=========================================================================="
