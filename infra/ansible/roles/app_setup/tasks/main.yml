@@ -61,7 +61,8 @@
       JWT_PUBLIC_KEY_PATH=/run/secrets/jwt_public.pem
       JWT_PRIVATE_KEY_PATH=/run/secrets/jwt_private.pem
       INTERNAL_SERVICE_TOKEN=ciq_prod_internal_token_secret
-      FRONTEND_URL=https://creatoriq.vercel.app
+      FRONTEND_URL=https://creatoriq.yashparmar.in,https://creatoriq.vercel.app
+      GOOGLE_OAUTH_REDIRECT_URI=https://api.ciq.yashparmar.in/v1/auth/google/callback
       IMAGE_REGISTRY=ghcr.io/yashparmar1125
       IMAGE_TAG=latest
     owner: ubuntu

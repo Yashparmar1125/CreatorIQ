@@ -144,14 +144,13 @@ class AuthService:
         self,
         db: AsyncSession,
         background_tasks: BackgroundTasks,
-        *,
         code: str | None,
         state: str | None,
         oauth_error: str | None,
-        ip_address: str | None,
-        user_agent: str | None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
     ) -> RedirectResponse:
-        fe = settings.frontend_url.rstrip("/")
+        fe = settings.frontend_url.split(",")[0].strip().rstrip("/")
         if oauth_error:
             return RedirectResponse(url=f"{fe}/login?error={quote(oauth_error)}", status_code=302)
         if not code or not state:

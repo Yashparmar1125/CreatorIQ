@@ -18,7 +18,8 @@ x-common-env: &common-env
   ANALYTICS_SERVICE_URL: http://analytics:8006
   ML_SERVICE_URL: http://ml:8007
   QDRANT_URL: http://qdrant:6333
-  FRONTEND_URL: ${FRONTEND_URL:-https://creatoriq.vercel.app}
+  FRONTEND_URL: ${FRONTEND_URL:-https://creatoriq.yashparmar.in,https://creatoriq.vercel.app}
+  GOOGLE_OAUTH_REDIRECT_URI: ${GOOGLE_OAUTH_REDIRECT_URI:-https://api.ciq.yashparmar.in/v1/auth/google/callback}
 
 x-service-defaults: &service-defaults
   env_file:
