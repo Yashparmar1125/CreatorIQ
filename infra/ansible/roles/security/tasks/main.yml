@@ -1,0 +1,50 @@
+---
+- name: Set UFW default incoming policy to deny
+  ufw:
+    direction: incoming
+    default: deny
+
+- name: Set UFW default outgoing policy to allow
+  ufw:
+    direction: outgoing
+    default: allow
+
+- name: Allow SSH on port 22
+  ufw:
+    rule: allow
+    port: '22'
+    proto: tcp
+
+- name: Allow HTTP on port 80
+  ufw:
+    rule: allow
+    port: '80'
+    proto: tcp
+
+- name: Allow HTTPS on port 443
+  ufw:
+    rule: allow
+    port: '443'
+    proto: tcp
+
+- name: Explicitly block external access to internal backend ports
+  ufw:
+    rule: deny
+    port: "{{ item }}"
+    proto: tcp
+  loop:
+    - '5432'
+    - '6379'
+    - '6333'
+    - '8000'
+    - '8001'
+    - '8002'
+    - '8003'
+    - '8004'
+    - '8005'
+    - '8006'
+    - '8007'
+
+- name: Enable UFW service
+  ufw:
+    state: enabled

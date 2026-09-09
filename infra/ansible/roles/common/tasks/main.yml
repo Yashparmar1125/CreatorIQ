@@ -1,0 +1,27 @@
+---
+- name: Update apt cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Install system dependencies
+  apt:
+    name:
+      - curl
+      - wget
+      - git
+      - htop
+      - ca-certificates
+      - gnupg
+      - lsb-release
+      - ufw
+      - fail2ban
+      - unzip
+      - jq
+    state: present
+
+- name: Ensure fail2ban service is enabled and running
+  systemd:
+    name: fail2ban
+    enabled: yes
+    state: started

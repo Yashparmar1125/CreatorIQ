@@ -1,0 +1,28 @@
+name: Provision Server via Ansible
+
+on:
+  workflow_dispatch:
+
+jobs:
+  ansible-provision:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup SSH Key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/ciq_key.pem
+          chmod 600 ~/.ssh/ciq_key.pem
+          ssh-keyscan -H 172.198.162.160 >> ~/.ssh/known_hosts
+
+      - name: Install Ansible
+        run: |
+          sudo apt update
+          sudo apt install -y ansible
+
+      - name: Run Ansible Playbook
+        run: |
+          cd infra/ansible
+          ansible-playbook -i inventory.ini playbook.yml

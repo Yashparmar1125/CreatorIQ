@@ -1,0 +1,70 @@
+---
+- name: Create application and secrets directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+    mode: '0755'
+  loop:
+    - /opt/creatoriq
+    - /opt/creatoriq/backend
+    - /opt/creatoriq/backend/secrets
+    - /opt/creatoriq/backend/scripts
+
+- name: Deploy JWT secrets
+  copy:
+    src: "{{ playbook_dir }}/../../backend/secrets/{{ item }}"
+    dest: "/opt/creatoriq/backend/secrets/{{ item }}"
+    owner: ubuntu
+    group: ubuntu
+    mode: '0600'
+  loop:
+    - jwt_private.pem
+    - jwt_public.pem
+  ignore_errors: yes
+
+- name: Deploy production docker-compose file
+  copy:
+    src: "{{ playbook_dir }}/../../backend/docker-compose.prod.yml"
+    dest: "/opt/creatoriq/backend/docker-compose.prod.yml"
+    owner: ubuntu
+    group: ubuntu
+    mode: '0644'
+
+- name: Deploy deployment script
+  copy:
+    src: "{{ playbook_dir }}/../../backend/scripts/deploy.sh"
+    dest: "/opt/creatoriq/backend/scripts/deploy.sh"
+    owner: ubuntu
+    group: ubuntu
+    mode: '0755'
+
+- name: Check if production .env exists on server
+  stat:
+    path: /opt/creatoriq/backend/.env
+  register: env_file_stat
+
+- name: Create base production .env if absent
+  copy:
+    dest: /opt/creatoriq/backend/.env
+    content: |
+      ENVIRONMENT=production
+      LOG_LEVEL=INFO
+      POSTGRES_DB=creatoriq
+      POSTGRES_USER=creatoriq
+      POSTGRES_PASSWORD=creatoriq
+      DATABASE_URL=postgresql+asyncpg://creatoriq:creatoriq@postgres:5432/creatoriq
+      REDIS_URL=redis://redis:6379/0
+      JWT_ISSUER=creatoriq-auth
+      JWT_AUDIENCE=creatoriq-api
+      JWT_PUBLIC_KEY_PATH=/run/secrets/jwt_public.pem
+      JWT_PRIVATE_KEY_PATH=/run/secrets/jwt_private.pem
+      INTERNAL_SERVICE_TOKEN=ciq_prod_internal_token_secret
+      FRONTEND_URL=https://creatoriq.vercel.app
+      IMAGE_REGISTRY=ghcr.io/yashparmar1125
+      IMAGE_TAG=latest
+    owner: ubuntu
+    group: ubuntu
+    mode: '0600'
+  when: not env_file_stat.stat.exists

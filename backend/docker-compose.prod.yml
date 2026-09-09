@@ -1,0 +1,292 @@
+name: creatoriq-backend-prod
+
+x-common-env: &common-env
+  ENVIRONMENT: ${ENVIRONMENT:-production}
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+  DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://creatoriq:creatoriq@postgres:5432/creatoriq}
+  REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+  JWT_ISSUER: ${JWT_ISSUER:-creatoriq-auth}
+  JWT_AUDIENCE: ${JWT_AUDIENCE:-creatoriq-api}
+  JWT_PUBLIC_KEY_PATH: ${JWT_PUBLIC_KEY_PATH:-/run/secrets/jwt_public.pem}
+  JWT_PRIVATE_KEY_PATH: ${JWT_PRIVATE_KEY_PATH:-/run/secrets/jwt_private.pem}
+  INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
+  AUTH_SERVICE_URL: http://auth:8001
+  CHANNEL_SERVICE_URL: http://channel:8002
+  TREND_SERVICE_URL: http://trend:8003
+  STRATEGY_SERVICE_URL: http://strategy:8004
+  PLANNER_SERVICE_URL: http://planner:8005
+  ANALYTICS_SERVICE_URL: http://analytics:8006
+  ML_SERVICE_URL: http://ml:8007
+  QDRANT_URL: http://qdrant:6333
+  FRONTEND_URL: ${FRONTEND_URL:-https://creatoriq.vercel.app}
+
+x-service-defaults: &service-defaults
+  env_file:
+    - ./.env
+  environment:
+    <<: *common-env
+  networks:
+    - creatoriq-prod-net
+  restart: unless-stopped
+  logging:
+    driver: "json-file"
+    options:
+      max-size: "30m"
+      max-file: "3"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ciq-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-creatoriq}
+      POSTGRES_USER: ${POSTGRES_USER:-creatoriq}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-creatoriq}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - creatoriq-prod-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-creatoriq} -d ${POSTGRES_DB:-creatoriq}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "2"
+
+  redis:
+    image: redis:7-alpine
+    container_name: ciq-redis
+    networks:
+      - creatoriq-prod-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "2"
+
+  qdrant:
+    image: qdrant/qdrant:v1.11.0
+    container_name: ciq-qdrant
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks:
+      - creatoriq-prod-net
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 5 bash -c '</dev/tcp/localhost/6333' || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "2"
+
+  auth:
+    <<: *service-defaults
+    image: ${IMAGE_REGISTRY:-ghcr.io/yashparmar1125}/creatoriq-auth:${IMAGE_TAG:-latest}
+    build: ./services/auth
+    container_name: ciq-auth
+    volumes:
+      - ./secrets:/run/secrets:ro
+    expose:
+      - "8001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  channel:
+    <<: *service-defaults
+    image: ${IMAGE_REGISTRY:-ghcr.io/yashparmar1125}/creatoriq-channel:${IMAGE_TAG:-latest}
+    build: ./services/channel
+    container_name: ciq-channel
+    expose:
+      - "8002"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  ml:
+    <<: *service-defaults
+    image: ${IMAGE_REGISTRY:-ghcr.io/yashparmar1125}/creatoriq-ml:${IMAGE_TAG:-latest}
+    build: ./services/ml
+    container_name: ciq-ml
+    expose:
+      - "8007"
+    deploy:
+      resources:
+        limits:
+          memory: 1200M
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  trend:
+    <<: *service-defaults
+    image: ${IMAGE_REGISTRY:-ghcr.io/yashparmar1125}/creatoriq-trend:${IMAGE_TAG:-latest}
+    build: ./services/trend
+    container_name: ciq-trend
+    expose:
+      - "8003"
+    deploy:
+      resources:
+        limits:
+          memory: 800M
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ml:
+        condition: service_started
+
+  strategy:
+    <<: *service-defaults
+    image: ${IMAGE_REGISTRY:-ghcr.io/yashparmar1125}/creatoriq-strategy:${IMAGE_TAG:-latest}
+    build: ./services/strategy
+    container_name: ciq-strategy
+    expose:
+      - "8004"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ml:
+        condition: service_started
+
+  planner:
+    <<: *service-defaults
+    image: ${IMAGE_REGISTRY:-ghcr.io/yashparmar1125}/creatoriq-planner:${IMAGE_TAG:-latest}
+    build: ./services/planner
+    container_name: ciq-planner
+    expose:
+      - "8005"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  analytics:
+    <<: *service-defaults
+    image: ${IMAGE_REGISTRY:-ghcr.io/yashparmar1125}/creatoriq-analytics:${IMAGE_TAG:-latest}
+    build: ./services/analytics
+    container_name: ciq-analytics
+    expose:
+      - "8006"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  api-gateway:
+    <<: *service-defaults
+    image: ${IMAGE_REGISTRY:-ghcr.io/yashparmar1125}/creatoriq-api-gateway:${IMAGE_TAG:-latest}
+    build: ./services/api-gateway
+    container_name: ciq-api-gateway
+    volumes:
+      - ./secrets:/run/secrets:ro
+    ports:
+      # Bound to localhost only so host reverse-proxy (Caddy) proxies to it securely
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      auth:
+        condition: service_started
+      channel:
+        condition: service_started
+      trend:
+        condition: service_started
+      strategy:
+        condition: service_started
+      planner:
+        condition: service_started
+      analytics:
+        condition: service_started
+      ml:
+        condition: service_started
+
+  # Schema Sync Helpers
+  db-push-auth:
+    profiles: ["db-push"]
+    <<: *service-defaults
+    image: ${IMAGE_REGISTRY:-ghcr.io/yashparmar1125}/creatoriq-auth:${IMAGE_TAG:-latest}
+    restart: "no"
+    command: ["python", "-m", "app.db_push"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  db-push-channel:
+    profiles: ["db-push"]
+    <<: *service-defaults
+    image: ${IMAGE_REGISTRY:-ghcr.io/yashparmar1125}/creatoriq-channel:${IMAGE_TAG:-latest}
+    restart: "no"
+    command: ["python", "-m", "app.db_push"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  db-push-trend:
+    profiles: ["db-push"]
+    <<: *service-defaults
+    image: ${IMAGE_REGISTRY:-ghcr.io/yashparmar1125}/creatoriq-trend:${IMAGE_TAG:-latest}
+    restart: "no"
+    command: ["python", "-m", "app.db_push"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  db-push-strategy:
+    profiles: ["db-push"]
+    <<: *service-defaults
+    image: ${IMAGE_REGISTRY:-ghcr.io/yashparmar1125}/creatoriq-strategy:${IMAGE_TAG:-latest}
+    restart: "no"
+    command: ["python", "-m", "app.db_push"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  db-push-planner:
+    profiles: ["db-push"]
+    <<: *service-defaults
+    image: ${IMAGE_REGISTRY:-ghcr.io/yashparmar1125}/creatoriq-planner:${IMAGE_TAG:-latest}
+    restart: "no"
+    command: ["python", "-m", "app.db_push"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  db-push-analytics:
+    profiles: ["db-push"]
+    <<: *service-defaults
+    image: ${IMAGE_REGISTRY:-ghcr.io/yashparmar1125}/creatoriq-analytics:${IMAGE_TAG:-latest}
+    restart: "no"
+    command: ["python", "-m", "app.db_push"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  qdrant_data:
+
+networks:
+  creatoriq-prod-net:
+    driver: bridge

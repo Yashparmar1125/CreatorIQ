@@ -1,0 +1,18 @@
+---
+- name: Provision CreatorIQ Backend Production Server
+  hosts: all
+  become: yes
+  gather_facts: yes
+
+  vars:
+    domain_name: api.ciq.yashparmar.in
+    app_dir: /opt/creatoriq/backend
+    secrets_dir: /opt/creatoriq/secrets
+
+  roles:
+    - role: common
+    - role: swap
+    - role: security
+    - role: docker
+    - role: reverse_proxy
+    - role: app_setup
