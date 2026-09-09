@@ -24,3 +24,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(api_router)
+
+
+@app.get("/health", tags=["Health"])
+def health_check() -> dict:
+    return {
+        "status": "healthy",
+        "service": settings.service_name,
+        "version": "v1",
+        "environment": settings.environment,
+    }
+
+
+@app.get("/", tags=["Root"])
+def root() -> dict:
+    return {
+        "message": "CreatorIQ API Gateway",
+        "docs": "/docs",
+        "version": "v1",
+    }
+
