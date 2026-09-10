@@ -54,39 +54,15 @@ export const TrendForecastChart: React.FC<TrendForecastChartProps> = ({ forecast
   const chartWidth = width - paddingLeft - paddingRight;
   const chartHeight = height - paddingTop - paddingBottom;
 
-  // Normalize scores to an intuitive 0-100% Demand Index
-  const allYhats = rawPoints.map((p) => p.yhat);
-  const rawMin = Math.min(...allYhats);
-  const rawMax = Math.max(...allYhats);
-  const isFlat = rawMax - rawMin < 1.0;
-
-  const normalizedPoints = rawPoints.map((p, idx) => {
-    let normalizedDemand = 65;
-    let normLower = 50;
-    let normUpper = 80;
-
-    if (!isFlat && rawMax > rawMin) {
-      const ratio = (p.yhat - rawMin) / (rawMax - rawMin);
-      normalizedDemand = Math.round(35 + ratio * 55);
-      normLower = Math.max(15, normalizedDemand - 12);
-      normUpper = Math.min(98, normalizedDemand + 14);
-    } else {
-      // Natural lifecycle curve for flat or sparse fallback signals
-      const progress = idx / (rawPoints.length - 1 || 1);
-      if (progress < 0.25) {
-        normalizedDemand = Math.round(65 + progress * 60); // rising to peak
-      } else if (progress < 0.5) {
-        normalizedDemand = Math.round(80 - (progress - 0.25) * 40);
-      } else {
-        normalizedDemand = Math.max(40, Math.round(70 - (progress - 0.5) * 35));
-      }
-      normLower = Math.max(15, normalizedDemand - 12);
-      normUpper = Math.min(98, normalizedDemand + 12);
-    }
+  // Map trajectory directly to intuitive 0-100% Audience Demand scale
+  const normalizedPoints = rawPoints.map((p) => {
+    const demand = Math.round(Math.max(5, Math.min(100, p.yhat)));
+    const normLower = Math.round(Math.max(0, Math.min(100, p.yhat_lower ?? (demand - 8))));
+    const normUpper = Math.round(Math.max(0, Math.min(100, p.yhat_upper ?? (demand + 8))));
 
     return {
       ...p,
-      demand: normalizedDemand,
+      demand,
       normLower,
       normUpper,
     };

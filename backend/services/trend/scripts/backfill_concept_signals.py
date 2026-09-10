@@ -9,7 +9,7 @@ import math
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import select, func
+from sqlalchemy import select, func, delete
 from app.core.db import SessionLocal
 from app.models.concept_models import TrendConcept, ConceptSignal, ConceptSignalSource, ConceptLifecycle
 
@@ -19,7 +19,16 @@ async def backfill_signals():
     print(f"[*] Starting historical signal backfill at {now.isoformat()}...")
 
     async with SessionLocal() as db:
-        # Fetch all concepts
+        # 1. Clean up any previous synthetic backfill entries
+        print("[*] Cleaning up existing backfill records...")
+        await db.execute(
+            delete(ConceptSignal).where(
+                ConceptSignal.payload["source"].astext == "backfill_historical"
+            )
+        )
+        await db.commit()
+
+        # 2. Fetch all concepts
         result = await db.execute(select(TrendConcept))
         concepts = result.scalars().all()
         print(f"[*] Loaded {len(concepts)} concepts from trend_concepts table.")
@@ -28,60 +37,57 @@ async def backfill_signals():
             print("[!] No concepts found to backfill.")
             return
 
-        # Fetch existing signal counts per concept
-        count_res = await db.execute(
-            select(
-                ConceptSignal.concept_id,
-                func.count(func.distinct(func.date(ConceptSignal.captured_at)))
-            ).group_by(ConceptSignal.concept_id)
-        )
-        existing_days_map = dict(count_res.all())
-
         new_signals = []
         concepts_updated = 0
 
         for c in concepts:
-            existing_days = existing_days_map.get(c.id, 0)
-            if existing_days >= 14:
-                # Already has rich historical coverage
-                continue
-
             concepts_updated += 1
             score = float(c.raw_momentum or 50.0)
             lc = c.lifecycle.value if hasattr(c.lifecycle, "value") else str(c.lifecycle or "emerging")
             growth = float(c.google_trends_growth or 0.0)
             seed = sum(ord(ch) for ch in c.canonical_title) % 100
 
-            # Determine slope and direction based on lifecycle
-            if lc in ["emerging", "growing"] or growth > 20:
-                slope = max(0.4, min(1.8, (growth / 100.0) if growth > 0 else 0.8))
-                mode = "up"
-            elif lc == "peaking":
-                mode = "peak"
-            elif lc in ["declining", "expired"] or growth < -15:
-                slope = 0.6
-                mode = "down"
+            # Determine trajectory mode based on genuine lifecycle dynamics
+            if lc == "peaking":
+                # Active viral breakout that accelerated over the past 30 days reaching its peak TODAY
+                mode = "peak_surge"
+            elif lc == "emerging":
+                # Early explosive discovery curve
+                mode = "emerging_surge"
+            elif lc == "growing" or growth > 15:
+                # Steady consistent climb
+                mode = "growing_climb"
+            elif lc in ["declining", "expired"] or growth < -20:
+                # Decaying trend that was higher in the past
+                mode = "declining_drop"
             else:
-                slope = 0.4
-                mode = "up"
+                mode = "growing_climb"
 
             for day_offset in range(30, 0, -1):
                 signal_date = (now - timedelta(days=day_offset)).replace(
                     hour=12, minute=0, second=0, microsecond=0
                 )
-                noise = math.sin((day_offset + seed) / 2.5) * 1.5
+                progress = (30 - day_offset) / 30.0  # 0.0 at day -30, 0.97 at day -1
+                noise = math.sin((day_offset + seed) / 2.5) * 1.2
 
-                if mode == "up":
-                    y = max(5.0, min(100.0, score - (day_offset * slope) + noise))
-                elif mode == "peak":
-                    curve = -0.04 * ((day_offset - 8) ** 2)
-                    y = max(5.0, min(100.0, score + curve + noise))
-                elif mode == "down":
-                    y = max(5.0, min(100.0, score + (day_offset * slope) + noise))
+                if mode == "peak_surge":
+                    # Reaches peak score today with strong upward momentum
+                    factor = 0.50 + 0.50 * (progress ** 1.3)
+                    y = score * factor + noise
+                elif mode == "emerging_surge":
+                    # Breakout from low baseline
+                    factor = 0.35 + 0.65 * (progress ** 1.6)
+                    y = score * factor + noise
+                elif mode == "growing_climb":
+                    slope = max(0.4, min(1.4, (growth / 100.0) if growth > 0 else 0.7))
+                    y = score - (day_offset * slope) + noise
+                elif mode == "declining_drop":
+                    slope = 0.5
+                    y = score + (day_offset * slope) + noise
                 else:
-                    y = max(5.0, min(100.0, score - (day_offset * 0.4) + noise))
+                    y = score - (day_offset * 0.5) + noise
 
-                y = round(float(y), 2)
+                y = round(float(max(5.0, min(100.0, y))), 2)
 
                 sig = ConceptSignal(
                     id=uuid.uuid4(),
@@ -100,7 +106,7 @@ async def backfill_signals():
 
         print(f"[*] Prepared {len(new_signals)} historical signals across {concepts_updated} concepts.")
 
-        # Batch insert in chunks of 2000 to keep memory and locks minimal
+        # Batch insert in chunks of 2000
         chunk_size = 2000
         for i in range(0, len(new_signals), chunk_size):
             chunk = new_signals[i:i + chunk_size]
