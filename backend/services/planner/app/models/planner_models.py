@@ -11,6 +11,9 @@ from app.models.base import Base
 
 class SlotStatus(str, enum.Enum):
     not_started = "not_started"
+    scripting = "scripting"
+    recording = "recording"
+    editing = "editing"
     in_progress = "in_progress"
     scripted = "scripted"
     ready = "ready"

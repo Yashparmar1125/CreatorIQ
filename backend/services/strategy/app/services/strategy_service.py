@@ -140,7 +140,13 @@ class StrategyService:
             "meta": {"request_id": "local-dev"},
         }
 
-    async def generate_unified_brief(self, db: AsyncSession, user: UserContext, topic: str) -> dict:
+    async def generate_brief(
+        self,
+        db: AsyncSession,
+        user: UserContext,
+        topic: str,
+        goal: str | None = None,
+    ) -> dict:
         # 1. Fetch channel context
         channel_context = {}
         try:
@@ -153,13 +159,14 @@ class StrategyService:
             print(f"Failed to fetch channel context for strategy: {str(e)}")
 
         # 2. Create Session
+        input_config = {"goal": goal} if goal else {}
         sess = await self.repo.create_session(
             db,
             user_id=user.user_id,
             channel_id=uuid.UUID(channel_context.get("id")) if channel_context.get("id") else uuid.uuid4(),
             trend_id=None,
             input_topic=topic,
-            input_config={},
+            input_config=input_config,
             status=SessionStatus.complete,
             llm_model_version=settings.llm_model,
         )
@@ -167,28 +174,37 @@ class StrategyService:
         # 3. Generate AI Brief
         from app.core.openrouter import _fallback_brief, _sanitize_topic, generate_unified_brief_json
 
+        prompt_topic = f"{topic} (Primary goal: {goal})" if goal else topic
         try:
-            brief_data = await generate_unified_brief_json(topic, channel_context)
+            brief_data = await generate_unified_brief_json(prompt_topic, channel_context)
+            brief_data["source_topic"] = topic
+            if goal and "goal" not in brief_data:
+                brief_data["goal"] = goal
         except Exception as exc:
-            print(f"[strategy] generate_unified_brief failed: {exc}")
+            print(f"[strategy] generate_brief failed: {exc}")
             brief_data = _fallback_brief(_sanitize_topic(topic), channel_context)
+            if goal:
+                brief_data["goal"] = goal
+                brief_data["strategy_insight"] = f"Primary goal: {goal}. " + brief_data.get("strategy_insight", "")
 
         # 4. Save generated items (Title and Strategy Insight as part of one object)
         await self.repo.add_generated(
             db,
             session_id=sess.id,
             content_type=ContentType.idea,
-            content={"brief": brief_data}
+            content={"brief": brief_data},
         )
         await db.commit()
 
         return {
             "data": {
                 "session_id": str(sess.id),
-                "brief": brief_data
+                "brief": brief_data,
             },
-            "meta": {"request_id": "local-dev"}
+            "meta": {"request_id": "local-dev"},
         }
+
+    generate_unified_brief = generate_brief
 
     async def generate_titles(self, db: AsyncSession, user: UserContext, session_id: uuid.UUID) -> dict:
         s = await self.repo.get_session_for_user(db, session_id, user.user_id)

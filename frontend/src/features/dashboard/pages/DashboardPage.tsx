@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router";
 import { useDashboardStore } from "../../../stores/useDashboardStore";
 import { useTrendsStore } from "../../../stores/useTrendsStore";
@@ -11,15 +11,48 @@ import { Button } from "../../../components/ui/Button";
 import { Badge } from "../../../components/ui/Badge";
 import { StatCard } from "../../../components/ui/StatCard";
 import { AIScannerLoader } from "../../../components/ui/AIScannerLoader";
+import { MiniBarChart } from "../../../components/ui/MiniBarChart";
 import {
   Sparkles,
   TrendingUp,
   Lightbulb,
   ArrowRight,
   Zap,
+  BarChart2,
+  ChevronRight,
 } from "lucide-react";
 
 const ACCENTS = ["brand", "cyan", "emerald", "violet"] as const;
+
+type ForecastPeriod = '28d' | '90d' | 'ALL';
+
+interface ForecastData {
+  bars: number[];
+  projectedGrowth: string;
+  comparisonLabel: string;
+  highlightIndex: number;
+}
+
+const FORECAST_PERIOD_DATA: Record<ForecastPeriod, ForecastData> = {
+  '28d': {
+    bars: [42, 56, 68, 72, 85, 94, 108],
+    projectedGrowth: '+12.4%',
+    comparisonLabel: 'vs last period',
+    highlightIndex: 5,
+  },
+  '90d': {
+    bars: [120, 135, 150, 142, 168, 190, 215],
+    projectedGrowth: '+18.7%',
+    comparisonLabel: 'vs last period',
+    highlightIndex: 5,
+  },
+  'ALL': {
+    bars: [310, 380, 420, 490, 560, 640, 750],
+    projectedGrowth: '+34.2%',
+    comparisonLabel: 'all-time projected',
+    highlightIndex: 6,
+  },
+};
 
 function formatSubs(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -29,7 +62,8 @@ function formatSubs(n: number): string {
 
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
-  const { stats, fetchDashboard } = useDashboardStore();
+  const { stats, insights = [], fetchDashboard } = useDashboardStore();
+  const [forecastPeriod, setForecastPeriod] = useState<ForecastPeriod>('28d');
   const {
     trends,
     isLoading: isTrendsLoading,
@@ -55,6 +89,8 @@ export const DashboardPage: React.FC = () => {
   };
 
   const topTrends = trends.slice(0, 4);
+  const currentForecast =
+    FORECAST_PERIOD_DATA[forecastPeriod] ?? FORECAST_PERIOD_DATA['28d'];
 
   return (
     <div className="space-y-8 animate-in">
@@ -263,7 +299,7 @@ export const DashboardPage: React.FC = () => {
       </div>
 
       {/* Performance Forecast Chart & Priority Insights (Harmonized Light Theme) */}
-      {/* <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         <Card variant="elevated" className="lg:col-span-8">
           <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -271,12 +307,13 @@ export const DashboardPage: React.FC = () => {
               <p className="text-xs text-neutral-500">Estimated growth from recent performance</p>
             </div>
             <div className="flex gap-1 rounded-xl border border-neutral-200 bg-neutral-50/80 p-1 shadow-inner">
-              {['28d', '90d', 'ALL'].map((tab) => (
+              {(['28d', '90d', 'ALL'] as const).map((tab) => (
                 <button
                   key={tab}
                   type="button"
+                  onClick={() => setForecastPeriod(tab)}
                   className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
-                    tab === '28d'
+                    forecastPeriod === tab
                       ? 'bg-white text-neutral-900 shadow-sm'
                       : 'text-neutral-500 hover:text-neutral-700'
                   }`}
@@ -286,12 +323,12 @@ export const DashboardPage: React.FC = () => {
               ))}
             </div>
           </div>
-          <MiniBarChart data={FORECAST_DATA} highlightIndex={5} />
+          <MiniBarChart data={currentForecast.bars} highlightIndex={currentForecast.highlightIndex} />
           <div className="mt-4 flex items-center justify-between rounded-lg border border-brand-100 bg-gradient-to-r from-brand-50/80 to-transparent px-4 py-3">
             <div className="flex items-center gap-2 text-sm text-brand-700">
               <BarChart2 className="h-4 w-4" />
-              <span className="font-medium">+12.4% projected</span>
-              <span className="text-brand-600/70">vs last period</span>
+              <span className="font-medium">{currentForecast.projectedGrowth} projected</span>
+              <span className="text-brand-600/70">{currentForecast.comparisonLabel}</span>
             </div>
           </div>
         </Card>
@@ -306,30 +343,38 @@ export const DashboardPage: React.FC = () => {
               <p className="text-xs text-neutral-500">{insights.length} actions available</p>
             </div>
           </div>
-          <div className="space-y-2">
-            {insights.map((item, j) => (
-              <div
-                key={j}
-                className="group rounded-xl border border-neutral-200/80 bg-white p-3.5 shadow-sm transition-all duration-200 hover:border-brand-200 hover:shadow-md"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <Badge variant="brand" className="text-[10px]">
-                    Priority {j + 1}
-                  </Badge>
-                  <ChevronRight className="h-3.5 w-3.5 text-neutral-400 transition-transform group-hover:translate-x-0.5 group-hover:text-brand-600" />
+          {insights.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <Sparkles className="h-8 w-8 text-neutral-300" />
+              <p className="mt-2 text-sm font-medium text-neutral-700">No pending insights</p>
+              <p className="text-xs text-neutral-500">Your channel strategy is running smoothly.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {insights.map((item, j) => (
+                <div
+                  key={j}
+                  className="group rounded-xl border border-neutral-200/80 bg-white p-3.5 shadow-sm transition-all duration-200 hover:border-brand-200 hover:shadow-md"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <Badge variant="brand" className="text-[10px]">
+                      Priority {j + 1}
+                    </Badge>
+                    <ChevronRight className="h-3.5 w-3.5 text-neutral-400 transition-transform group-hover:translate-x-0.5 group-hover:text-brand-600" />
+                  </div>
+                  <p className="mt-2 text-sm font-medium text-neutral-900">{item.title}</p>
+                  <p className="mt-1 text-xs text-neutral-500">{item.impact}</p>
                 </div>
-                <p className="mt-2 text-sm font-medium text-neutral-900">{item.title}</p>
-                <p className="mt-1 text-xs text-neutral-500">{item.impact}</p>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
           <Link to="/app/strategy">
             <Button variant="secondary" className="mt-5 w-full">
               Explore All Insights
             </Button>
           </Link>
         </Card>
-      </div> */}
+      </div>
     </div>
   );
 };

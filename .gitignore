@@ -53,3 +53,7 @@ Thumbs.db
 # Reference repositories & research data
 CreatorIQ-main/
 Prophet/
+
+# Teamwork subagent artifacts
+.agents/
+ORIGINAL_REQUEST.md

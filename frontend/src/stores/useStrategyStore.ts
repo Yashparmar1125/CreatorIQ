@@ -4,18 +4,20 @@ import { normalizeStrategyBrief, sanitizeStrategyTopic, type StrategyBrief } fro
 
 interface StrategyState {
   brief: StrategyBrief | null;
+  sessionId: string | null;
   isLoading: boolean;
   error: string | null;
-  generateBrief: (topic: string) => Promise<void>;
+  generateBrief: (topic: string, goal?: string) => Promise<void>;
   clearBrief: () => void;
 }
 
 export const useStrategyStore = create<StrategyState>((set) => ({
   brief: null,
+  sessionId: null,
   isLoading: false,
   error: null,
-  clearBrief: () => set({ brief: null, error: null }),
-  generateBrief: async (topic: string) => {
+  clearBrief: () => set({ brief: null, sessionId: null, error: null }),
+  generateBrief: async (topic: string, goal?: string) => {
     const cleaned = sanitizeStrategyTopic(topic);
     if (!cleaned) {
       set({ error: 'Please enter a valid topic.' });
@@ -24,9 +26,14 @@ export const useStrategyStore = create<StrategyState>((set) => ({
 
     set({ isLoading: true, error: null });
     try {
-      const { data } = await api.post('/strategy/generate-brief', { topic: cleaned });
-      const payload = data?.data?.brief ?? data?.brief;
-      const brief = normalizeStrategyBrief(payload, topic);
+      const payload: { topic: string; goal?: string } = { topic: cleaned };
+      if (goal) {
+        payload.goal = goal;
+      }
+      const { data } = await api.post('/strategy/generate-brief', payload);
+      const rawBrief = data?.data?.brief ?? data?.brief;
+      const sessionId = (data?.data?.session_id ?? data?.session_id ?? null) as string | null;
+      const brief = normalizeStrategyBrief(rawBrief, topic);
 
       if (!brief.titles.length && !brief.strategy_insight) {
         set({
@@ -36,11 +43,11 @@ export const useStrategyStore = create<StrategyState>((set) => ({
         return;
       }
 
-      if ((payload as { generated_via?: string })?.generated_via === 'fallback') {
+      if ((rawBrief as { generated_via?: string })?.generated_via === 'fallback') {
         console.warn('Strategy brief served from fallback (AI rate-limited or unavailable).');
       }
 
-      set({ brief, isLoading: false, error: null });
+      set({ brief, sessionId, isLoading: false, error: null });
     } catch (error) {
       console.error('Failed to generate brief:', error);
       set({

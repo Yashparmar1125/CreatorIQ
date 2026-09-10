@@ -1,3 +1,4 @@
+from typing import Optional
 import uuid
 
 from fastapi import APIRouter, Depends
@@ -18,6 +19,11 @@ class CreateSessionBody(BaseModel):
     input_topic: str = Field(..., min_length=1, max_length=500)
     trend_id: str | None = None
     input_config: dict | None = None
+
+
+class GenerateBriefRequest(BaseModel):
+    topic: str = Field(..., min_length=1, max_length=500)
+    goal: Optional[str] = None
 
 
 @router.get("/health")
@@ -71,12 +77,8 @@ async def generate_tags(
 
 @router.post("/strategy/generate-brief")
 async def generate_unified_brief(
-    body: dict,
+    body: GenerateBriefRequest,
     user: UserContext = Depends(get_user_context),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    topic = body.get("topic")
-    if not topic:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=400, detail="topic is required")
-    return await service.generate_unified_brief(db, user, topic)
+    return await service.generate_brief(db, user, body.topic, goal=body.goal)
