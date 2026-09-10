@@ -210,10 +210,11 @@ class ForecastEngine:
                         latency_ms=latency_ms,
                         obs_count=orig_count,
                     )
-                else:
-                    accuracy_metrics = build_accuracy_metrics([], [], latency_ms=latency_ms, obs_count=orig_count)
             except Exception:
                 accuracy_metrics = build_accuracy_metrics([], [], latency_ms=latency_ms, obs_count=orig_count)
+
+            spread = float(horizons.get("1_month", {}).get("upper_bound", 0) - horizons.get("1_month", {}).get("lower_bound", 0))
+            uncertainty = "high" if spread > 20 else ("moderate" if spread > 10 else "low")
 
             return {
                 "topic": topic,
