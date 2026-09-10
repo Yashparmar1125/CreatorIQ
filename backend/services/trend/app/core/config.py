@@ -50,16 +50,14 @@ class Settings(BaseSettings):
     )
     enable_trend_enrichment: bool = True
 
-    # Feed refresh credits — disabled automatically in development
-    enable_feed_credit_limits: bool = True
+    # Feed refresh credits — set False for unlimited refreshes
+    enable_feed_credit_limits: bool = False
 
     model_config = SettingsConfigDict(env_file=env_path, extra="ignore")
 
     @property
     def feed_credits_enabled(self) -> bool:
-        if not self.enable_feed_credit_limits:
-            return False
-        return self.environment.lower() not in ("development", "dev", "local")
+        return False
 
 
 settings = Settings()

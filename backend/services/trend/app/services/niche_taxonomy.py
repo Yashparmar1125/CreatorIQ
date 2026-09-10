@@ -83,7 +83,7 @@ NICHE_KEYWORDS: dict[str, list[str]] = {
     "beauty": ["beauty", "skincare", "makeup", "fashion", "style"],
 }
 
-PLAN_CREDITS = {"free": 2, "pro": 20, "agency": 100}
+PLAN_CREDITS = {"free": 999999, "pro": 999999, "agency": 999999}
 
 # Targeted queries for on-demand collection when a user's feed pool is thin
 ON_DEMAND_QUERIES: dict[str, list[str]] = {

@@ -451,9 +451,10 @@ class FeedService:
         ctx = await self.get_creator_context(user_id)
         limit = PLAN_CREDITS.get(plan, PLAN_CREDITS["free"])
 
+        # Refresh credits disabled — unlimited refreshes permitted
         if settings.feed_credits_enabled and consume_credit and not is_first_feed:
             used = await self.feed_repo.count_refreshes_this_month(db, user_id)
-            if used >= limit:
+            if limit is not None and limit < 999999 and used >= limit:
                 raise HTTPException(
                     status_code=status.HTTP_402_PAYMENT_REQUIRED,
                     detail={
@@ -511,13 +512,11 @@ class FeedService:
         if geo_source in ("onboarding_country", "global_default"):
             geo_badge = "Using estimated geography — analytics will improve recommendations."
 
-        limit = PLAN_CREDITS.get(plan, 2)
-        credits: dict[str, Any] = {"plan": plan}
-        if settings.feed_credits_enabled:
-            credits["limit"] = limit
-        else:
-            credits["limit"] = None
-            credits["unlimited"] = True
+        credits: dict[str, Any] = {
+            "plan": plan,
+            "limit": None,
+            "unlimited": True,
+        }
         ai_enriched = any(x.get("ai_enriched") for x in items)
         return {
             "trends": items,

@@ -225,13 +225,9 @@ export const TrendsPage: React.FC = () => {
               {geoContext.badge}
             </span>
           )}
-          {credits && (
-            <span className="text-xs text-neutral-500">
-              {credits.unlimited
-                ? 'Unlimited refreshes (dev)'
-                : `${credits.limit} refreshes / month`}
-            </span>
-          )}
+          <span className="text-xs text-emerald-700 font-medium">
+            Unlimited refreshes
+          </span>
           {snapshotAt && (
             <span className="ml-auto text-xs text-neutral-400">
               Updated {new Date(snapshotAt).toLocaleString()}
