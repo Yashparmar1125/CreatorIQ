@@ -25,9 +25,11 @@ import {
   History,
   Lightbulb,
   Bookmark,
+  Check,
+  Copy,
 } from 'lucide-react';
 import { sanitizeStrategyTopic } from '../../../lib/strategyTopic';
-import { cleanTrendTitle, cleanTrendText } from '../../../lib/cleanTrendTitle';
+import { cleanTrendTitle, cleanTrendText, resolveVideoConcept } from '../../../lib/cleanTrendTitle';
 import { cn } from '../../../lib/utils';
 
 const FORMAT_TABS = [
@@ -75,6 +77,14 @@ export const TrendsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeSearch, setActiveSearch] = useState('');
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [copiedConceptId, setCopiedConceptId] = useState<string | null>(null);
+
+  const handleCopyConcept = (trendId: string, conceptText: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(conceptText);
+    setCopiedConceptId(trendId);
+    setTimeout(() => setCopiedConceptId((prev) => (prev === trendId ? null : prev)), 2000);
+  };
 
   useEffect(() => {
     fetchTrends();
@@ -395,19 +405,56 @@ export const TrendsPage: React.FC = () => {
                     )}
                   </div>
 
+                  {/* Video Concept Highlight Box */}
+                  <div className="rounded-xl border border-brand-200/90 bg-gradient-to-br from-brand-50/90 via-indigo-50/30 to-purple-50/20 p-3.5 shadow-2xs transition-all group-hover:border-brand-300">
+                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                      <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-brand-800">
+                        <Sparkles className="h-3.5 w-3.5 text-brand-600" />
+                        Video Concept
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-brand-100/80 px-2 py-0.5 text-[10px] font-semibold text-brand-700 border border-brand-200/60">
+                          <Film className="h-2.5 w-2.5" />
+                          {trend.supported_formats?.includes('shorts') ? 'Shorts Hook' : 'Video Angle'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => handleCopyConcept(trend.id, resolveVideoConcept(trend), e)}
+                          title="Copy video concept"
+                          className="inline-flex items-center gap-1 rounded-md bg-white/90 px-1.5 py-0.5 text-[10px] font-medium text-brand-700 hover:text-brand-900 hover:bg-white border border-brand-200/70 transition-all shadow-2xs cursor-pointer"
+                        >
+                          {copiedConceptId === trend.id ? (
+                            <>
+                              <Check className="h-2.5 w-2.5 text-emerald-600" />
+                              <span className="text-emerald-700">Copied</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="h-2.5 w-2.5" />
+                              <span>Copy</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                    <p className="text-xs sm:text-sm font-semibold text-neutral-900 leading-snug">
+                      &ldquo;{resolveVideoConcept(trend)}&rdquo;
+                    </p>
+                  </div>
+
                   {/* Why Predicted For You Insight */}
                   {trend.why_predicted && (
-                    <div className="rounded-lg border border-brand-100 bg-brand-50/60 p-2.5 text-xs text-brand-800">
-                      <span className="font-semibold text-brand-900">Why Predicted: </span>
+                    <div className="rounded-lg border border-neutral-200/80 bg-neutral-50/80 px-2.5 py-2 text-xs text-neutral-700">
+                      <span className="font-semibold text-neutral-900">Why Predicted: </span>
                       {cleanTrendText(trend.why_predicted)}
                     </div>
                   )}
 
                   {/* Action Plan */}
-                  {(trend.action_plan || trend.growth_tip || trend.content_angle) && (
-                    <div className="rounded-lg border border-neutral-200/80 bg-neutral-50/80 p-2.5 text-xs text-neutral-700">
+                  {(trend.action_plan || trend.growth_tip) && (
+                    <div className="rounded-lg border border-neutral-200/80 bg-neutral-50/80 px-2.5 py-2 text-xs text-neutral-700">
                       <span className="font-semibold text-neutral-900">Action Plan: </span>
-                      {cleanTrendText(trend.action_plan || trend.growth_tip || trend.content_angle)}
+                      {cleanTrendText(trend.action_plan || trend.growth_tip)}
                     </div>
                   )}
 

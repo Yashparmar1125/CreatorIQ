@@ -5,7 +5,7 @@ import { useTrendsStore } from "../../../stores/useTrendsStore";
 import { useAuthStore } from "../../../stores/useAuthStore";
 import { renderStatIcon } from "../../../lib/stat-icons";
 import { sanitizeStrategyTopic } from "../../../lib/strategyTopic";
-import { cleanTrendTitle, cleanTrendText } from "../../../lib/cleanTrendTitle";
+import { cleanTrendTitle, cleanTrendText, resolveVideoConcept } from "../../../lib/cleanTrendTitle";
 import { Card } from "../../../components/ui/Card";
 import { Button } from "../../../components/ui/Button";
 import { Badge } from "../../../components/ui/Badge";
@@ -20,6 +20,7 @@ import {
   Zap,
   BarChart2,
   ChevronRight,
+  Film,
 } from "lucide-react";
 
 const ACCENTS = ["brand", "cyan", "emerald", "violet"] as const;
@@ -253,13 +254,30 @@ export const DashboardPage: React.FC = () => {
                     )}
                   </div>
 
-                  <h3 className="text-base font-bold text-neutral-900 group-hover:text-brand-600">
+                  <h3 className="text-base font-bold text-neutral-900 group-hover:text-brand-600 transition-colors">
                     {cleanTrendTitle(trend.topic)}
                   </h3>
 
+                  {/* Video Concept Highlight */}
+                  <div className="rounded-xl border border-brand-200/90 bg-gradient-to-br from-brand-50/90 via-indigo-50/30 to-purple-50/20 p-3 shadow-2xs transition-all group-hover:border-brand-300">
+                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                      <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-brand-800">
+                        <Sparkles className="h-3.5 w-3.5 text-brand-600" />
+                        Video Concept
+                      </span>
+                      <span className="inline-flex items-center gap-1 rounded-full bg-brand-100/80 px-2 py-0.5 text-[10px] font-semibold text-brand-700 border border-brand-200/60">
+                        <Film className="h-2.5 w-2.5" />
+                        {trend.supported_formats?.includes('shorts') ? 'Shorts' : 'Video'}
+                      </span>
+                    </div>
+                    <p className="text-xs sm:text-sm font-semibold text-neutral-900 leading-snug">
+                      &ldquo;{resolveVideoConcept(trend)}&rdquo;
+                    </p>
+                  </div>
+
                   {trend.why_predicted && (
-                    <div className="rounded-lg border border-brand-100 bg-brand-50/60 p-2.5 text-xs text-brand-800">
-                      <span className="font-semibold text-brand-900">
+                    <div className="rounded-lg border border-neutral-200/80 bg-neutral-50/80 px-2.5 py-2 text-xs text-neutral-700">
+                      <span className="font-semibold text-neutral-900">
                         Why Predicted:{" "}
                       </span>
                       {cleanTrendText(trend.why_predicted)}
@@ -267,7 +285,7 @@ export const DashboardPage: React.FC = () => {
                   )}
 
                   {(trend.action_plan || trend.growth_tip) && (
-                    <div className="rounded-lg border border-neutral-200/80 bg-neutral-50/80 p-2.5 text-xs text-neutral-700">
+                    <div className="rounded-lg border border-neutral-200/80 bg-neutral-50/80 px-2.5 py-2 text-xs text-neutral-700">
                       <span className="font-semibold text-neutral-900">
                         Action Plan:{" "}
                       </span>

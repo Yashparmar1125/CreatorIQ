@@ -25,6 +25,9 @@ export interface Trend {
   geo_relevance?: number;
   headline?: string;
   content_angle?: string;
+  video_concept?: string;
+  why_predicted?: string;
+  action_plan?: string;
   raw_topic?: string;
   video_url?: string;
   channel_name?: string;

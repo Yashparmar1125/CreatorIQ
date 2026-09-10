@@ -122,13 +122,14 @@ class TrendEnrichmentService:
             "- why_trending: 1-2 sentences on why this is rising on YouTube (NO HASHTAGS).\n"
             "- why_predicted: personalized 1-sentence explanation why this specific trend was predicted for THIS creator's niche and geography (NO HASHTAGS).\n"
             "- growth_tip: personalized advice for THIS creator's tone and format (NO HASHTAGS).\n"
-            "- content_angle: one specific video concept they could film today (NO HASHTAGS).\n"
+            "- video_concept: one creative, highly-clickable video concept idea tailored for this creator (NO HASHTAGS).\n"
+            "- content_angle: one specific video concept or editorial angle they could film today (NO HASHTAGS).\n"
             "- action_plan: step-by-step 1-sentence content creation action for this video (NO HASHTAGS).\n"
             "- key_indicator: one metric line using the provided velocity/volume.\n"
             "- archetype: one of " + ", ".join(_ARCHETYPES) + ".\n"
             "Reply with ONLY valid JSON, no markdown.\n"
             'Schema: {"items": [{"id": string, "keep": true, "topic": string, "headline": string, '
-            '"why_trending": string, "why_predicted": string, "growth_tip": string, '
+            '"why_trending": string, "why_predicted": string, "growth_tip": string, "video_concept": string, '
             '"content_angle": string, "action_plan": string, "key_indicator": string, "archetype": string}]}'
         )
 
@@ -209,7 +210,8 @@ class TrendEnrichmentService:
         out["why_trending"] = _clean_text(ai.get("why_trending") or raw.get("why_trending"))
         out["why_predicted"] = _clean_text(ai.get("why_predicted") or f"Predicted for your channel based on high similarity and momentum.")
         out["growth_tip"] = _clean_text(ai.get("growth_tip") or raw.get("growth_tip"))
-        out["content_angle"] = _clean_text(ai.get("content_angle"))
+        out["video_concept"] = _clean_text(ai.get("video_concept") or ai.get("content_angle") or "")
+        out["content_angle"] = _clean_text(ai.get("content_angle") or ai.get("video_concept") or "")
         out["action_plan"] = _clean_text(ai.get("action_plan") or ai.get("content_angle") or ai.get("growth_tip"))
         out["key_indicator"] = _clean_text(ai.get("key_indicator") or raw.get("key_indicator"))
         if ai.get("archetype") in _ARCHETYPES:
@@ -242,6 +244,7 @@ class TrendEnrichmentService:
             f"As a {tone} {niche} creator, test this with a quick {fmt} — "
             "your audience may discover you through search before the topic saturates."
         )
+        out["video_concept"] = f"Test the viral '{title}' trend with a unique {tone} {niche} spin in a quick {fmt_label}."
         out["content_angle"] = f"React to or remix the '{title}' trend with your own {tone} spin."
         out["action_plan"] = f"Film a {fmt_label} video testing '{title}' using a {tone} hook in the first 5 seconds."
         out["description"] = out["why_trending"]

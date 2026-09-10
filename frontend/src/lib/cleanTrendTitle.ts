@@ -41,3 +41,36 @@ export function cleanTrendText(text?: string | null): string {
     .replace(/\s+/g, ' ')
     .trim();
 }
+
+/**
+ * Resolves or synthesizes a clean, high-impact video concept for a trend card.
+ */
+export function resolveVideoConcept(trend: {
+  video_concept?: string | null;
+  content_angle?: string | null;
+  action_plan?: string | null;
+  growth_tip?: string | null;
+  headline?: string | null;
+  topic?: string | null;
+  niches?: string[] | null;
+  supported_formats?: string[] | null;
+}): string {
+  if (trend.video_concept && trend.video_concept.trim()) {
+    return cleanTrendText(trend.video_concept);
+  }
+  if (trend.content_angle && trend.content_angle.trim()) {
+    return cleanTrendText(trend.content_angle);
+  }
+  // Check if headline has a distinct concept
+  if (trend.headline && trend.headline !== trend.topic && !trend.headline.toLowerCase().startsWith('rising in')) {
+    return cleanTrendText(trend.headline);
+  }
+  const title = cleanTrendTitle(trend.topic);
+  const niche = trend.niches?.[0] || 'creators';
+  const isShorts = trend.supported_formats?.includes('shorts') || trend.supported_formats?.includes('both');
+
+  if (isShorts) {
+    return `Test the viral '${title}' format with an immediate 3-second hook tailored for ${niche} viewers.`;
+  }
+  return `Deep dive into the '${title}' trend with a unique ${niche} reaction and breakdown.`;
+}
