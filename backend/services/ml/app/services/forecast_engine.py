@@ -87,11 +87,20 @@ class ForecastEngine:
                     except Exception:
                         continue
 
-        # Check whether we have sufficient empirical observations (>= 7)
-        orig_count = len(records)
+        # Deduplicate empirical records by calendar date to count true unique observation days
+        df_empirical = pd.DataFrame(records)
+        if not df_empirical.empty:
+            df_empirical["ds"] = pd.to_datetime(df_empirical["ds"]).dt.tz_localize(None)
+            df_empirical = df_empirical.sort_values("ds").drop_duplicates(subset=["ds"])
+            unique_days = len(df_empirical)
+        else:
+            unique_days = 0
+
+        # Check whether we have sufficient empirical observations (>= 7 distinct days)
+        orig_count = unique_days
         is_synthetic = orig_count < 7
 
-        # If sparse history (< 7 days), synthesize calibrated historical trajectory as fallback
+        # If sparse history (< 7 distinct days), synthesize calibrated historical trajectory as fallback
         if is_synthetic:
             records = []
             seed = sum(ord(c) for c in topic) % 50
@@ -124,10 +133,11 @@ class ForecastEngine:
                 records.append({"ds": pd.Timestamp(d), "y": float(synthetic_y)})
 
             records.append({"ds": pd.Timestamp(origin_date), "y": float(current_score)})
-
-        df = pd.DataFrame(records)
-        df["ds"] = pd.to_datetime(df["ds"]).dt.tz_localize(None)
-        df = df.sort_values("ds").drop_duplicates(subset=["ds"])
+            df = pd.DataFrame(records)
+            df["ds"] = pd.to_datetime(df["ds"]).dt.tz_localize(None)
+            df = df.sort_values("ds").drop_duplicates(subset=["ds"])
+        else:
+            df = df_empirical
 
         if not PROPHET_AVAILABLE:
             logger.warning("Prophet not installed. Using linear extrapolation fallback.")
