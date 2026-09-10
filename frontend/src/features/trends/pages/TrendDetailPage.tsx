@@ -142,11 +142,11 @@ export const TrendDetailPage: React.FC = () => {
             <Card variant="elevated" className="flex items-center justify-center p-8">
               <div className="flex items-center gap-2 text-sm text-neutral-500">
                 <Loader2 className="h-4 w-4 animate-spin text-brand-600" />
-                Generating Prophet trajectory forecast...
+                Analyzing audience demand & view potential...
               </div>
             </Card>
           ) : trendForecast ? (
-            <TrendForecastChart forecast={trendForecast} />
+            <TrendForecastChart forecast={trendForecast} trend={trend} />
           ) : null}
 
           <Card variant="elevated">
