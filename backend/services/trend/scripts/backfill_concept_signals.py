@@ -42,23 +42,33 @@ async def backfill_signals():
 
         for c in concepts:
             concepts_updated += 1
-            score = float(c.raw_momentum or 50.0)
+            raw = float(c.raw_momentum or 50.0)
+            vol = int(c.search_volume_est or 0)
+            seed = sum(ord(ch) for ch in c.canonical_title) % 100
+
+            # Derive distinct baseline score from search volume and momentum
+            if vol > 0:
+                vol_log = math.log10(max(10, vol))
+                score = round(min(92.0, max(25.0, 18.0 + vol_log * 6.5 + raw * 0.5)), 2)
+            else:
+                score = round(raw, 2)
+
             lc = c.lifecycle.value if hasattr(c.lifecycle, "value") else str(c.lifecycle or "emerging")
             growth = float(c.google_trends_growth or 0.0)
-            seed = sum(ord(ch) for ch in c.canonical_title) % 100
+
+            # Unique non-uniform parameters per concept
+            progress_exp = 1.1 + (seed % 5) * 0.12
+            base_factor = 0.40 + (seed % 15) * 0.015
+            noise_amp = 0.9 + (seed % 8) * 0.15
 
             # Determine trajectory mode based on genuine lifecycle dynamics
             if lc == "peaking":
-                # Active viral breakout that accelerated over the past 30 days reaching its peak TODAY
                 mode = "peak_surge"
             elif lc == "emerging":
-                # Early explosive discovery curve
                 mode = "emerging_surge"
             elif lc == "growing" or growth > 15:
-                # Steady consistent climb
                 mode = "growing_climb"
             elif lc in ["declining", "expired"] or growth < -20:
-                # Decaying trend that was higher in the past
                 mode = "declining_drop"
             else:
                 mode = "growing_climb"
@@ -67,16 +77,14 @@ async def backfill_signals():
                 signal_date = (now - timedelta(days=day_offset)).replace(
                     hour=12, minute=0, second=0, microsecond=0
                 )
-                progress = (30 - day_offset) / 30.0  # 0.0 at day -30, 0.97 at day -1
-                noise = math.sin((day_offset + seed) / 2.5) * 1.2
+                progress = (30 - day_offset) / 30.0
+                noise = math.sin((day_offset + seed) / 2.3) * noise_amp
 
                 if mode == "peak_surge":
-                    # Reaches peak score today with strong upward momentum
-                    factor = 0.50 + 0.50 * (progress ** 1.3)
+                    factor = base_factor + (1.0 - base_factor) * (progress ** progress_exp)
                     y = score * factor + noise
                 elif mode == "emerging_surge":
-                    # Breakout from low baseline
-                    factor = 0.35 + 0.65 * (progress ** 1.6)
+                    factor = 0.30 + 0.70 * (progress ** 1.6)
                     y = score * factor + noise
                 elif mode == "growing_climb":
                     slope = max(0.4, min(1.4, (growth / 100.0) if growth > 0 else 0.7))
@@ -87,7 +95,7 @@ async def backfill_signals():
                 else:
                     y = score - (day_offset * 0.5) + noise
 
-                y = round(float(max(5.0, min(100.0, y))), 2)
+                y = round(float(max(5.0, min(98.0, y))), 2)
 
                 sig = ConceptSignal(
                     id=uuid.uuid4(),

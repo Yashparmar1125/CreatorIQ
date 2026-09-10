@@ -494,7 +494,37 @@ class TrendService:
         concept = await self.feed.concept_repo.get_by_id(db, trend_id)
         if concept:
             topic = concept.canonical_title
-            score = float(concept.raw_momentum or 50.0)
+            raw = float(concept.raw_momentum or 50.0)
+            vol = int(concept.search_volume_est or 0)
+
+            # 1. Attempt to find exact personalized opportunity score from feed snapshots
+            score = None
+            try:
+                from sqlalchemy import text
+                res = await db.execute(
+                    text("""
+                        SELECT item->>'opportunity_score'
+                        FROM trend_feed_snapshots s,
+                             jsonb_array_elements(s.items) item
+                        WHERE item->>'id' = :tid
+                        ORDER BY s.created_at DESC LIMIT 1
+                    """),
+                    {"tid": str(trend_id)},
+                )
+                row = res.fetchone()
+                if row and row[0]:
+                    score = float(row[0])
+            except Exception:
+                pass
+
+            if score is None:
+                if vol > 0:
+                    import math
+                    vol_log = math.log10(max(10, vol))
+                    score = round(min(92.0, max(25.0, 18.0 + vol_log * 6.5 + raw * 0.5)), 2)
+                else:
+                    score = round(raw, 2)
+
             lifecycle = str(concept.lifecycle.value if hasattr(concept.lifecycle, "value") else concept.lifecycle)
             growth = float(concept.google_trends_growth or 0.0)
             velocity = float(concept.youtube_search_velocity or concept.youtube_video_velocity or 0.0)

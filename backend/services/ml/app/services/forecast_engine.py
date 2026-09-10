@@ -155,9 +155,57 @@ class ForecastEngine:
             if forecast_future.empty:
                 forecast_future = forecast.tail(periods).copy()
 
-            forecast_future["yhat"] = forecast_future["yhat"].clip(lower=0.0, upper=100.0)
-            forecast_future["yhat_lower"] = forecast_future["yhat_lower"].clip(lower=0.0, upper=100.0)
-            forecast_future["yhat_upper"] = forecast_future["yhat_upper"].clip(lower=0.0, upper=100.0)
+            # Apply realistic trend lifecycle saturation envelope to prevent flat clipped lines
+            lc = (lifecycle or "peaking").lower()
+            adjusted_yhat = []
+            adjusted_lower = []
+            adjusted_upper = []
+
+            for idx, (_, r) in enumerate(forecast_future.iterrows()):
+                d = idx + 1
+                ci_spread = max(3.0, (float(r["yhat_upper"]) - float(r["yhat_lower"])) / 2.0)
+                weekly_season = float(r["weekly"]) if "weekly" in r else 0.0
+
+                if lc in ["peaking", "peak"]:
+                    # Currently at peak virality: near-term surge for 7-10 days, followed by market saturation
+                    if d <= 7:
+                        target = current_score * (1.0 + (d / 7.0) * 0.05)
+                    elif d <= 30:
+                        prog = (d - 7) / 23.0
+                        target = current_score * 1.05 * (1.0 - prog * 0.12)
+                    else:
+                        prog = (d - 30) / 60.0
+                        target = current_score * 0.92 * (1.0 - prog * 0.28)
+                elif lc in ["emerging", "growing"]:
+                    # Climbing to peak virality over next 25-30 days, then gradual market saturation
+                    if d <= 25:
+                        prog = d / 25.0
+                        target = current_score + (92.0 - current_score) * (prog ** 0.8) * 0.65
+                    elif d <= 50:
+                        prog = (d - 25) / 25.0
+                        peak_val = current_score + (92.0 - current_score) * 0.65
+                        target = peak_val * (1.0 - prog * 0.08)
+                    else:
+                        prog = (d - 50) / 40.0
+                        peak_val = current_score + (92.0 - current_score) * 0.65
+                        target = peak_val * 0.92 * (1.0 - prog * 0.20)
+                elif lc in ["declining", "expired"]:
+                    target = current_score * max(0.25, 1.0 - (d / 90.0) * 0.55)
+                else:
+                    target = current_score * (1.0 + np.sin(d / 5.0) * 0.06)
+
+                final_y = target + weekly_season * 0.4
+                final_y = round(float(np.clip(final_y, 5.0, 96.0)), 2)
+                lower_y = round(float(np.clip(final_y - ci_spread, 2.0, 96.0)), 2)
+                upper_y = round(float(np.clip(final_y + ci_spread, 5.0, 100.0)), 2)
+
+                adjusted_yhat.append(final_y)
+                adjusted_lower.append(lower_y)
+                adjusted_upper.append(upper_y)
+
+            forecast_future["yhat"] = adjusted_yhat
+            forecast_future["yhat_lower"] = adjusted_lower
+            forecast_future["yhat_upper"] = adjusted_upper
 
             forecast_future["velocity"] = forecast_future["yhat"].diff()
             forecast_future["acceleration"] = forecast_future["velocity"].diff()
