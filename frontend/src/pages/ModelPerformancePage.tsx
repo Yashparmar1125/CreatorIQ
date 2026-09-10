@@ -34,7 +34,7 @@ interface EvaluationRecord {
   observations_count: number;
   data_source: string;
   status: string;
-  metrics_payload?: any;
+  metrics_payload?: Record<string, unknown> | null;
 }
 
 interface EvaluationSummary {
@@ -503,7 +503,9 @@ export const ModelPerformancePage: React.FC = () => {
 
               <select
                 value={modelFilter}
-                onChange={(e) => setModelFilter(e.target.value as any)}
+                onChange={(e) =>
+                  setModelFilter(e.target.value as 'all' | 'Prophet_Additive' | 'Idea_Evaluator' | 'Title_CTR_Predictor')
+                }
                 className="h-8 rounded-lg border border-neutral-800 bg-neutral-950 px-2 text-xs text-neutral-300 focus:border-brand-500 focus:outline-none"
               >
                 <option value="all">All Models</option>

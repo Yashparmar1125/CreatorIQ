@@ -133,7 +133,8 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
   },
 
   fetchSlots: async (startDate?: string, endDate?: string) => {
-    let { channelId, currentDate } = get();
+    const { currentDate } = get();
+    let { channelId } = get();
     if (!channelId) {
       channelId = await get().fetchPrimaryChannel();
     }

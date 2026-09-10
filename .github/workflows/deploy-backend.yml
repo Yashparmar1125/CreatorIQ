@@ -10,11 +10,6 @@ on:
       - '.github/workflows/deploy-backend.yml'
   workflow_dispatch:
     inputs:
-      force_build_all:
-        description: 'Force rebuild of all 8 microservices regardless of changes'
-        required: true
-        default: false
-        type: boolean
       deploy_to_vm:
         description: 'Deploy to Azure VM after image build'
         required: true
@@ -34,85 +29,21 @@ env:
   OWNER: ${{ github.repository_owner }}
 
 jobs:
-  detect-changed-services:
-    name: Detect Changed Backend Services
-    runs-on: ubuntu-latest
-    outputs:
-      services: ${{ steps.set-matrix.outputs.services }}
-      has_changes: ${{ steps.set-matrix.outputs.has_changes }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Filter Service Changes
-        id: filter
-        uses: dorny/paths-filter@v3
-        with:
-          filters: |
-            api-gateway:
-              - 'backend/services/api-gateway/**'
-              - 'backend/docker-compose.prod.yml'
-            auth:
-              - 'backend/services/auth/**'
-              - 'backend/docker-compose.prod.yml'
-            channel:
-              - 'backend/services/channel/**'
-              - 'backend/docker-compose.prod.yml'
-            trend:
-              - 'backend/services/trend/**'
-              - 'backend/docker-compose.prod.yml'
-            strategy:
-              - 'backend/services/strategy/**'
-              - 'backend/docker-compose.prod.yml'
-            planner:
-              - 'backend/services/planner/**'
-              - 'backend/docker-compose.prod.yml'
-            analytics:
-              - 'backend/services/analytics/**'
-              - 'backend/docker-compose.prod.yml'
-            ml:
-              - 'backend/services/ml/**'
-              - 'backend/docker-compose.prod.yml'
-
-      - name: Compute Build Matrix
-        id: set-matrix
-        run: |
-          FORCE_ALL="${{ inputs.force_build_all }}"
-          SERVICES=()
-
-          ALL_SERVICES=("api-gateway" "auth" "channel" "trend" "strategy" "planner" "analytics" "ml")
-
-          if [ "$FORCE_ALL" = "true" ]; then
-            SERVICES=("${ALL_SERVICES[@]}")
-          else
-            for svc in "${ALL_SERVICES[@]}"; do
-              if [ "${{ steps.filter.outputs[svc] }}" = "true" ]; then
-                SERVICES+=("$svc")
-              fi
-            done
-          fi
-
-          # If triggered by a push and no specific service changed (e.g. only infra changed),
-          # default to empty or build all if desired.
-          if [ ${#SERVICES[@]} -eq 0 ]; then
-            echo "services=[]" >> $GITHUB_OUTPUT
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-          else
-            JSON_SERVICES=$(printf '%s\n' "${SERVICES[@]}" | jq -R . | jq -s -c .)
-            echo "services=$JSON_SERVICES" >> $GITHUB_OUTPUT
-            echo "has_changes=true" >> $GITHUB_OUTPUT
-            echo "Target build services: $JSON_SERVICES"
-          fi
-
   build-and-push:
     name: Build & Push (${{ matrix.service }})
-    needs: detect-changed-services
-    if: needs.detect-changed-services.outputs.has_changes == 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        service: ${{ fromJson(needs.detect-changed-services.outputs.services) }}
+        service:
+          - api-gateway
+          - auth
+          - channel
+          - trend
+          - strategy
+          - planner
+          - analytics
+          - ml
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -139,19 +70,14 @@ jobs:
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ steps.repo_owner.outputs.owner }}/creatoriq-${{ matrix.service }}:${{ github.sha }}
-            ${{ env.REGISTRY }}/${{ steps.repo_owner.outputs.owner }}/creatoriq-${{ matrix.service }}:sha-${{ github.sha }}
             ${{ env.REGISTRY }}/${{ steps.repo_owner.outputs.owner }}/creatoriq-${{ matrix.service }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
   deploy-vm:
     name: Zero-Downtime Rollout to Azure VM
-    needs: [detect-changed-services, build-and-push]
-    if: |
-      always() &&
-      (needs.detect-changed-services.result == 'success') &&
-      (needs.build-and-push.result == 'success' || needs.build-and-push.result == 'skipped') &&
-      (github.event_name == 'push' || inputs.deploy_to_vm == true)
+    needs: build-and-push
+    if: always() && (needs.build-and-push.result == 'success')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository

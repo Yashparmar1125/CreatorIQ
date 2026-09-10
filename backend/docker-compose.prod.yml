@@ -284,6 +284,16 @@ services:
       postgres:
         condition: service_healthy
 
+  db-push-ml:
+    profiles: ["db-push"]
+    <<: *service-defaults
+    image: ${IMAGE_REGISTRY:-ghcr.io/yashparmar1125}/creatoriq-ml:${IMAGE_TAG:-latest}
+    restart: "no"
+    command: ["python", "-m", "app.db_push"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   postgres_data:
   qdrant_data:

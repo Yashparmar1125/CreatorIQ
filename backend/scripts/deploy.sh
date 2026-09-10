@@ -33,7 +33,7 @@ timeout 60 bash -c 'until docker exec ciq-postgres pg_isready -U "${POSTGRES_USE
 timeout 30 bash -c 'until docker exec ciq-redis redis-cli ping | grep -q PONG; do sleep 2; echo "  Waiting for Redis..."; done'
 
 echo "[4/6] Running database schema synchronization (db-push)..."
-for svc in auth channel trend strategy planner analytics; do
+for svc in auth channel trend strategy planner analytics ml; do
     echo "  -> Running db-push-$svc..."
     docker compose -f "$COMPOSE_FILE" --profile db-push run --rm "db-push-$svc" || echo "  [WARN] Schema push warning for $svc"
 done
