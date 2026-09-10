@@ -452,7 +452,11 @@ export const AnalyticsPage: React.FC = () => {
                 <option value="Baseline">Baseline</option>
               </select>
             </div>
-            <MiniBarChart data={currentChart} highlightIndex={currentHighlight} />
+            <MiniBarChart
+              data={currentChart}
+              highlightIndex={currentHighlight}
+              formatValue={(val) => `${val}% retention`}
+            />
             <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
               <div className="rounded-xl border border-brand-200/60 bg-gradient-to-br from-brand-50 to-white p-4 shadow-sm">
                 <div className="flex items-center justify-between">
@@ -474,13 +478,15 @@ export const AnalyticsPage: React.FC = () => {
                 </p>
                 <p className="mt-1 text-xs text-neutral-500">Avg. view duration</p>
               </div>
-              <div className="surface-dark rounded-xl p-4">
+              <div className="rounded-xl border border-indigo-200/60 bg-gradient-to-br from-indigo-50 to-white p-4 shadow-sm">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs text-neutral-400">Outro</p>
-                  <ArrowDownRight className="h-4 w-4 text-brand-400" />
+                  <p className="text-xs font-medium text-indigo-700">Outro</p>
+                  <ArrowDownRight className="h-4 w-4 text-indigo-500" />
                 </div>
-                <p className="mt-2 text-2xl font-semibold metric">{currentMetrics.outro}%</p>
-                <p className="mt-1 text-xs text-neutral-500">CTR point</p>
+                <p className="mt-2 text-2xl font-semibold text-neutral-900 metric">
+                  {currentMetrics.outro}%
+                </p>
+                <p className="mt-1 text-xs text-neutral-500">CTR point (end screen)</p>
               </div>
             </div>
           </Card>

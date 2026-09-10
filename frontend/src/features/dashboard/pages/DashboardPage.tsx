@@ -346,7 +346,11 @@ export const DashboardPage: React.FC = () => {
               ))}
             </div>
           </div>
-          <MiniBarChart data={currentForecast.bars} highlightIndex={currentForecast.highlightIndex} />
+          <MiniBarChart
+            data={currentForecast.bars}
+            highlightIndex={currentForecast.highlightIndex}
+            formatValue={(v) => `${v}K views`}
+          />
           <div className="mt-4 flex items-center justify-between rounded-lg border border-brand-100 bg-gradient-to-r from-brand-50/80 to-transparent px-4 py-3">
             <div className="flex items-center gap-2 text-sm text-brand-700">
               <BarChart2 className="h-4 w-4" />

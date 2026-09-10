@@ -155,12 +155,12 @@ body {
 }
 
 .chart-bar {
-  background: linear-gradient(180deg, var(--color-brand-500) 0%, var(--color-brand-700) 100%);
+  background: linear-gradient(180deg, #818cf8 0%, #4338ca 100%);
   border-radius: 4px 4px 0 0;
 }
 
 .chart-bar-muted {
-  background: linear-gradient(180deg, var(--color-neutral-200) 0%, var(--color-neutral-300) 100%);
+  background: linear-gradient(180deg, #e2e8f0 0%, #cbd5e1 100%);
   border-radius: 4px 4px 0 0;
 }
 
