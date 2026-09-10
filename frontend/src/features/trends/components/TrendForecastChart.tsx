@@ -29,7 +29,8 @@ export const TrendForecastChart: React.FC<TrendForecastChartProps> = ({ forecast
     trend || {
       tvs_score: forecast.current_score,
       supported_formats: ['shorts', 'both'],
-    }
+    },
+    forecast
   );
 
   if (!trajectory || trajectory.length === 0) {
