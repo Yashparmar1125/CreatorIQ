@@ -29,7 +29,13 @@ import {
   Copy,
 } from 'lucide-react';
 import { sanitizeStrategyTopic } from '../../../lib/strategyTopic';
-import { cleanTrendTitle, cleanTrendText, resolveVideoConcept } from '../../../lib/cleanTrendTitle';
+import {
+  cleanTrendTitle,
+  cleanTrendText,
+  resolveVideoConcept,
+  resolveVideoConceptBadge,
+  cleanTrendHeadline,
+} from '../../../lib/cleanTrendTitle';
 import { cn } from '../../../lib/utils';
 
 const FORMAT_TABS = [
@@ -381,9 +387,9 @@ export const TrendsPage: React.FC = () => {
                     <h3 className="text-base font-semibold text-neutral-900 group-hover:text-brand-600">
                       {cleanTrendTitle(trend.topic)}
                     </h3>
-                    {trend.headline && trend.headline !== trend.topic && (
-                      <p className="mt-1 text-sm font-medium text-neutral-700">{trend.headline}</p>
-                    )}
+                    <p className="mt-1 text-sm font-medium text-neutral-700">
+                      {cleanTrendHeadline(trend)}
+                    </p>
                     {trend.is_youtube_video && trend.channel_name && (
                       <p className="mt-2 text-xs text-neutral-500">
                         {trend.channel_name}
@@ -415,7 +421,7 @@ export const TrendsPage: React.FC = () => {
                       <div className="flex items-center gap-1.5">
                         <span className="inline-flex items-center gap-1 rounded-full bg-brand-100/80 px-2 py-0.5 text-[10px] font-semibold text-brand-700 border border-brand-200/60">
                           <Film className="h-2.5 w-2.5" />
-                          {trend.supported_formats?.includes('shorts') ? 'Shorts Hook' : 'Video Angle'}
+                          {resolveVideoConceptBadge(trend)}
                         </span>
                         <button
                           type="button"

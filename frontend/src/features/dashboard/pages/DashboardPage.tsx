@@ -5,7 +5,12 @@ import { useTrendsStore } from "../../../stores/useTrendsStore";
 import { useAuthStore } from "../../../stores/useAuthStore";
 import { renderStatIcon } from "../../../lib/stat-icons";
 import { sanitizeStrategyTopic } from "../../../lib/strategyTopic";
-import { cleanTrendTitle, cleanTrendText, resolveVideoConcept } from "../../../lib/cleanTrendTitle";
+import {
+  cleanTrendTitle,
+  cleanTrendText,
+  resolveVideoConcept,
+  resolveVideoConceptBadge,
+} from "../../../lib/cleanTrendTitle";
 import { Card } from "../../../components/ui/Card";
 import { Button } from "../../../components/ui/Button";
 import { Badge } from "../../../components/ui/Badge";
@@ -267,7 +272,7 @@ export const DashboardPage: React.FC = () => {
                       </span>
                       <span className="inline-flex items-center gap-1 rounded-full bg-brand-100/80 px-2 py-0.5 text-[10px] font-semibold text-brand-700 border border-brand-200/60">
                         <Film className="h-2.5 w-2.5" />
-                        {trend.supported_formats?.includes('shorts') ? 'Shorts' : 'Video'}
+                        {resolveVideoConceptBadge(trend)}
                       </span>
                     </div>
                     <p className="text-xs sm:text-sm font-semibold text-neutral-900 leading-snug">

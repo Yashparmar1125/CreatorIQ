@@ -17,7 +17,7 @@ import {
   Flame,
 } from 'lucide-react';
 
-import { cleanTrendTitle } from '../../../lib/cleanTrendTitle';
+import { cleanTrendTitle, resolveVideoConcept } from '../../../lib/cleanTrendTitle';
 import { TrendForecastChart } from '../components/TrendForecastChart';
 
 export const TrendDetailPage: React.FC = () => {
@@ -162,9 +162,9 @@ export const TrendDetailPage: React.FC = () => {
           <Card variant="dark">
             <h2 className="text-sm font-semibold">Your angle</h2>
             <p className="mt-2 text-sm leading-relaxed text-neutral-200">
-              {trend.content_angle || trend.growth_tip}
+              &ldquo;{resolveVideoConcept(trend)}&rdquo;
             </p>
-            {trend.growth_tip && trend.content_angle && (
+            {trend.growth_tip && (
               <p className="mt-3 text-sm text-neutral-400">{trend.growth_tip}</p>
             )}
           </Card>

@@ -21,9 +21,19 @@ def _clean_title(text: str | None) -> str:
         return "Trending Opportunity"
     cleaned = re.sub(r'#\w+', '', text)
     cleaned = re.sub(r'#', '', cleaned)
+    # Remove channel attribution after pipes or double pipes (e.g. "|| Preetha Vibes" or "| Bhawna Saini vlogs" or trailing "|")
+    cleaned = re.sub(r'\s*\|+.*$', '', cleaned)
+    cleaned = re.sub(r'\s*-\s*YouTube$', '', cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r'\s*//+.*$', '', cleaned)
+    # Remove leading/trailing punctuation like |, -, :, quotes
+    cleaned = re.sub(r'^[\s\-–—:,"\'|]+|[\s\-–—:,"\'|]+$', '', cleaned)
     cleaned = re.sub(r'_', ' ', cleaned)
     cleaned = re.sub(r'\s+', ' ', cleaned).strip()
-    return cleaned.title() if cleaned else "Trending Opportunity"
+    if not cleaned:
+        return "Trending Opportunity"
+    if cleaned.islower():
+        cleaned = cleaned.title()
+    return cleaned
 
 
 def _clean_text(text: str | None) -> str:
@@ -32,7 +42,34 @@ def _clean_text(text: str | None) -> str:
     cleaned = re.sub(r'#\w+', '', text)
     cleaned = re.sub(r'#', '', cleaned)
     cleaned = re.sub(r'\s+', ' ', cleaned).strip()
-    return cleaned
+_SHORTS_CONCEPTS = [
+    "Hook: 'Wait till the end...' Test '{title}' with a real-time before & after comparison for {niche} viewers.",
+    "POV: Trying the '{title}' trend for the very first time without watching a tutorial.",
+    "The 60-Second Challenge: Can you pull off '{title}' in real time with zero cuts?",
+    "Is '{title}' actually legit? Test the viral claim in 45 seconds with instant proof.",
+    "Behind the scenes of '{title}': Film what actually happens off-camera in a rapid 30s cut.",
+    "Expectation vs Reality: The '{title}' trend executed by a beginner vs. a pro {niche} creator.",
+    "The 1 trick everyone misses with '{title}' — reveal and demonstrate the fix in the opening 3 seconds.",
+    "Testing '{title}' so you don't have to — give your raw, unfiltered verdict on a 1-to-10 scale.",
+]
+
+_LONG_FORM_CONCEPTS = [
+    "The Rise and Impact of '{title}': An investigative breakdown of why this captivated {niche} viewers.",
+    "The Ultimate Guide to '{title}': Step-by-step masterclass covering every detail for {niche} creators.",
+    "I Tested '{title}' for 7 Days Straight — Here is what happened to my stats and audience reach.",
+    "Tier List: Ranking every single variation and technique of '{title}' from worst to god-tier.",
+    "The Truth About '{title}' Nobody Is Telling You: Unfiltered breakdown backed by real evidence.",
+    "Mastering '{title}' from scratch: 0 to 100 complete walkthrough for serious {niche} creators.",
+]
+
+_HEADLINES = [
+    "Peaking Search Velocity — High Virality Potential in {niche}",
+    "Early Breakout Signal — Low Competition Opportunity in {niche}",
+    "Audience Demand Surge — Perfect for High Retention",
+    "Fast-Growing Topic — Ride the Early Discovery Wave",
+    "Untapped Search Angle — Strong Viewer Retention Signal",
+    "Viral Momentum Detected — High Click-Through Rate Window",
+]
 
 
 class TrendEnrichmentService:
@@ -122,11 +159,12 @@ class TrendEnrichmentService:
             "- why_trending: 1-2 sentences on why this is rising on YouTube (NO HASHTAGS).\n"
             "- why_predicted: personalized 1-sentence explanation why this specific trend was predicted for THIS creator's niche and geography (NO HASHTAGS).\n"
             "- growth_tip: personalized advice for THIS creator's tone and format (NO HASHTAGS).\n"
-            "- video_concept: one creative, highly-clickable video concept idea tailored for this creator (NO HASHTAGS).\n"
-            "- content_angle: one specific video concept or editorial angle they could film today (NO HASHTAGS).\n"
+            "- video_concept: one creative, highly-clickable video concept idea tailored for this creator (NO HASHTAGS, NO generic 'React to or remix' boilerplate).\n"
+            "- content_angle: one specific video concept or editorial angle they could film today (NO HASHTAGS, NO generic boilerplate).\n"
             "- action_plan: step-by-step 1-sentence content creation action for this video (NO HASHTAGS).\n"
             "- key_indicator: one metric line using the provided velocity/volume.\n"
             "- archetype: one of " + ", ".join(_ARCHETYPES) + ".\n"
+            "- DIVERSITY RULE: NEVER use generic formulas like 'React to or remix the ... trend with your own spin' or 'Test the viral ... trend'. Every video_concept and content_angle must be an original, concrete viral idea.\n"
             "Reply with ONLY valid JSON, no markdown.\n"
             'Schema: {"items": [{"id": string, "keep": true, "topic": string, "headline": string, '
             '"why_trending": string, "why_predicted": string, "growth_tip": string, "video_concept": string, '
@@ -232,7 +270,15 @@ class TrendEnrichmentService:
         fmt_label = {"both": "short or long-form", "long_form": "long-form", "shorts": "Short"}.get(fmt, fmt)
         tone = ctx.get("tone") or "conversational"
         vol = raw.get("volume") or raw.get("key_indicator") or "rising search interest"
-        out["headline"] = f"Rising in {niche} — worth a {fmt_label} video"
+        seed = abs(hash(f"{raw.get('id', '')}:{title}"))
+        is_shorts = fmt in ("shorts", "both")
+        concepts = _SHORTS_CONCEPTS if is_shorts else _LONG_FORM_CONCEPTS
+        concept_template = concepts[seed % len(concepts)]
+        concept_str = concept_template.format(title=title, niche=niche)
+        headline_template = _HEADLINES[seed % len(_HEADLINES)]
+        headline_str = headline_template.format(niche=niche)
+
+        out["headline"] = headline_str
         out["why_trending"] = (
             f"'{title}' is gaining traction on YouTube with {vol}. "
             f"Creators in {niche} are starting to cover this angle."
@@ -244,8 +290,8 @@ class TrendEnrichmentService:
             f"As a {tone} {niche} creator, test this with a quick {fmt} — "
             "your audience may discover you through search before the topic saturates."
         )
-        out["video_concept"] = f"Test the viral '{title}' trend with a unique {tone} {niche} spin in a quick {fmt_label}."
-        out["content_angle"] = f"React to or remix the '{title}' trend with your own {tone} spin."
+        out["video_concept"] = concept_str
+        out["content_angle"] = concept_str
         out["action_plan"] = f"Film a {fmt_label} video testing '{title}' using a {tone} hook in the first 5 seconds."
         out["description"] = out["why_trending"]
         out["ai_enriched"] = False
