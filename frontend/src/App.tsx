@@ -22,6 +22,7 @@ import { SettingsPage } from './features/settings/pages/SettingsPage';
 import { ProductPage } from './pages/ProductPage';
 import { PricingPage } from './pages/PricingPage';
 import { InsightsPage } from './pages/InsightsPage';
+import { ModelPerformancePage } from './pages/ModelPerformancePage';
 
 const router = createBrowserRouter([
   {
@@ -39,6 +40,18 @@ const router = createBrowserRouter([
   {
     path: '/insights',
     element: <InsightsPage />,
+  },
+  {
+    path: '/model-performance',
+    element: <ModelPerformancePage />,
+  },
+  {
+    path: '/ml-metrics',
+    element: <Navigate to="/model-performance" replace />,
+  },
+  {
+    path: '/evaluations',
+    element: <Navigate to="/model-performance" replace />,
   },
   {
     path: '/login',

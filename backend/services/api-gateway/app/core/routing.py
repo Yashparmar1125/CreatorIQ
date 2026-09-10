@@ -28,6 +28,8 @@ def resolve_target(path: str) -> RouteTarget:
         return RouteTarget(service="planner", base_url=settings.planner_service_url)
     if first == "analytics":
         return RouteTarget(service="analytics", base_url=settings.analytics_service_url)
+    if first == "ml":
+        return RouteTarget(service="ml", base_url=settings.ml_service_url)
 
     return RouteTarget(service="unknown", base_url="")
 
@@ -37,6 +39,8 @@ def is_public_auth_path(path: str, method: str) -> bool:
     if m == "POST" and path in {"auth/register", "auth/login", "auth/token/refresh"}:
         return True
     if m == "GET" and path in {"auth/google/oauth-url", "auth/google/callback", "auth/health"}:
+        return True
+    if m == "GET" and (path.startswith("ml/evaluations") or path == "ml/health"):
         return True
     if "/internal/" in f"/{path}":
         return True

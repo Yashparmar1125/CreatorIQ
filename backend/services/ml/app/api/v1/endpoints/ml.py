@@ -1,11 +1,12 @@
 from typing import Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.db import get_db
 from app.core.deps import require_internal_token
 from app.services.ml_service import MlService
-
 
 router = APIRouter()
 service = MlService()
@@ -37,9 +38,34 @@ async def health() -> dict:
     return service.health()
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Public Evaluation & Observability Endpoints (No Auth Required)
+# ─────────────────────────────────────────────────────────────────────────────
+@router.get("/ml/evaluations/summary")
+async def get_evaluations_summary(db: AsyncSession | None = Depends(get_db)) -> dict:
+    """Returns aggregated accuracy, error rate (MAE/RMSE), and latency statistics."""
+    return await service.get_evaluations_summary(db=db)
+
+
+@router.get("/ml/evaluations/recent")
+async def get_recent_evaluations(
+    limit: int = Query(default=50, ge=1, le=200),
+    db: AsyncSession | None = Depends(get_db),
+) -> dict:
+    """Returns the latest evaluation records for live inspection."""
+    return await service.get_recent_evaluations(db=db, limit=limit)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Internal Microservice Predict Endpoints
+# ─────────────────────────────────────────────────────────────────────────────
 @router.post("/internal/ml/trend-forecast")
-async def trend_forecast(body: TrendForecastBody, _: None = Depends(require_internal_token)) -> dict:
-    return service.trend_forecast(body.model_dump(exclude_none=True))
+async def trend_forecast(
+    body: TrendForecastBody,
+    _: None = Depends(require_internal_token),
+    db: AsyncSession | None = Depends(get_db),
+) -> dict:
+    return await service.trend_forecast(body.model_dump(exclude_none=True), db=db)
 
 
 @router.post("/internal/ml/score-idea")

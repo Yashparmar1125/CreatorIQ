@@ -57,3 +57,8 @@ Prophet/
 # Teamwork subagent artifacts
 .agents/
 ORIGINAL_REQUEST.md
+
+# Log files
+logs/
+*.log
+*.jsonl
