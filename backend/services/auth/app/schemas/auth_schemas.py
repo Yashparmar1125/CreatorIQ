@@ -22,6 +22,9 @@ class OnboardingUpdate(BaseModel):
     posting_frequency: str
     channel_tone: str
     country: str
+    channel_name: Optional[str] = None
+    handle: Optional[str] = None
+    subscriber_count: Optional[int] = None
 
 class UserResponse(UserBase):
     id: UUID

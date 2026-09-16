@@ -13,9 +13,6 @@ import { Toaster } from './components/Toaster';
 import { DashboardPage } from './features/dashboard/pages/DashboardPage';
 import { TrendsPage } from './features/trends/pages/TrendsPage';
 import { TrendDetailPage } from './features/trends/pages/TrendDetailPage';
-import { StrategyPage } from './features/strategy/pages/StrategyPage';
-import { PlannerPage } from './features/planner/pages/PlannerPage';
-import { AnalyticsPage } from './features/analytics/pages/AnalyticsPage';
 import { SettingsPage } from './features/settings/pages/SettingsPage';
 
 // Public Pages
@@ -90,18 +87,6 @@ const router = createBrowserRouter([
     element: <Navigate to="/app/trends" replace />,
   },
   {
-    path: '/strategy',
-    element: <Navigate to="/app/strategy" replace />,
-  },
-  {
-    path: '/planner',
-    element: <Navigate to="/app/planner" replace />,
-  },
-  {
-    path: '/analytics',
-    element: <Navigate to="/app/analytics" replace />,
-  },
-  {
     path: '/app',
     element: (
       <ProtectedRoute>
@@ -124,18 +109,6 @@ const router = createBrowserRouter([
       {
         path: 'trends/detail/:trendId',
         element: <TrendDetailPage />,
-      },
-      {
-        path: 'strategy',
-        element: <StrategyPage />,
-      },
-      {
-        path: 'planner',
-        element: <PlannerPage />,
-      },
-      {
-        path: 'analytics',
-        element: <AnalyticsPage />,
       },
       {
         path: 'settings',

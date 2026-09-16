@@ -24,7 +24,7 @@ $LocalRedisUrl = "redis://redis:6379/0"
 $env:DATABASE_URL = $LocalDatabaseUrl
 $env:REDIS_URL = $LocalRedisUrl
 
-$dbServices = @("auth", "channel", "trend", "strategy", "planner", "analytics")
+$dbServices = @("auth", "channel", "trend")
 
 function Sync-DatabaseSchema {
     Write-Host ""
@@ -133,9 +133,6 @@ $endpoints = @(
     @{ Name = "Auth"; Url = "http://localhost:8001/auth/health" },
     @{ Name = "Channel"; Url = "http://localhost:8002/health" },
     @{ Name = "Trend"; Url = "http://localhost:8003/health" },
-    @{ Name = "Strategy"; Url = "http://localhost:8004/health" },
-    @{ Name = "Planner"; Url = "http://localhost:8005/health" },
-    @{ Name = "Analytics"; Url = "http://localhost:8006/health" },
     @{ Name = "ML"; Url = "http://localhost:8007/health" }
 )
 

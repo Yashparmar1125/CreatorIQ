@@ -26,7 +26,7 @@ export const WelcomeStep: React.FC<WelcomeStepProps> = ({ onNext }) => (
         Welcome to <span className="text-gradient-brand">CreatorIQ</span>
       </h1>
       <p className="mx-auto max-w-md text-base leading-relaxed text-neutral-400">
-        Connect your YouTube channel and get a personalized trend feed in minutes.
+        Set up your creator profile and get a personalized AI trend feed in minutes.
       </p>
     </div>
 

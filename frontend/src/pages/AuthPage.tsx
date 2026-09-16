@@ -1,12 +1,11 @@
 import React, { useEffect } from 'react';
-import { useNavigate, useLocation, useSearchParams, Link } from 'react-router';
+import { useNavigate, useLocation, Link } from 'react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useNotificationStore } from '../stores/useNotificationStore';
 import {
-  Youtube,
   Mail,
   User,
   Lock,
@@ -24,16 +23,6 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Alert } from '../components/ui/Alert';
 
-const OAUTH_LOGIN_ERRORS: Record<string, string> = {
-  missing_code: 'Sign-in was cancelled or incomplete.',
-  invalid_state: 'Session expired. Please try again.',
-  token_exchange: 'Could not complete sign-in with Google.',
-  profile: 'Could not load your Google profile.',
-  missing_profile: 'Your Google account did not return an email.',
-  account_conflict: 'This email is linked to another Google account.',
-  access_denied: 'Google sign-in was cancelled.',
-};
-
 const authSchema = z.object({
   name: z.string().optional(),
   email: z.string().email('Please enter a valid email'),
@@ -43,15 +32,14 @@ const authSchema = z.object({
 type AuthFormValues = z.infer<typeof authSchema>;
 
 const benefits = [
-  { icon: TrendingUp, text: 'Personalized Top 5 trend feed on day one' },
-  { icon: Sparkles, text: 'AI strategy briefs grounded in your niche' },
-  { icon: BarChart2, text: 'Analytics and planning in one workspace' },
+  { icon: TrendingUp, text: 'Personalized Top 15 trend feed on day one' },
+  { icon: Sparkles, text: 'Prophet time-series forecasting & view estimation' },
+  { icon: BarChart2, text: 'AI-curated topics calibrated to your channel' },
 ];
 
 export const AuthPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const { addNotification } = useNotificationStore();
 
   const isLoginPage = location.pathname === '/login';
@@ -59,7 +47,6 @@ export const AuthPage: React.FC = () => {
 
   const loginWithPassword = useAuthStore((s) => s.loginWithPassword);
   const register = useAuthStore((s) => s.register);
-  const startGoogleOAuth = useAuthStore((s) => s.startGoogleOAuth);
   const storeError = useAuthStore((s) => s.error);
   const clearError = useAuthStore((s) => s.clearError);
   const isLoading = useAuthStore((s) => s.isLoading);
@@ -79,15 +66,6 @@ export const AuthPage: React.FC = () => {
     clearError();
     reset();
   }, [mode, clearError, reset]);
-
-  useEffect(() => {
-    const errorCode = searchParams.get('error');
-    if (errorCode) {
-      const message = OAUTH_LOGIN_ERRORS[errorCode] ?? errorCode.replace(/_/g, ' ');
-      addNotification('error', 'Authentication Failed', message);
-    }
-  }, [searchParams, addNotification]);
-
   const onFormSubmit = async (data: AuthFormValues) => {
     if (mode === 'signup' && (!data.name || data.name.length < 2)) {
       setError('name', { type: 'manual', message: 'Full name must be at least 2 characters' });
@@ -110,13 +88,6 @@ export const AuthPage: React.FC = () => {
     }
   };
 
-  const handleGoogle = async () => {
-    try {
-      await startGoogleOAuth();
-    } catch {
-      addNotification('error', 'OAuth Error', 'Could not initiate Google sign-in.');
-    }
-  };
 
   return (
     <div className="flex min-h-screen">
@@ -290,23 +261,6 @@ export const AuthPage: React.FC = () => {
                   )}
                 </Button>
 
-                <div className="relative flex items-center gap-3 py-1">
-                  <div className="h-px flex-1 bg-neutral-200" />
-                  <span className="text-xs text-neutral-400">or</span>
-                  <div className="h-px flex-1 bg-neutral-200" />
-                </div>
-
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="w-full"
-                  size="lg"
-                  onClick={() => void handleGoogle()}
-                  disabled={isLoading}
-                >
-                  <Youtube className="h-4 w-4 text-red-600" />
-                  Continue with YouTube
-                </Button>
               </form>
 
               <p className="mt-6 text-center text-sm text-neutral-500">

@@ -48,6 +48,9 @@ class BuildProfileRequest(BaseModel):
     channel_tone: str
     country: str
     run_analysis: bool | None = None
+    channel_name: str | None = None
+    handle: str | None = None
+    subscriber_count: int | None = None
 
 
 @router.get("/health")
@@ -175,6 +178,9 @@ async def build_creator_profile(
         channel_tone=payload.channel_tone,
         country=payload.country,
         run_analysis=payload.run_analysis,
+        channel_name=payload.channel_name,
+        handle=payload.handle,
+        subscriber_count=payload.subscriber_count,
     )
     await db.commit()
     return {"data": profile, "meta": {"request_id": "local-dev"}}

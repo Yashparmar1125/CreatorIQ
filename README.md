@@ -1,6 +1,8 @@
 # CreatorIQ
 
-**CreatorIQ** is a premium AI SaaS platform for YouTube creators. It combines **trend discovery**, **AI strategy briefs**, **channel analytics**, and **content planning** in one workspace — personalized to each creator's niche, format, tone, and audience geography.
+**CreatorIQ** is a premium AI SaaS platform for YouTube creators. It combines **trend discovery**, **AI trend intelligence**, **Prophet time-series forecasting**, and **view opportunity scoring** in one workspace — personalized to each creator's niche, format, tone, and audience geography.
+
+> 📘 **Quick Start for Developers**: See the step-by-step [Developer Setup Guide](docs/DEVELOPER_SETUP_GUIDE.md) for local Docker and bare-metal environments.
 
 ---
 

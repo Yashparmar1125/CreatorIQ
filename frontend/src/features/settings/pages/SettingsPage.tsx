@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { RefreshCw, Sparkles, Save, Check, Sliders, Cpu, Plus, X } from 'lucide-react';
+import { Save, Check, Plus, X } from 'lucide-react';
 import { api } from '../../../lib/api';
 import { MaturityBadge, type ProfileMaturity } from '../../onboarding/components/MaturityBadge';
 import { PageHeader } from '../../../components/ui/PageHeader';
@@ -34,12 +34,6 @@ interface CreatorProfile {
   sync_status: string;
   last_analyzed_at: string | null;
   last_reconfigured_at: string | null;
-}
-
-interface ReconfigureChanges {
-  niches_effective: { before: string[]; after: string[] };
-  profile_maturity: { before: string; after: string };
-  geo_source: { before: string; after: string };
 }
 
 const PRESET_NICHES = [
@@ -87,15 +81,10 @@ const TONE_OPTIONS = [
 
 export const SettingsPage: React.FC = () => {
   const [profile, setProfile] = useState<CreatorProfile | null>(null);
-  const [changes, setChanges] = useState<ReconfigureChanges | null>(null);
   const [loading, setLoading] = useState(true);
-  const [reconfiguring, setReconfiguring] = useState(false);
   const [savingManual, setSavingManual] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-
-  // Active Tab: 'manual' | 'auto'
-  const [activeMode, setActiveMode] = useState<'manual' | 'auto'>('manual');
 
   // Manual Form State
   const [selectedNiches, setSelectedNiches] = useState<string[]>([]);
@@ -128,30 +117,6 @@ export const SettingsPage: React.FC = () => {
   useEffect(() => {
     void loadProfile();
   }, [loadProfile]);
-
-  const handleReconfigureAuto = async () => {
-    setReconfiguring(true);
-    setError(null);
-    setSuccess(null);
-    setChanges(null);
-    try {
-      await api.post('/auth/sync/channel');
-      const { data } = await api.post('/channels/profile/reconfigure');
-      const updated = data.data.profile as CreatorProfile;
-      setProfile(updated);
-      setChanges(data.data.changes as ReconfigureChanges);
-      setSuccess('Profile automatically reconfigured from your latest YouTube analytics & metadata!');
-    } catch (e: unknown) {
-      const err = e as { response?: { data?: { error?: { message?: string }; detail?: { message?: string } } } };
-      setError(
-        err.response?.data?.error?.message ||
-          err.response?.data?.detail?.message ||
-          'Auto-reconfigure failed. Try again.'
-      );
-    } finally {
-      setReconfiguring(false);
-    }
-  };
 
   const handleSaveManual = async () => {
     if (selectedNiches.length === 0) {
@@ -209,7 +174,7 @@ export const SettingsPage: React.FC = () => {
     <div className="mx-auto max-w-4xl space-y-6 animate-in">
       <PageHeader
         title="Creator Profile & Preferences"
-        description="Configure how CreatorIQ & Qdrant Vector AI personalize your trend recommendations — choose Automatic YouTube Sync or Manual Custom Control."
+        description="Configure how CreatorIQ & Qdrant Vector AI personalize your trend recommendations and opportunity scoring."
       />
 
       {error && <Alert variant="error">{error}</Alert>}
@@ -222,11 +187,10 @@ export const SettingsPage: React.FC = () => {
             <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
               <div>
                 <h3 className="text-base font-bold text-neutral-900">
-                  {profile.channel_stats.channel_name || 'Connected Channel'}
+                  {profile.channel_stats.channel_name || 'Channel Profile'}
                 </h3>
                 <p className="mt-1 text-xs text-neutral-500">
-                  {(profile.channel_stats.subscriber_count ?? 0).toLocaleString()} Subscribers ·{' '}
-                  {profile.channel_stats.video_count ?? 0} Videos Published
+                  {(profile.channel_stats.subscriber_count ?? 0).toLocaleString()} Subscribers
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -235,37 +199,8 @@ export const SettingsPage: React.FC = () => {
             </div>
           </Card>
 
-          {/* Mode Switcher Tabs (Manual vs Automatic) */}
-          <div className="flex rounded-xl border border-neutral-200 bg-neutral-100/80 p-1.5 shadow-inner">
-            <button
-              type="button"
-              onClick={() => setActiveMode('manual')}
-              className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-xs font-bold transition-all ${
-                activeMode === 'manual'
-                  ? 'bg-white text-neutral-900 shadow-sm'
-                  : 'text-neutral-500 hover:text-neutral-700'
-              }`}
-            >
-              <Sliders className="h-4 w-4 text-brand-600" />
-              Manual Custom Control
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveMode('auto')}
-              className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-xs font-bold transition-all ${
-                activeMode === 'auto'
-                  ? 'bg-white text-neutral-900 shadow-sm'
-                  : 'text-neutral-500 hover:text-neutral-700'
-              }`}
-            >
-              <Cpu className="h-4 w-4 text-cyan-600" />
-              Automatic YouTube AI Sync
-            </button>
-          </div>
-
-          {/* TAB 1: MANUAL CUSTOM PROFILE SETTINGS */}
-          {activeMode === 'manual' && (
-            <Card variant="elevated" className="space-y-6">
+          {/* MANUAL CUSTOM PROFILE SETTINGS */}
+          <Card variant="elevated" className="space-y-6">
               <div>
                 <h3 className="text-sm font-bold text-neutral-900">Manual Profile Preferences</h3>
                 <p className="text-xs text-neutral-500">
@@ -423,76 +358,10 @@ export const SettingsPage: React.FC = () => {
               <div className="border-t border-neutral-100 pt-4">
                 <Button onClick={() => void handleSaveManual()} disabled={savingManual} className="w-full sm:w-auto">
                   <Save className={`h-4 w-4 ${savingManual ? 'animate-spin' : ''}`} />
-                  {savingManual ? 'Saving Preferences...' : 'Save Manual Profile Settings'}
+                  {savingManual ? 'Saving Preferences...' : 'Save Profile Settings'}
                 </Button>
               </div>
             </Card>
-          )}
-
-          {/* TAB 2: AUTOMATIC YOUTUBE AI SYNC */}
-          {activeMode === 'auto' && (
-            <Card variant="elevated" className="space-y-6">
-              <div>
-                <h3 className="text-sm font-bold text-neutral-900">Automatic YouTube AI Sync</h3>
-                <p className="text-xs text-neutral-500">
-                  CreatorIQ automatically inspects your connected YouTube channel&apos;s upload history, video titles, and engagement rates to infer your exact niche and target audience.
-                </p>
-              </div>
-
-              <dl className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2 border-t border-neutral-100 pt-4">
-                <div>
-                  <dt className="text-xs text-neutral-500">Auto-Detected Niches</dt>
-                  <dd className="mt-1 font-medium text-neutral-900">
-                    {profile.niches.inferred.join(', ') || profile.niches.effective.join(', ') || '—'}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-neutral-500">Sync Status</dt>
-                  <dd className="mt-1 font-medium capitalize text-neutral-900">
-                    {profile.sync_status.replace('_', ' ')}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-neutral-500">Target Audience Geo</dt>
-                  <dd className="mt-1 font-medium text-neutral-900">
-                    {profile.geo.target_country || 'Auto-Detected'}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-neutral-500">Last AI Analysis</dt>
-                  <dd className="mt-1 font-medium text-neutral-900">
-                    {profile.last_reconfigured_at
-                      ? new Date(profile.last_reconfigured_at).toLocaleString()
-                      : 'Never'}
-                  </dd>
-                </div>
-              </dl>
-
-              {changes && (
-                <div className="rounded-lg border border-brand-200 bg-brand-50 p-4 text-sm">
-                  <p className="flex items-center gap-2 font-medium text-brand-800">
-                    <Sparkles className="h-4 w-4" />
-                    What changed
-                  </p>
-                  <p className="mt-2 text-neutral-700">
-                    Maturity: {changes.profile_maturity.before} →{' '}
-                    <strong>{changes.profile_maturity.after}</strong>
-                  </p>
-                  <p className="text-neutral-700">
-                    Niches: {changes.niches_effective.before.join(', ') || '—'} →{' '}
-                    <strong>{changes.niches_effective.after.join(', ') || '—'}</strong>
-                  </p>
-                </div>
-              )}
-
-              <div className="border-t border-neutral-100 pt-4">
-                <Button onClick={() => void handleReconfigureAuto()} disabled={reconfiguring}>
-                  <RefreshCw className={`h-4 w-4 ${reconfiguring ? 'animate-spin' : ''}`} />
-                  {reconfiguring ? 'Reconfiguring...' : 'Reconfigure recommendations from YouTube'}
-                </Button>
-              </div>
-            </Card>
-          )}
         </div>
       )}
     </div>

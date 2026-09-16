@@ -3,7 +3,6 @@ import { persist } from 'zustand/middleware';
 import axios from 'axios';
 import { api } from '../lib/api';
 
-const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:8000/v1';
 
 export interface AuthUser {
   id: string;
@@ -27,7 +26,6 @@ interface AuthState {
   loginWithPassword: (email: string, password: string) => Promise<void>;
   register: (full_name: string, email: string, password: string) => Promise<void>;
   fetchMe: () => Promise<void>;
-  startGoogleOAuth: () => Promise<void>;
   applyHashTokens: (hash: string) => Promise<void>;
   logout: () => void;
   clearError: () => void;
@@ -110,28 +108,6 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      startGoogleOAuth: async () => {
-        set({ error: null });
-        try {
-          const { data } = await axios.get<{ data: { url: string } }>(`${baseURL}/auth/google/oauth-url`);
-          const url = data.data?.url;
-          if (!url) {
-            set({ error: 'Could not start Google sign-in' });
-            throw new Error('no_oauth_url');
-          }
-          window.location.href = url;
-        } catch (e: unknown) {
-          if (axios.isAxiosError(e)) {
-            const msg = String(
-              (e.response?.data as { error?: { message?: string } })?.error?.message || 'Could not start Google sign-in'
-            );
-            set({ error: msg });
-          } else {
-            set({ error: 'Could not start Google sign-in' });
-          }
-          throw e;
-        }
-      },
 
       applyHashTokens: async (hash: string) => {
         const h = hash.startsWith('#') ? hash.slice(1) : hash;

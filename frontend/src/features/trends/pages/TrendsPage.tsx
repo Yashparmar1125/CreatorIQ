@@ -23,12 +23,10 @@ import {
   Globe,
   ExternalLink,
   History,
-  Lightbulb,
   Bookmark,
   Check,
   Copy,
 } from 'lucide-react';
-import { sanitizeStrategyTopic } from '../../../lib/strategyTopic';
 import {
   cleanTrendTitle,
   cleanTrendText,
@@ -118,16 +116,6 @@ export const TrendsPage: React.FC = () => {
     if (activeFormatFilter === 'all') return trends;
     return trends.filter((t) => t.supported_formats?.includes(activeFormatFilter));
   }, [trends, activeFormatFilter]);
-
-  const extractTopic = (trend: (typeof trends)[number]) =>
-    sanitizeStrategyTopic(trend.raw_topic || trend.topic);
-
-  const handleQuickStrategy = (trend: (typeof trends)[number], e: React.MouseEvent) => {
-    e.stopPropagation();
-    navigate('/app/strategy', {
-      state: { topic: extractTopic(trend), autoGenerate: true },
-    });
-  };
 
   return (
     <div className="space-y-6 animate-in">
@@ -482,15 +470,6 @@ export const TrendsPage: React.FC = () => {
                       <span />
                     )}
                     <div className="flex shrink-0 items-center gap-2">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={(e) => handleQuickStrategy(trend, e)}
-                        title="Generate AI strategy for this topic"
-                      >
-                        <Lightbulb className="h-3.5 w-3.5" />
-                        Strategy
-                      </Button>
                       <Button
                         variant={trend.saved ? 'primary' : 'secondary'}
                         size="sm"

@@ -4,13 +4,15 @@ import { MaturityBadge, type ProfileMaturity } from '../MaturityBadge';
 import { OnboardingStepShell } from '../OnboardingStepShell';
 
 interface ProfileReviewStepProps {
+  channelName: string;
+  channelHandle?: string | null;
+  subscriberCount?: number;
   niche: string[];
   format: string | null;
   tone: string | null;
   frequency: string | null;
   country: string | null;
   profileMaturity: ProfileMaturity;
-  channelName?: string | null;
   isLoading: boolean;
   error?: string | null;
   onConfirm: () => void;
@@ -18,24 +20,24 @@ interface ProfileReviewStepProps {
 }
 
 export const ProfileReviewStep: React.FC<ProfileReviewStepProps> = ({
+  channelName,
+  channelHandle,
+  subscriberCount = 0,
   niche,
   format,
   tone,
   frequency,
   country,
   profileMaturity,
-  channelName,
   isLoading,
   error,
   onConfirm,
   onBack,
 }) => {
-  const isNew = profileMaturity === 'new';
-
   return (
     <OnboardingStepShell
       title="Review profile"
-      description="Confirm how we will personalize your recommendations."
+      description="Confirm your channel settings before creating your personalized workspace."
       onBack={onBack}
       onNext={onConfirm}
       nextLabel={isLoading ? 'Saving...' : 'Complete setup'}
@@ -45,15 +47,16 @@ export const ProfileReviewStep: React.FC<ProfileReviewStepProps> = ({
     >
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-semibold text-neutral-900">{channelName || 'Your channel'}</p>
+          <p className="text-base font-semibold text-neutral-900">{channelName || 'Your channel'}</p>
           <p className="mt-0.5 text-xs text-neutral-500">
-            {isNew ? 'Manual profile (new channel)' : 'Analysis-assisted profile'}
+            {channelHandle ? `${channelHandle} • ` : ''}
+            {subscriberCount.toLocaleString()} subscribers
           </p>
         </div>
         <MaturityBadge maturity={profileMaturity} />
       </div>
 
-      <dl className="grid grid-cols-2 gap-4 text-sm">
+      <dl className="grid grid-cols-2 gap-4 text-sm border-t border-neutral-100 pt-4">
         <div>
           <dt className="text-xs text-neutral-500">Niches</dt>
           <dd className="mt-1 font-medium text-neutral-900">{niche.join(', ') || '—'}</dd>
@@ -76,12 +79,9 @@ export const ProfileReviewStep: React.FC<ProfileReviewStepProps> = ({
         </div>
       </dl>
 
-      {isNew && (
-        <p className="border-t border-neutral-100 pt-4 text-xs leading-relaxed text-neutral-500">
-          Trends will use your manual niche and target country until your channel has enough data. You can update
-          anytime via Profile → Reconfigure.
-        </p>
-      )}
+      <p className="border-t border-neutral-100 pt-3 text-xs leading-relaxed text-neutral-500">
+        AI recommendations, opportunity scoring, and view estimates will be calibrated to your channel profile. You can update these anytime in Settings.
+      </p>
 
       {isLoading && (
         <div className="flex items-center gap-2 text-sm text-neutral-500">

@@ -16,9 +16,6 @@ class GatewayService:
             "auth": f"{settings.auth_service_url}/auth/health",
             "channel": f"{settings.channel_service_url}/health",
             "trend": f"{settings.trend_service_url}/health",
-            "strategy": f"{settings.strategy_service_url}/health",
-            "planner": f"{settings.planner_service_url}/health",
-            "analytics": f"{settings.analytics_service_url}/health",
             "ml": f"{settings.ml_service_url}/health"
         }
         

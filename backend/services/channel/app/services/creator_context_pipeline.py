@@ -62,11 +62,13 @@ TONE_UI_MAP: dict[str, str] = {
 
 
 def classify_maturity(*, video_count: int, subscriber_count: int, view_count: int) -> ProfileMaturity:
-    if video_count == 0 or view_count < 100:
-        return ProfileMaturity.new
-    if video_count >= 20 and (subscriber_count >= 1000 or view_count >= 10_000):
+    if subscriber_count >= 10_000:
         return ProfileMaturity.established
-    if video_count >= 1:
+    if subscriber_count >= 1_000:
+        return ProfileMaturity.emerging
+    if video_count >= 20 and view_count >= 10_000:
+        return ProfileMaturity.established
+    if video_count >= 1 or view_count >= 100:
         return ProfileMaturity.emerging
     return ProfileMaturity.new
 
@@ -163,39 +165,74 @@ class CreatorContextPipeline:
         channel_tone: str,
         country: str,
         run_analysis: bool | None = None,
+        channel_name: str | None = None,
+        handle: str | None = None,
+        subscriber_count: int | None = None,
     ) -> dict[str, Any]:
         channel = await self.channel_repo.get_primary_channel_by_user(db, user_id)
 
-        video_count = int(channel.video_count) if channel else 0
-        subscriber_count = int(channel.subscriber_count) if channel else 0
-        view_count = int(channel.view_count) if channel else 0
-        inferred: list[str] = list(channel.niches) if channel and channel.niches else []
-
-        maturity = classify_maturity(
-            video_count=video_count,
-            subscriber_count=subscriber_count,
-            view_count=view_count,
-        )
-
-        if run_analysis is None:
-            run_analysis = maturity != ProfileMaturity.new and video_count > 0
-
         content_format = map_content_format(primary_format)
         tone = map_tone(channel_tone)
-        analytics_weights = dict(channel.audience_geo_weights) if channel and channel.audience_geo_weights else None
-        geo_weights, geo_source = resolve_geo_weights(
-            country,
-            analytics_weights=analytics_weights,
-            view_count=view_count,
-        )
 
-        if channel:
+        if not channel:
+            sub_cnt = int(subscriber_count or 0)
+            vid_cnt = 20 if sub_cnt >= 1000 else 5
+            view_cnt = sub_cnt * 10 if sub_cnt > 0 else 500
+            name_val = channel_name.strip() if channel_name and channel_name.strip() else "My Channel"
+            handle_val = handle.strip() if handle and handle.strip() else None
+            channel = Channel(
+                user_id=user_id,
+                youtube_channel_id=f"manual-{user_id}",
+                name=name_val,
+                handle=handle_val,
+                thumbnail_url=None,
+                subscriber_count=sub_cnt,
+                video_count=vid_cnt,
+                view_count=view_cnt,
+                engagement_rate=4.5,
+                is_primary=True,
+                niches=niche or [],
+                content_formats=_content_format_enums(content_format),
+                tone=_tone_enum(tone),
+            )
+            db.add(channel)
+            await db.flush()
+        else:
+            if channel_name and channel_name.strip():
+                channel.name = channel_name.strip()
+            if handle is not None:
+                channel.handle = handle.strip() if handle.strip() else None
+            if subscriber_count is not None:
+                channel.subscriber_count = int(subscriber_count)
+                if int(subscriber_count) > 0 and channel.view_count == 0:
+                    channel.view_count = int(subscriber_count) * 10
             channel.content_formats = _content_format_enums(content_format)
             channel.tone = _tone_enum(tone)
             merged_niches = list(dict.fromkeys((channel.niches or []) + niche))[:5]
             if niche:
                 channel.niches = merged_niches
             await db.flush()
+
+        video_count = int(channel.video_count)
+        subscriber_count_val = int(channel.subscriber_count)
+        view_count = int(channel.view_count)
+        inferred: list[str] = list(channel.niches) if channel.niches else []
+
+        maturity = classify_maturity(
+            video_count=video_count,
+            subscriber_count=subscriber_count_val,
+            view_count=view_count,
+        )
+
+        if run_analysis is None:
+            run_analysis = False
+
+        analytics_weights = dict(channel.audience_geo_weights) if channel.audience_geo_weights else None
+        geo_weights, geo_source = resolve_geo_weights(
+            country,
+            analytics_weights=analytics_weights,
+            view_count=view_count,
+        )
 
         effective_niches, niche_source = merge_niches(
             onboarding=niche,

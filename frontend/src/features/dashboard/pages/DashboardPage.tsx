@@ -4,7 +4,6 @@ import { useDashboardStore } from "../../../stores/useDashboardStore";
 import { useTrendsStore } from "../../../stores/useTrendsStore";
 import { useAuthStore } from "../../../stores/useAuthStore";
 import { renderStatIcon } from "../../../lib/stat-icons";
-import { sanitizeStrategyTopic } from "../../../lib/strategyTopic";
 import {
   cleanTrendTitle,
   cleanTrendText,
@@ -20,7 +19,6 @@ import { MiniBarChart } from "../../../components/ui/MiniBarChart";
 import {
   Sparkles,
   TrendingUp,
-  Lightbulb,
   ArrowRight,
   Zap,
   BarChart2,
@@ -83,17 +81,6 @@ export const DashboardPage: React.FC = () => {
     fetchTrends();
   }, [fetchDashboard, fetchTrends]);
 
-  const handleQuickStrategy = (
-    trend: (typeof trends)[number],
-    e: React.MouseEvent,
-  ) => {
-    e.stopPropagation();
-    const topic = sanitizeStrategyTopic(trend.raw_topic || trend.topic);
-    navigate("/app/strategy", {
-      state: { topic, autoGenerate: true },
-    });
-  };
-
   const topTrends = trends.slice(0, 4);
   const currentForecast =
     FORECAST_PERIOD_DATA[forecastPeriod] ?? FORECAST_PERIOD_DATA['28d'];
@@ -135,7 +122,7 @@ export const DashboardPage: React.FC = () => {
               <p className="mt-1 text-xs text-neutral-600">
                 {channelContext?.name ? (
                   <>
-                    Connected:{" "}
+                    Channel:{" "}
                     <span className="font-semibold text-neutral-900">
                       {channelContext.name}
                     </span>
@@ -162,13 +149,13 @@ export const DashboardPage: React.FC = () => {
             <Link to="/app/trends">
               <Button variant="secondary" size="sm">
                 <TrendingUp className="h-4 w-4" />
-                View All 15 Trends
+                View All Trends
               </Button>
             </Link>
-            <Link to="/app/strategy">
+            <Link to="/app/settings">
               <Button size="sm">
                 <Sparkles className="h-4 w-4" />
-                AI Briefs
+                Channel Profile
               </Button>
             </Link>
           </div>
@@ -308,11 +295,15 @@ export const DashboardPage: React.FC = () => {
                   </span>
                   <Button
                     size="sm"
-                    onClick={(e) => handleQuickStrategy(trend, e)}
+                    variant="secondary"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/app/trends/detail/${trend.id}`);
+                    }}
                     className="shadow-sm"
                   >
-                    <Lightbulb className="h-3.5 w-3.5" />
-                    Strategy Brief
+                    <TrendingUp className="h-3.5 w-3.5" />
+                    View Trend
                   </Button>
                 </div>
               </Card>
@@ -395,9 +386,9 @@ export const DashboardPage: React.FC = () => {
               ))}
             </div>
           )}
-          <Link to="/app/strategy">
+          <Link to="/app/trends">
             <Button variant="secondary" className="mt-5 w-full">
-              Explore All Insights
+              Explore All Trends
             </Button>
           </Link>
         </Card>

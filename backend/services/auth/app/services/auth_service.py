@@ -302,6 +302,9 @@ class AuthService:
                         "posting_frequency": payload.posting_frequency,
                         "channel_tone": payload.channel_tone,
                         "country": payload.country,
+                        "channel_name": payload.channel_name,
+                        "handle": payload.handle,
+                        "subscriber_count": payload.subscriber_count,
                     },
                     headers={"X-Internal-Service-Token": settings.internal_service_token},
                 )

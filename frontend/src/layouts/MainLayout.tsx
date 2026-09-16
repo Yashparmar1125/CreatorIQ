@@ -4,9 +4,6 @@ import logo from '../assets/logo.png';
 import {
   LayoutDashboard,
   TrendingUp,
-  Lightbulb,
-  Calendar,
-  BarChart2,
   Settings,
   Search,
   Bell,
@@ -21,9 +18,6 @@ import { cn } from '../lib/utils';
 const navItems = [
   { name: 'Dashboard', icon: LayoutDashboard, href: '/app/dashboard' },
   { name: 'Trends', icon: TrendingUp, href: '/app/trends' },
-  { name: 'Strategy', icon: Lightbulb, href: '/app/strategy' },
-  { name: 'Planner', icon: Calendar, href: '/app/planner' },
-  { name: 'Analytics', icon: BarChart2, href: '/app/analytics' },
 ];
 
 function SidebarNav({

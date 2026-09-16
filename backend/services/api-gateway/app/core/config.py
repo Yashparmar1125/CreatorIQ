@@ -21,9 +21,6 @@ class Settings(BaseSettings):
     auth_service_url: str = "http://127.0.0.1:8001"
     channel_service_url: str = "http://127.0.0.1:8002"
     trend_service_url: str = "http://127.0.0.1:8003"
-    strategy_service_url: str = "http://127.0.0.1:8004"
-    planner_service_url: str = "http://127.0.0.1:8005"
-    analytics_service_url: str = "http://127.0.0.1:8006"
     ml_service_url: str = "http://127.0.0.1:8007"
 
     model_config = SettingsConfigDict(env_file=env_path, extra="ignore")

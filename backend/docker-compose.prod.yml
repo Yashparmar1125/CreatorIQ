@@ -13,13 +13,9 @@ x-common-env: &common-env
   AUTH_SERVICE_URL: http://auth:8001
   CHANNEL_SERVICE_URL: http://channel:8002
   TREND_SERVICE_URL: http://trend:8003
-  STRATEGY_SERVICE_URL: http://strategy:8004
-  PLANNER_SERVICE_URL: http://planner:8005
-  ANALYTICS_SERVICE_URL: http://analytics:8006
   ML_SERVICE_URL: http://ml:8007
   QDRANT_URL: http://qdrant:6333
   FRONTEND_URL: ${FRONTEND_URL:-https://creatoriq.yashparmar.in,https://creatoriq.vercel.app}
-  GOOGLE_OAUTH_REDIRECT_URI: ${GOOGLE_OAUTH_REDIRECT_URI:-https://api.ciq.yashparmar.in/v1/auth/google/callback}
 
 x-service-defaults: &service-defaults
   env_file:
@@ -158,45 +154,6 @@ services:
       ml:
         condition: service_started
 
-  strategy:
-    <<: *service-defaults
-    image: ${IMAGE_REGISTRY:-ghcr.io/yashparmar1125}/creatoriq-strategy:${IMAGE_TAG:-latest}
-    build: ./services/strategy
-    container_name: ciq-strategy
-    expose:
-      - "8004"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      ml:
-        condition: service_started
-
-  planner:
-    <<: *service-defaults
-    image: ${IMAGE_REGISTRY:-ghcr.io/yashparmar1125}/creatoriq-planner:${IMAGE_TAG:-latest}
-    build: ./services/planner
-    container_name: ciq-planner
-    expose:
-      - "8005"
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  analytics:
-    <<: *service-defaults
-    image: ${IMAGE_REGISTRY:-ghcr.io/yashparmar1125}/creatoriq-analytics:${IMAGE_TAG:-latest}
-    build: ./services/analytics
-    container_name: ciq-analytics
-    expose:
-      - "8006"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
   api-gateway:
     <<: *service-defaults
     image: ${IMAGE_REGISTRY:-ghcr.io/yashparmar1125}/creatoriq-api-gateway:${IMAGE_TAG:-latest}
@@ -213,12 +170,6 @@ services:
       channel:
         condition: service_started
       trend:
-        condition: service_started
-      strategy:
-        condition: service_started
-      planner:
-        condition: service_started
-      analytics:
         condition: service_started
       ml:
         condition: service_started
@@ -254,30 +205,10 @@ services:
       postgres:
         condition: service_healthy
 
-  db-push-strategy:
+  db-push-ml:
     profiles: ["db-push"]
     <<: *service-defaults
-    image: ${IMAGE_REGISTRY:-ghcr.io/yashparmar1125}/creatoriq-strategy:${IMAGE_TAG:-latest}
-    restart: "no"
-    command: ["python", "-m", "app.db_push"]
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  db-push-planner:
-    profiles: ["db-push"]
-    <<: *service-defaults
-    image: ${IMAGE_REGISTRY:-ghcr.io/yashparmar1125}/creatoriq-planner:${IMAGE_TAG:-latest}
-    restart: "no"
-    command: ["python", "-m", "app.db_push"]
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  db-push-analytics:
-    profiles: ["db-push"]
-    <<: *service-defaults
-    image: ${IMAGE_REGISTRY:-ghcr.io/yashparmar1125}/creatoriq-analytics:${IMAGE_TAG:-latest}
+    image: ${IMAGE_REGISTRY:-ghcr.io/yashparmar1125}/creatoriq-ml:${IMAGE_TAG:-latest}
     restart: "no"
     command: ["python", "-m", "app.db_push"]
     depends_on:

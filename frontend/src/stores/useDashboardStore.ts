@@ -26,14 +26,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   fetchDashboard: async () => {
     set({ isLoading: true, error: null });
     try {
-      // 1. Trigger live sync from YouTube
-      try {
-        await api.post('/auth/sync/channel');
-      } catch (syncErr) {
-        console.warn('Sync failed, showing cached data:', syncErr);
-      }
-
-      // 2. Fetch updated data from our DB
+      // Fetch channel data from DB
       const { data } = await api.get('/channels');
       const channels = data.data?.channels || [];
       const primary = channels.find((c: any) => c.is_primary) || channels[0];

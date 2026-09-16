@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router';
+import { useNavigate, useParams } from 'react-router';
 import { useTrendsStore } from '../../../stores/useTrendsStore';
 import { PageHeader } from '../../../components/ui/PageHeader';
 import { Card } from '../../../components/ui/Card';
@@ -197,12 +197,6 @@ export const TrendDetailPage: React.FC = () => {
                   </div>
                 ))}
               </div>
-              <Link
-                to="/app/strategy"
-                className="mt-4 inline-block text-sm font-medium text-brand-600 hover:underline"
-              >
-                Open Strategy →
-              </Link>
             </Card>
           )}
         </div>

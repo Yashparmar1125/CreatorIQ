@@ -4,8 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useOnboardingStore } from '../stores/onboardingStore';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { WelcomeStep } from './steps/WelcomeStep';
-import { ConnectStep } from './steps/ConnectStep';
-import { AnalysisStatusStep } from './steps/AnalysisStatusStep';
+import { ManualChannelStep } from './steps/ManualChannelStep';
 import { NicheStep } from './steps/NicheStep';
 import { PreferencesStep } from './steps/PreferencesStep';
 import { ProfileReviewStep } from './steps/ProfileReviewStep';
@@ -15,11 +14,10 @@ import { cn } from '../../../lib/utils';
 
 const stepsConfig = [
   { id: 1, name: 'Welcome' },
-  { id: 2, name: 'YouTube' },
-  { id: 3, name: 'Analysis' },
-  { id: 4, name: 'Niche' },
-  { id: 5, name: 'Strategy' },
-  { id: 6, name: 'Review' },
+  { id: 2, name: 'Channel' },
+  { id: 3, name: 'Niche' },
+  { id: 4, name: 'Preferences' },
+  { id: 5, name: 'Review' },
 ];
 
 export const OnboardingWizard: React.FC = () => {
@@ -28,17 +26,18 @@ export const OnboardingWizard: React.FC = () => {
     nextStep,
     prevStep,
     setStep,
-    isYoutubeConnected,
+    channelName,
+    setChannelName,
+    channelHandle,
+    setChannelHandle,
+    subscriberCount,
+    setSubscriberCount,
     niche,
     setNiche,
     customNiche,
     setCustomNiche,
     country,
     setCountry,
-    connectedChannel,
-    fetchChannels,
-    fetchAnalysisStatus,
-    analysisStatus,
     profileMaturity,
     format,
     setFormat,
@@ -52,9 +51,9 @@ export const OnboardingWizard: React.FC = () => {
     reset,
   } = useOnboardingStore();
 
-  const { startGoogleOAuth, user } = useAuthStore();
+  const { user } = useAuthStore();
 
-  const TOTAL_STEPS = 7;
+  const TOTAL_STEPS = 6;
 
   useEffect(() => {
     if (step >= TOTAL_STEPS && user && !user.onboarding_completed) {
@@ -65,15 +64,6 @@ export const OnboardingWizard: React.FC = () => {
     }
   }, [step, user, setStep, TOTAL_STEPS]);
 
-  useEffect(() => {
-    if (step === 2) {
-      void fetchChannels();
-    }
-  }, [step, fetchChannels]);
-
-  const showDetectedNiches =
-    profileMaturity !== 'new' && Boolean(connectedChannel?.niches?.length);
-
   const renderCurrentStep = () => {
     switch (step) {
       case 1:
@@ -81,35 +71,25 @@ export const OnboardingWizard: React.FC = () => {
 
       case 2:
         return (
-          <ConnectStep
-            isLoading={isLoading}
-            isYoutubeConnected={isYoutubeConnected}
-            onConnect={startGoogleOAuth}
+          <ManualChannelStep
+            channelName={channelName}
+            channelHandle={channelHandle}
+            subscriberCount={subscriberCount}
+            onChannelNameChange={setChannelName}
+            onChannelHandleChange={setChannelHandle}
+            onSubscriberCountChange={setSubscriberCount}
             onNext={nextStep}
             onBack={prevStep}
-            connectedChannel={connectedChannel || undefined}
-            profileMaturity={profileMaturity}
           />
         );
 
       case 3:
         return (
-          <AnalysisStatusStep
-            isLoading={isLoading}
-            analysisStatus={analysisStatus}
-            onPoll={fetchAnalysisStatus}
-            onNext={nextStep}
-            onBack={prevStep}
-          />
-        );
-
-      case 4:
-        return (
           <NicheStep
             selectedNiches={niche}
             customNiche={customNiche || undefined}
-            detectedNiches={showDetectedNiches ? connectedChannel?.niches : []}
-            isNewChannel={profileMaturity === 'new'}
+            detectedNiches={[]}
+            isNewChannel={true}
             onToggleNiche={(n) => {
               if (niche.includes(n)) {
                 setNiche(niche.filter((i) => i !== n));
@@ -123,7 +103,7 @@ export const OnboardingWizard: React.FC = () => {
           />
         );
 
-      case 5:
+      case 4:
         return (
           <PreferencesStep
             format={format}
@@ -140,9 +120,12 @@ export const OnboardingWizard: React.FC = () => {
           />
         );
 
-      case 6:
+      case 5:
         return (
           <ProfileReviewStep
+            channelName={channelName}
+            channelHandle={channelHandle}
+            subscriberCount={subscriberCount}
             niche={niche.filter((n) => n !== 'Other').concat(
               niche.includes('Other') && customNiche ? [customNiche] : []
             )}
@@ -151,18 +134,17 @@ export const OnboardingWizard: React.FC = () => {
             frequency={frequency}
             country={country}
             profileMaturity={profileMaturity}
-            channelName={connectedChannel?.name}
             isLoading={isLoading}
             error={onboardingError}
             onConfirm={async () => {
               await completeOnboarding();
-              setStep(7);
+              setStep(6);
             }}
             onBack={prevStep}
           />
         );
 
-      case 7:
+      case 6:
         return (
           <ReadyStep
             onEnter={() => {
@@ -194,7 +176,7 @@ export const OnboardingWizard: React.FC = () => {
       </div>
 
       <div className="relative z-10 w-full max-w-3xl">
-        {step < 7 && (
+        {step < 6 && (
           <div className="mb-10 flex justify-center gap-2">
             {stepsConfig.map((s) => (
               <div
