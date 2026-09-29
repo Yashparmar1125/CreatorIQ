@@ -38,6 +38,18 @@ function syncLocalTokens(access: string | null, refresh: string | null) {
   else localStorage.removeItem('ciq_refresh_token');
 }
 
+function extractErrorMessage(e: unknown, fallback: string): string {
+  if (!axios.isAxiosError(e)) return fallback;
+  const data = e.response?.data as any;
+  if (!data) return e.message || fallback;
+  if (typeof data === 'string') return data;
+  if (data.error?.message) return String(data.error.message);
+  if (typeof data.detail === 'string') return data.detail;
+  if (data.detail?.message) return String(data.detail.message);
+  if (data.message) return String(data.message);
+  return fallback;
+}
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
@@ -71,9 +83,7 @@ export const useAuthStore = create<AuthState>()(
           get().setTokens(d.access_token, d.refresh_token);
           set({ user: d.user, isAuthenticated: true, isLoading: false });
         } catch (e: unknown) {
-          const msg = axios.isAxiosError(e)
-            ? String((e.response?.data as { error?: { message?: string } })?.error?.message || 'Login failed')
-            : 'Login failed';
+          const msg = extractErrorMessage(e, 'Login failed');
           set({ error: msg, isLoading: false });
           throw e;
         }
@@ -89,9 +99,7 @@ export const useAuthStore = create<AuthState>()(
           get().setTokens(d.access_token, d.refresh_token);
           set({ user: d.user, isAuthenticated: true, isLoading: false });
         } catch (e: unknown) {
-          const msg = axios.isAxiosError(e)
-            ? String((e.response?.data as { error?: { message?: string } })?.error?.message || 'Registration failed')
-            : 'Registration failed';
+          const msg = extractErrorMessage(e, 'Registration failed');
           set({ error: msg, isLoading: false });
           throw e;
         }

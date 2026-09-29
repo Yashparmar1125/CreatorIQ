@@ -4,8 +4,11 @@ pydantic-settings
 email-validator
 python-jose[cryptography]
 passlib[bcrypt]
+bcrypt
+cryptography
 sqlalchemy
 asyncpg
 psycopg2-binary
 alembic
 httpx
+greenlet
