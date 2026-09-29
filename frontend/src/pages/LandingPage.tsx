@@ -98,8 +98,8 @@ function HeroPreview() {
           </Badge>
         </div>
         <div className="grid lg:grid-cols-5">
-          <div className="space-y-3 border-b border-neutral-200 p-4 lg:col-span-3 lg:border-b-0 lg:border-r">
-            <p className="text-xs font-medium text-neutral-500">Top opportunities · Entertainment</p>
+          <div className="space-y-3 border-b border-neutral-200 bg-[#fafafa] p-4 lg:col-span-3 lg:border-b-0 lg:border-r">
+            <p className="text-xs font-medium !text-[#666666]">Top opportunities · Entertainment</p>
             {[
               { title: 'Phir Har Gaya comedy short', meta: '18.8M views · Score 76', hot: true },
               { title: 'Indian Dad New Car', meta: '214K/hr velocity', hot: false },
@@ -107,17 +107,17 @@ function HeroPreview() {
             ].map((item) => (
               <div
                 key={item.title}
-                className="flex items-start gap-3 rounded-lg border border-neutral-200 bg-white p-3 transition-colors hover:border-brand-200 hover:bg-brand-50/30"
+                className="flex items-start gap-3 rounded-lg border border-neutral-200 bg-white p-3 transition-colors hover:border-brand-300 shadow-xs"
               >
                 <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
                   <TrendingUp className="h-4 w-4" />
                 </div>
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-neutral-900">{item.title}</p>
-                  <p className="text-xs text-neutral-500">{item.meta}</p>
+                  <p className="truncate text-sm font-semibold !text-[#0a0a0a]">{item.title}</p>
+                  <p className="text-xs !text-[#666666] font-medium">{item.meta}</p>
                 </div>
                 {item.hot && (
-                  <Badge variant="brand" className="ml-auto shrink-0">
+                  <Badge variant="brand" className="ml-auto shrink-0 !bg-brand-600 !text-white">
                     Hot
                   </Badge>
                 )}

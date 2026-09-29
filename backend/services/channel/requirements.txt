@@ -5,3 +5,5 @@ sqlalchemy
 asyncpg
 psycopg2-binary
 alembic
+greenlet
+httpx

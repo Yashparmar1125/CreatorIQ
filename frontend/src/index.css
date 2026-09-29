@@ -81,29 +81,7 @@ body {
    across every single page, form, and modal.
    ========================================================================== */
 
-/* Typography High-Contrast in Dark Theme */
-.text-neutral-950,
-.text-neutral-900,
-.text-neutral-800 {
-  color: #ededed !important;
-}
-
-.text-neutral-700 {
-  color: #d4d4d8 !important;
-}
-
-.text-neutral-600 {
-  color: #a1a1aa !important;
-}
-
-.text-neutral-500 {
-  color: #8e8e93 !important;
-}
-
-.text-neutral-400 {
-  color: #a1a1aa !important;
-}
-
+/* Typography Utilities */
 .text-white {
   color: #ffffff !important;
 }
@@ -119,16 +97,6 @@ textarea::placeholder {
 }
 
 /* Surface Background Dark Overrides */
-.bg-white {
-  background-color: #121212 !important;
-}
-
-.bg-white\/95,
-.bg-white\/90,
-.bg-white\/80 {
-  background-color: rgba(18, 18, 18, 0.95) !important;
-}
-
 .bg-neutral-50 {
   background-color: #141414 !important;
 }

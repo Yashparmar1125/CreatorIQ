@@ -32,7 +32,11 @@ def is_public_auth_path(path: str, method: str) -> bool:
     m = method.upper()
     if m == "POST" and path in {"auth/register", "auth/login", "auth/token/refresh"}:
         return True
-    if m == "GET" and path in {"auth/health"}:
+    if m == "GET" and (
+        path in {"auth/health", "auth/google/url", "auth/google/callback", "auth/youtube/url", "auth/youtube/callback"}
+        or path.startswith("auth/google")
+        or path.startswith("auth/youtube")
+    ):
         return True
     if m == "GET" and (path.startswith("ml/evaluations") or path == "ml/health"):
         return True
