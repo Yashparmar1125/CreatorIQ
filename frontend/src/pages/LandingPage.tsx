@@ -167,7 +167,7 @@ export const LandingPage: React.FC = () => {
         actions={
           <>
             <Link to={isAuthenticated ? '/app/dashboard' : '/signup'}>
-              <Button size="lg">
+              <Button variant='secondary' size="lg">
                 {isAuthenticated ? 'Go to dashboard' : 'Start free'}
                 <ArrowRight className="h-4 w-4" />
               </Button>
@@ -181,15 +181,15 @@ export const LandingPage: React.FC = () => {
           </>
         }
         footer={
-          <div className="mt-10 grid gap-4 border-t border-neutral-200/80 pt-8 sm:grid-cols-3">
+          <div className="mt-10 grid gap-4 border-t border-[#222222] pt-8 sm:grid-cols-3">
             {trustMetrics.map((m) => (
               <div key={m.label} className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand-100 to-brand-50 text-brand-600 ring-1 ring-brand-200/50 shadow-sm">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-950/40 text-brand-400 border border-brand-800/40 shadow-sm">
                   <m.icon className="h-4 w-4" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-neutral-900">{m.value}</p>
-                  <p className="text-xs text-neutral-500">{m.label}</p>
+                  <p className="text-sm font-medium text-white">{m.value}</p>
+                  <p className="text-xs text-neutral-400">{m.label}</p>
                 </div>
               </div>
             ))}
@@ -201,7 +201,7 @@ export const LandingPage: React.FC = () => {
       <MarketingSection
         title="Everything you need in one workspace"
         description="Four connected tools — from spotting a trend to publishing the video."
-        className="bg-neutral-50"
+        className="bg-[#0a0a0a]"
         align="center"
       >
         <div className="grid gap-5 sm:grid-cols-2">
@@ -210,17 +210,17 @@ export const LandingPage: React.FC = () => {
               key={feature.title}
               variant="elevated"
               hover
-              className={`h-full border-l-4 ${feature.accent}`}
+              className={`h-full border-l-4 bg-[#121212] border-[#222222] ${feature.accent}`}
             >
-              <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-brand-100 to-brand-50 text-brand-600 ring-1 ring-brand-200/50">
+              <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-brand-950/40 text-brand-400 border border-brand-800/40">
                 <feature.icon className="h-5 w-5" />
               </div>
-              <h3 className="text-lg font-semibold text-neutral-900">{feature.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-neutral-600">{feature.description}</p>
+              <h3 className="text-lg font-semibold text-white">{feature.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-neutral-400">{feature.description}</p>
               <ul className="mt-5 space-y-2.5">
                 {feature.points.map((point) => (
-                  <li key={point} className="flex items-center gap-2.5 text-sm text-neutral-700">
-                    <Check className="h-4 w-4 shrink-0 text-success-600" />
+                  <li key={point} className="flex items-center gap-2.5 text-sm text-neutral-300">
+                    <Check className="h-4 w-4 shrink-0 text-emerald-400" />
                     {point}
                   </li>
                 ))}
@@ -233,22 +233,22 @@ export const LandingPage: React.FC = () => {
       <MarketingSection
         title="How it works"
         description="From signup to your first personalized feed in minutes."
-        className="border-t border-neutral-200 bg-white"
+        className="border-t border-[#222222] bg-[#0d0d0d]"
       >
         <div className="grid gap-6 md:grid-cols-3">
           {steps.map((item, i) => (
             <div
               key={item.title}
-              className="surface-card-elevated relative rounded-xl p-6 transition-transform duration-200 hover:-translate-y-1"
+              className="bg-[#121212] border border-[#222222] relative rounded-xl p-6 transition-transform duration-200 hover:-translate-y-1"
             >
               {i < steps.length - 1 && (
-                <div className="absolute -right-3 top-1/2 hidden h-px w-6 bg-neutral-200 md:block" />
+                <div className="absolute -right-3 top-1/2 hidden h-px w-6 bg-[#282828] md:block" />
               )}
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-neutral-800 to-neutral-900 text-white shadow-lg">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#1a1a1a] border border-[#2e2e2e] text-white shadow-lg">
                 <item.icon className="h-5 w-5" />
               </div>
-              <h3 className="mt-5 text-base font-semibold text-neutral-900">{item.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-neutral-500">{item.body}</p>
+              <h3 className="mt-5 text-base font-semibold text-white">{item.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-neutral-400">{item.body}</p>
             </div>
           ))}
         </div>
@@ -257,7 +257,7 @@ export const LandingPage: React.FC = () => {
       <MarketingSection
         title="Built for creators who publish consistently"
         description="Actionable signals tied to your niche — not generic viral noise."
-        className="bg-neutral-50"
+        className="bg-[#0a0a0a]"
         align="center"
       >
         <div className="grid gap-5 sm:grid-cols-3">
@@ -266,12 +266,12 @@ export const LandingPage: React.FC = () => {
             { icon: Youtube, stat: 'YouTube', label: 'Real video velocity signals' },
             { icon: Sparkles, stat: 'AI', label: 'Personalized angles & titles' },
           ].map((item) => (
-            <Card key={item.label} variant="elevated" hover className="text-center">
-              <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-brand-100 to-brand-50 text-brand-600 ring-1 ring-brand-200/50">
+            <Card key={item.label} variant="elevated" hover className="text-center bg-[#121212] border-[#222222]">
+              <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-brand-950/40 text-brand-400 border border-brand-800/40">
                 <item.icon className="h-5 w-5" />
               </div>
-              <p className="mt-4 text-2xl font-semibold text-neutral-900">{item.stat}</p>
-              <p className="mt-1 text-sm text-neutral-500">{item.label}</p>
+              <p className="mt-4 text-2xl font-semibold text-white font-mono">{item.stat}</p>
+              <p className="mt-1 text-sm text-neutral-400">{item.label}</p>
             </Card>
           ))}
         </div>
@@ -283,7 +283,7 @@ export const LandingPage: React.FC = () => {
         description="Create a free account and get your first personalized trend feed on onboarding."
       >
         <Link to={isAuthenticated ? '/app/trends' : '/signup'}>
-          <Button size="lg">
+          <Button size="lg" className='bg-white/10 text-white'>
             {isAuthenticated ? 'View my trends' : 'Get started free'}
             <ArrowRight className="h-4 w-4" />
           </Button>

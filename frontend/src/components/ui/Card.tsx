@@ -11,16 +11,16 @@ interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
 
 const paddingMap = {
   none: '',
-  sm: 'p-4',
+  sm: 'p-3.5',
   md: 'p-5 md:p-6',
   lg: 'p-6 md:p-8',
 };
 
 const variantMap: Record<CardVariant, string> = {
-  default: 'rounded-xl border border-neutral-200 bg-white shadow-sm',
-  elevated: 'surface-card-elevated rounded-xl',
-  glass: 'surface-glass rounded-xl shadow-sm',
-  dark: 'surface-dark rounded-xl text-white',
+  default: 'rounded-xl border border-[#222222] bg-[#121212] text-[#ededed]',
+  elevated: 'rounded-xl border border-[#282828] bg-[#161616] text-[#ededed] shadow-lg shadow-black/40',
+  glass: 'rounded-xl border border-[#222222] bg-[#131313] text-[#ededed]',
+  dark: 'rounded-xl border border-[#262626] bg-[#0e0e0e] text-[#ededed]',
 };
 
 export const Card: React.FC<CardProps> = ({
@@ -35,7 +35,7 @@ export const Card: React.FC<CardProps> = ({
     className={cn(
       variantMap[variant],
       paddingMap[padding],
-      hover && variant !== 'elevated' && 'premium-shadow-hover',
+      hover && 'transition-all duration-200 hover:border-[#3a3a3a] hover:bg-[#181818]',
       className
     )}
     {...props}

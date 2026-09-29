@@ -35,8 +35,8 @@ export const TrendForecastChart: React.FC<TrendForecastChartProps> = ({ forecast
 
   if (!trajectory || trajectory.length === 0) {
     return (
-      <Card variant="elevated" className="p-6">
-        <p className="text-sm text-neutral-500">No trajectory points available.</p>
+      <Card variant="elevated" className="p-6 border-[#222222] bg-[#121212]">
+        <p className="text-xs text-neutral-500">No trajectory points available.</p>
       </Card>
     );
   }
@@ -47,15 +47,15 @@ export const TrendForecastChart: React.FC<TrendForecastChartProps> = ({ forecast
 
   const width = 800;
   const height = 240;
-  const paddingLeft = 60;
-  const paddingRight = 30;
+  const paddingLeft = 55;
+  const paddingRight = 25;
   const paddingTop = 25;
   const paddingBottom = 40;
 
   const chartWidth = width - paddingLeft - paddingRight;
   const chartHeight = height - paddingTop - paddingBottom;
 
-  // Map trajectory directly to intuitive 0-100% Audience Demand scale
+  // Map trajectory directly to 0-100% Audience Demand scale
   const normalizedPoints = rawPoints.map((p) => {
     const demand = Math.round(Math.max(5, Math.min(100, p.yhat)));
     const normLower = Math.round(Math.max(0, Math.min(100, p.yhat_lower ?? (demand - 8))));
@@ -93,33 +93,33 @@ export const TrendForecastChart: React.FC<TrendForecastChartProps> = ({ forecast
   const areaD = `${upperPath} ${lowerPathReversed} Z`;
 
   return (
-    <Card variant="elevated" className="space-y-5 p-5 sm:p-6">
+    <Card variant="elevated" className="space-y-4 p-5 border-[#222222] bg-[#121212] text-[#ededed]">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-100 pb-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#1e1e1e] pb-3.5">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-base font-semibold text-neutral-900">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-white">
               Audience Demand & View Possibilities
             </h3>
-            <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-0.5 text-[11px] font-semibold text-brand-700 border border-brand-200/60">
+            <span className="inline-flex items-center gap-1 rounded bg-[#1e1b4b] px-2 py-0.5 text-[10px] font-semibold text-indigo-300 border border-[#3730a3]">
               <Sparkles className="h-3 w-3" /> Growth Projections
             </span>
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700 border border-emerald-200/80">
-              <Flame className="h-3 w-3 text-emerald-600" /> {possibility.urgency}
+            <span className="inline-flex items-center gap-1 rounded bg-[#0e2316] px-2 py-0.5 text-[10px] font-semibold text-emerald-400 border border-[#166534]">
+              <Flame className="h-3 w-3" /> {possibility.urgency}
             </span>
           </div>
-          <p className="mt-1 text-xs text-neutral-500">
-            Projected reach, optimal publishing window, and estimated view potential for your channel.
+          <p className="mt-0.5 text-xs text-neutral-400">
+            Projected reach, optimal publishing window, and estimated view potential.
           </p>
         </div>
 
         <button
           type="button"
           onClick={() => setShowExplainability(!showExplainability)}
-          className="inline-flex items-center gap-1.5 text-xs font-medium text-brand-600 hover:text-brand-800 bg-brand-50/60 hover:bg-brand-50 px-2.5 py-1.5 rounded-lg border border-brand-200/60 transition-colors cursor-pointer"
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-neutral-300 hover:text-white bg-[#181818] hover:bg-[#202020] px-2.5 py-1.5 rounded-lg border border-[#2c2c2c] transition-colors cursor-pointer"
         >
           <Info className="h-3.5 w-3.5" />
-          <span>How this is calculated</span>
+          <span>Calculation model</span>
           {showExplainability ? (
             <ChevronUp className="h-3.5 w-3.5" />
           ) : (
@@ -130,127 +130,115 @@ export const TrendForecastChart: React.FC<TrendForecastChartProps> = ({ forecast
 
       {/* Explainability Accordion */}
       {showExplainability && (
-        <div className="rounded-xl border border-brand-200/70 bg-gradient-to-r from-brand-50/60 via-indigo-50/30 to-purple-50/20 p-4 animate-in fade-in-50 duration-200">
+        <div className="rounded-lg border border-[#2a2a2a] bg-[#161616] p-4 animate-in">
           <div className="flex items-center gap-2 mb-2.5">
-            <CheckCircle2 className="h-4 w-4 text-brand-600 shrink-0" />
-            <span className="text-xs font-bold uppercase tracking-wider text-brand-900">
-              Transparent Calculation Model
+            <CheckCircle2 className="h-3.5 w-3.5 text-indigo-400 shrink-0" />
+            <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-200">
+              Calculation Model Factors
             </span>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-neutral-700">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
             {possibility.explainabilityPoints.map((pt, idx) => (
-              <div key={idx} className="rounded-lg bg-white/80 p-2.5 border border-brand-100 shadow-2xs">
-                <p className="font-semibold text-neutral-900">{pt.title}</p>
-                <p className="mt-1 text-neutral-600 leading-relaxed">{pt.desc}</p>
+              <div key={idx} className="rounded-lg bg-[#111111] p-2.5 border border-[#242424]">
+                <p className="font-semibold text-neutral-200">{pt.title}</p>
+                <p className="mt-1 text-neutral-400 leading-relaxed text-[11px]">{pt.desc}</p>
               </div>
             ))}
           </div>
-          <p className="mt-2.5 text-[11px] text-neutral-500 italic">
-            Note: Projections reflect algorithmic distribution potential and search query capture for your niche, eliminating ungrounded numerical scores.
-          </p>
         </div>
       )}
 
-      {/* Three Creator-Centric View & Possibility Cards */}
+      {/* Three Metric Cards */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         {/* Card 1: Estimated Views */}
-        <div className="rounded-xl border border-neutral-200/80 bg-neutral-50/70 p-3.5 shadow-2xs">
+        <div className="rounded-lg border border-[#222222] bg-[#161616] p-3.5">
           <div className="flex items-center justify-between">
-            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-neutral-600">
-              <Eye className="h-3.5 w-3.5 text-brand-600" /> Estimated Views
+            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-neutral-400">
+              <Eye className="h-3.5 w-3.5 text-indigo-400" /> Estimated Views
             </span>
-            <span className="rounded bg-brand-100/70 px-1.5 py-0.5 text-[10px] font-semibold text-brand-700">
+            <span className="rounded bg-[#1a1a1a] px-1.5 py-0.5 text-[9px] font-semibold text-neutral-400 border border-[#2a2a2a]">
               Potential
             </span>
           </div>
           <div className="mt-1.5">
-            <span className="text-xl font-extrabold text-neutral-900 tracking-tight">
+            <span className="text-xl font-bold text-white tracking-tight metric">
               {possibility.primaryRangeLabel}
             </span>
           </div>
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-neutral-600">
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-neutral-400">
             <span className="inline-flex items-center gap-1">
-              <Film className="h-3 w-3 text-brand-500" />
-              Shorts: <strong>{possibility.shortsRangeLabel}</strong>
+              <Film className="h-3 w-3 text-neutral-400" />
+              Shorts: <strong className="text-neutral-200">{possibility.shortsRangeLabel}</strong>
             </span>
             <span className="inline-flex items-center gap-1">
-              <Tv className="h-3 w-3 text-indigo-500" />
-              Video: <strong>{possibility.longFormRangeLabel}</strong>
+              <Tv className="h-3 w-3 text-neutral-400" />
+              Video: <strong className="text-neutral-200">{possibility.longFormRangeLabel}</strong>
             </span>
           </div>
-          <p className="mt-1.5 text-[10px] text-neutral-400">
-            Calibrated for your creator tier from {possibility.volumeParsed} search queries
-          </p>
         </div>
 
         {/* Card 2: Optimal Publishing Window */}
-        <div className="rounded-xl border border-neutral-200/80 bg-neutral-50/70 p-3.5 shadow-2xs">
+        <div className="rounded-lg border border-[#222222] bg-[#161616] p-3.5">
           <div className="flex items-center justify-between">
-            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-neutral-600">
-              <Clock className="h-3.5 w-3.5 text-amber-600" /> Optimal Window
+            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-neutral-400">
+              <Clock className="h-3.5 w-3.5 text-amber-400" /> Optimal Window
             </span>
-            <span className="rounded bg-amber-100/80 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800">
+            <span className="rounded bg-[#1a1a1a] px-1.5 py-0.5 text-[9px] font-semibold text-neutral-400 border border-[#2a2a2a]">
               Timing
             </span>
           </div>
           <div className="mt-1.5">
-            <span className="text-xl font-extrabold text-neutral-900 tracking-tight">
+            <span className="text-xl font-bold text-white tracking-tight metric">
               {possibility.optimalWindow}
             </span>
           </div>
-          <p className="mt-2 text-[11px] font-medium text-emerald-700 leading-snug">
+          <p className="mt-2 text-[11px] font-medium text-emerald-400 leading-snug">
             {possibility.urgency}
-          </p>
-          <p className="mt-1 text-[10px] text-neutral-500 line-clamp-2">
-            {possibility.windowAdvice}
           </p>
         </div>
 
         {/* Card 3: Reach Multiplier */}
-        <div className="rounded-xl border border-neutral-200/80 bg-neutral-50/70 p-3.5 shadow-2xs">
+        <div className="rounded-lg border border-[#222222] bg-[#161616] p-3.5">
           <div className="flex items-center justify-between">
-            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-neutral-600">
-              <TrendingUp className="h-3.5 w-3.5 text-emerald-600" /> Reach Multiplier
+            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-neutral-400">
+              <TrendingUp className="h-3.5 w-3.5 text-emerald-400" /> Reach Multiplier
             </span>
-            <span className="rounded bg-emerald-100/80 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-800">
+            <span className="rounded bg-[#1a1a1a] px-1.5 py-0.5 text-[9px] font-semibold text-neutral-400 border border-[#2a2a2a]">
               Velocity
             </span>
           </div>
           <div className="mt-1.5">
-            <span className="text-xl font-extrabold text-neutral-900 tracking-tight">
+            <span className="text-xl font-bold text-white tracking-tight metric">
               {possibility.reachMultiplier}
             </span>
           </div>
-          <p className="mt-2 text-[11px] font-medium text-brand-700 leading-snug">
+          <p className="mt-2 text-[11px] font-medium text-indigo-400 leading-snug">
             {possibility.reachDescription}
-          </p>
-          <p className="mt-1 text-[10px] text-neutral-500">
-            Higher algorithmic push than baseline topics in your niche
           </p>
         </div>
       </div>
 
-      {/* Responsive Audience Search Demand Curve */}
-      <div className="relative overflow-hidden rounded-xl border border-neutral-200 bg-white p-3.5 shadow-2xs">
+      {/* Dark Audience Demand Trajectory Curve */}
+      <div className="rounded-lg border border-[#222222] bg-[#0f0f0f] p-3.5">
         <div className="flex items-center justify-between mb-2 text-xs">
-          <span className="font-semibold text-neutral-800">Audience Search Momentum Lifecycle</span>
-          <span className="text-[11px] text-neutral-400">30-Day Algorithm Projection</span>
+          <span className="font-semibold text-neutral-300">Audience Demand Momentum Lifecycle</span>
+          <span className="text-[11px] text-neutral-500">30-Day Algorithm Projection</span>
         </div>
 
         <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto">
           <defs>
             <linearGradient id="demand-band-gradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#6366f1" stopOpacity="0.22" />
-              <stop offset="100%" stopColor="#6366f1" stopOpacity="0.03" />
+              <stop offset="0%" stopColor="#6366f1" stopOpacity="0.18" />
+              <stop offset="100%" stopColor="#6366f1" stopOpacity="0.01" />
             </linearGradient>
             <linearGradient id="demand-line-gradient" x1="0" y1="0" x2="1" y2="0">
               <stop offset="0%" stopColor="#818cf8" />
-              <stop offset="50%" stopColor="#4f46e5" />
-              <stop offset="100%" stopColor="#6366f1" />
+              <stop offset="50%" stopColor="#6366f1" />
+              <stop offset="100%" stopColor="#a5b4fc" />
             </linearGradient>
           </defs>
 
-          {/* Grid lines with intuitive Demand percentages */}
+          {/* Grid lines */}
           {[
             { ratio: 0, label: '100% Peak' },
             { ratio: 0.25, label: '75% High' },
@@ -265,14 +253,14 @@ export const TrendForecastChart: React.FC<TrendForecastChartProps> = ({ forecast
                   y1={y}
                   x2={width - paddingRight}
                   y2={y}
-                  stroke="#f1f5f9"
+                  stroke="#1c1c1c"
                   strokeDasharray="4 4"
                 />
                 <text
                   x={paddingLeft - 8}
                   y={y + 3.5}
                   textAnchor="end"
-                  className="fill-neutral-400 font-medium text-[9px]"
+                  className="fill-neutral-600 font-medium text-[9px]"
                 >
                   {grid.label}
                 </text>
@@ -288,7 +276,7 @@ export const TrendForecastChart: React.FC<TrendForecastChartProps> = ({ forecast
             d={lineD}
             fill="none"
             stroke="url(#demand-line-gradient)"
-            strokeWidth="3"
+            strokeWidth="2.5"
             strokeLinecap="round"
           />
 
@@ -305,15 +293,15 @@ export const TrendForecastChart: React.FC<TrendForecastChartProps> = ({ forecast
                 <circle
                   cx={pt.x}
                   cy={pt.yDemand}
-                  r="4"
-                  className="fill-indigo-600 stroke-white"
+                  r="3.5"
+                  className="fill-indigo-400 stroke-[#0f0f0f]"
                   strokeWidth="2"
                 />
                 <text
                   x={pt.x}
-                  y={height - paddingBottom + 18}
+                  y={height - paddingBottom + 16}
                   textAnchor="middle"
-                  className="fill-neutral-500 font-medium text-[10px]"
+                  className="fill-neutral-500 font-medium text-[9px]"
                 >
                   {pt.ds.slice(5)}
                 </text>
@@ -323,37 +311,36 @@ export const TrendForecastChart: React.FC<TrendForecastChartProps> = ({ forecast
         </svg>
 
         {/* Lifecycle Phase Strip */}
-        <div className="mt-2.5 pt-2 border-t border-neutral-100 grid grid-cols-3 text-center text-[10px] font-medium text-neutral-500">
-          <div className="flex items-center justify-center gap-1 text-brand-700">
-            <span className="h-1.5 w-1.5 rounded-full bg-brand-500" />
+        <div className="mt-2.5 pt-2 border-t border-[#1a1a1a] grid grid-cols-3 text-center text-[10px] font-medium text-neutral-500">
+          <div className="flex items-center justify-center gap-1 text-indigo-400">
+            <span className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
             <span>1. Early Breakout Wave</span>
           </div>
-          <div className="flex items-center justify-center gap-1 text-emerald-700 font-semibold">
+          <div className="flex items-center justify-center gap-1 text-emerald-400">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
             <span>2. Peak Virality (Active)</span>
           </div>
-          <div className="flex items-center justify-center gap-1 text-neutral-400">
-            <span className="h-1.5 w-1.5 rounded-full bg-neutral-300" />
+          <div className="flex items-center justify-center gap-1 text-neutral-600">
+            <span className="h-1.5 w-1.5 rounded-full bg-neutral-700" />
             <span>3. Market Saturation</span>
           </div>
         </div>
       </div>
 
       {/* Footer Meta */}
-      <div className="flex flex-wrap items-center justify-between text-xs text-neutral-500 pt-1">
+      <div className="flex flex-wrap items-center justify-between text-[11px] text-neutral-500 pt-1">
         <div className="flex items-center gap-4">
-          <span className="flex items-center gap-1.5 font-medium text-neutral-700">
-            <span className="h-2 w-2 rounded-full bg-indigo-600" />
+          <span className="flex items-center gap-1.5 font-medium text-neutral-400">
+            <span className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
             Projected Audience Demand
           </span>
-          <span className="flex items-center gap-1.5 font-medium text-neutral-700">
-            <span className="h-2.5 w-4 rounded-xs bg-indigo-500/20 border border-indigo-400/50" />
+          <span className="flex items-center gap-1.5 font-medium text-neutral-400">
+            <span className="h-2 w-3 rounded-xs bg-indigo-500/20 border border-indigo-400/40" />
             Expected Reach Range
           </span>
         </div>
-        <span className="text-neutral-400">Signal Origin: {origin_date}</span>
+        <span className="text-neutral-500">Signal Origin: {origin_date}</span>
       </div>
     </Card>
   );
 };
-

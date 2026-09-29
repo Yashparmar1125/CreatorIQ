@@ -22,13 +22,13 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
       className
     )}
   >
-    <div className="min-w-0 space-y-1">
+    <div className="min-w-0 space-y-1.5">
       {badge}
-      <h1 className="text-xl font-semibold font-sora text-neutral-900 tracking-tight sm:text-2xl lg:text-[1.75rem]">
+      <h1 className="text-xl font-bold font-sora text-[#ededed] tracking-tight sm:text-2xl lg:text-[1.75rem]">
         {title}
       </h1>
       {description && (
-        <p className="max-w-2xl text-sm text-neutral-500">{description}</p>
+        <p className="max-w-2xl text-xs sm:text-sm text-neutral-400 leading-relaxed">{description}</p>
       )}
     </div>
     {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}

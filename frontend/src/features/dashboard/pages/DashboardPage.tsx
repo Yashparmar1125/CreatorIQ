@@ -24,9 +24,9 @@ import {
   BarChart2,
   ChevronRight,
   Film,
+  Mic,
+  Lightbulb,
 } from "lucide-react";
-
-const ACCENTS = ["brand", "cyan", "emerald", "violet"] as const;
 
 type ForecastPeriod = '28d' | '90d' | 'ALL';
 
@@ -58,12 +58,6 @@ const FORECAST_PERIOD_DATA: Record<ForecastPeriod, ForecastData> = {
   },
 };
 
-function formatSubs(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
-  return String(n);
-}
-
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const { stats, insights = [], fetchDashboard } = useDashboardStore();
@@ -71,7 +65,6 @@ export const DashboardPage: React.FC = () => {
   const {
     trends,
     isLoading: isTrendsLoading,
-    channelContext,
     fetchTrends,
   } = useTrendsStore();
   const user = useAuthStore((s) => s.user);
@@ -81,89 +74,121 @@ export const DashboardPage: React.FC = () => {
     fetchTrends();
   }, [fetchDashboard, fetchTrends]);
 
-  const topTrends = trends.slice(0, 4);
+  const [chatQuery, setChatQuery] = useState("");
+
+  const handleChatSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chatQuery.trim()) return;
+    navigate("/app/trends", {
+      state: { search: chatQuery },
+    });
+  };
+
+  const handleQuickPrompt = (promptText: string) => {
+    navigate("/app/trends", {
+      state: { search: promptText },
+    });
+  };
+
+  const topTrends = trends.slice(0, 3);
   const currentForecast =
     FORECAST_PERIOD_DATA[forecastPeriod] ?? FORECAST_PERIOD_DATA['28d'];
 
-  return (
-    <div className="space-y-8 animate-in">
-      {/* Harmonized Light-Glass Welcome Banner */}
-      <div className="surface-card-elevated relative overflow-hidden rounded-2xl border border-brand-200/80 bg-gradient-to-r from-brand-50/70 via-white to-indigo-50/40 p-6 shadow-sm">
-        <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-brand-400/10 blur-2xl" />
-        <div className="relative z-10 flex flex-col justify-between gap-6 sm:flex-row sm:items-center">
-          <div className="flex items-center gap-4">
-            {channelContext?.thumbnail_url ? (
-              <img
-                src={channelContext.thumbnail_url}
-                alt=""
-                className="h-14 w-14 rounded-full border-2 border-brand-400 object-cover shadow-sm"
-              />
-            ) : (
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-600 to-indigo-600 text-xl font-bold text-white shadow-md">
-                {user?.full_name?.charAt(0) || "C"}
-              </div>
-            )}
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-xl font-bold tracking-tight text-neutral-900 sm:text-2xl">
-                  Welcome back,{" "}
-                  <span className="text-gradient-brand">
-                    {user?.full_name?.split(" ")[0] || "Creator"}
-                  </span>
-                </h1>
-                <Badge
-                  variant="brand"
-                  className="border-brand-200 bg-brand-100/80 text-brand-700"
-                >
-                  <Zap className="mr-1 h-3 w-3 text-brand-600" />
-                  Qdrant Vector AI
-                </Badge>
-              </div>
-              <p className="mt-1 text-xs text-neutral-600">
-                {channelContext?.name ? (
-                  <>
-                    Channel:{" "}
-                    <span className="font-semibold text-neutral-900">
-                      {channelContext.name}
-                    </span>
-                    {channelContext.subscriber_count > 0 &&
-                      ` (${formatSubs(channelContext.subscriber_count)} subs)`}
-                  </>
-                ) : (
-                  "Personalized YouTube Opportunities Workspace"
-                )}
-              </p>
-              {channelContext?.niches && channelContext.niches.length > 0 && (
-                <div className="mt-2.5 flex flex-wrap gap-1.5">
-                  {channelContext.niches.map((niche) => (
-                    <Badge key={niche} variant="brand">
-                      {niche}
-                    </Badge>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
+  const displayName = user?.full_name?.toLowerCase().includes("navnath")
+    ? "Ndk"
+    : (user?.full_name?.split(" ")[0] || "Ndk");
 
-          <div className="flex shrink-0 items-center gap-2">
-            <Link to="/app/trends">
-              <Button variant="secondary" size="sm">
-                <TrendingUp className="h-4 w-4" />
-                View All Trends
-              </Button>
-            </Link>
-            <Link to="/app/settings">
-              <Button size="sm">
-                <Sparkles className="h-4 w-4" />
-                Channel Profile
-              </Button>
-            </Link>
+  return (
+    <div className="space-y-8 pb-12">
+      {/* ChatGPT Center Hero Greeting */}
+      <div className="pt-10 pb-4 text-center space-y-2">
+        <h1 className="font-sora text-3xl sm:text-4xl font-semibold tracking-tight text-white">
+          How can I help, {displayName}?
+        </h1>
+        <p className="text-xs text-neutral-400">
+          CreatorIQ Intelligence &bull; Powered by Qdrant Vector AI &amp; YouTube Trend Engine
+        </p>
+      </div>
+
+      {/* ChatGPT-Style Capsule Input Bar */}
+      <div className="mx-auto w-full max-w-2xl">
+        <form
+          onSubmit={handleChatSubmit}
+          className="relative flex items-center rounded-3xl border border-[#2e2e2e] bg-[#212121] px-4 py-3 shadow-xl shadow-black/40 focus-within:border-[#404040] focus-within:ring-1 focus-within:ring-[#404040] transition-all"
+        >
+          {/* Left Plus Attachment Action */}
+          <button
+            type="button"
+            className="mr-2.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-neutral-400 hover:bg-[#2c2c2c] hover:text-white transition-colors cursor-pointer"
+            title="Attach signal context"
+            onClick={() => handleQuickPrompt("Analyze my connected channel upload velocity")}
+          >
+            <span className="text-xl font-light leading-none">+</span>
+          </button>
+
+          {/* Central Input */}
+          <input
+            type="text"
+            value={chatQuery}
+            onChange={(e) => setChatQuery(e.target.value)}
+            placeholder="Ask anything"
+            className="flex-1 bg-transparent text-sm text-white placeholder-neutral-500 focus:outline-none border-0"
+          />
+
+          {/* Right Action Icons (Think chip, Mic, Audio/Send) */}
+          <div className="flex items-center gap-2 shrink-0 ml-2">
+            <button
+              type="button"
+              onClick={() => handleQuickPrompt(chatQuery ? `Deep research: ${chatQuery}` : "Deep research trending concepts")}
+              className="flex items-center gap-1.5 rounded-full border border-[#333333] bg-[#181818] px-3 py-1.5 text-xs font-medium text-neutral-300 hover:border-[#444444] hover:text-white transition-colors cursor-pointer"
+            >
+              <Lightbulb className="h-3.5 w-3.5 text-neutral-400" />
+              <span>Think</span>
+            </button>
+
+            <button
+              type="button"
+              className="flex h-8 w-8 items-center justify-center rounded-full text-neutral-400 hover:bg-[#2a2a2a] hover:text-white transition-colors cursor-pointer"
+              title="Voice dictation"
+              onClick={() => handleQuickPrompt("Brainstorm video ideas for my niche")}
+            >
+              <Mic className="h-4 w-4" />
+            </button>
+
+            <button
+              type="submit"
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-pure-white text-black hover:bg-neutral-200 transition-colors cursor-pointer shadow-sm"
+              style={{ backgroundColor: '#ffffff', color: '#000000' }}
+              title="Send prompt to AI"
+            >
+              <ArrowRight className="h-4 w-4" style={{ color: '#000000' }} />
+            </button>
           </div>
+        </form>
+
+        {/* ChatGPT Prompt Suggestion Pills */}
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-xs">
+          {[
+            { label: "What should I create this week?", icon: Sparkles },
+            { label: "Why is this trend growing?", icon: TrendingUp },
+            { label: "Viral hook for my niche", icon: Zap },
+            { label: "Compare Shorts vs Long-form", icon: Film },
+          ].map((prompt, idx) => (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => handleQuickPrompt(prompt.label)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-[#2a2a2a] bg-[#161616] px-3.5 py-1.5 text-xs text-neutral-300 hover:border-[#3a3a3a] hover:bg-[#1f1f1f] hover:text-white transition-colors cursor-pointer shadow-xs"
+            >
+              <prompt.icon className="h-3 w-3 text-neutral-400" />
+              <span>{prompt.label}</span>
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Channel Stat Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {/* Channel Metric Stat Cards */}
+      <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-4 pt-4">
         {stats.map((stat, i) => (
           <StatCard
             key={i}
@@ -171,128 +196,105 @@ export const DashboardPage: React.FC = () => {
             value={stat.value}
             trend={stat.trend}
             icon={renderStatIcon(stat.icon)}
-            accent={ACCENTS[i % ACCENTS.length]}
           />
         ))}
       </div>
 
-      {/* Top Predicted Trends Highlight Section */}
-      <div className="space-y-4">
+      {/* Top Predicted Trend Cards Grid (Directly matching wireframe) */}
+      <div className="space-y-3.5">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-bold text-neutral-900">
-              Top Predicted Trends For You
+            <h2 className="text-sm font-bold uppercase tracking-wider text-neutral-300">
+              Top Predicted Opportunities
             </h2>
             <p className="text-xs text-neutral-500">
-              Scanned from 200+ live signals & vector-matched to your channel
-              profile.
+              Click any concept card to inspect trajectory forecast, audience demand and evidence.
             </p>
           </div>
           <Link
             to="/app/trends"
-            className="group flex items-center gap-1 text-xs font-semibold text-brand-600 hover:text-brand-700"
+            className="flex items-center gap-1 text-xs font-semibold text-neutral-400 hover:text-white transition-colors"
           >
-            Explore all 15 trends
-            <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+            Explore all trends
+            <ArrowRight className="h-3 w-3" />
           </Link>
         </div>
 
         {isTrendsLoading && topTrends.length === 0 ? (
-          <AIScannerLoader message="Vector-searching top predicted opportunities for your channel..." />
+          <AIScannerLoader message="Analyzing signals and vector-matching concepts..." />
         ) : topTrends.length === 0 ? (
-          <Card className="py-10 text-center" variant="elevated">
-            <TrendingUp className="mx-auto h-8 w-8 text-neutral-400" />
-            <h3 className="mt-2 text-sm font-semibold text-neutral-900">
+          <Card className="py-12 text-center" variant="elevated">
+            <TrendingUp className="mx-auto h-7 w-7 text-neutral-600" />
+            <h3 className="mt-2 text-sm font-semibold text-neutral-300">
               No trend predictions yet
             </h3>
             <p className="mt-1 text-xs text-neutral-500">
-              Run trend collector or complete your onboarding.
+              Run trend collector or complete onboarding to populate your feed.
             </p>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             {topTrends.map((trend: any) => (
               <Card
                 key={trend.id}
                 variant="elevated"
                 hover
-                className="group flex cursor-pointer flex-col justify-between gap-4 transition-transform duration-200 hover:-translate-y-0.5"
+                className="group flex cursor-pointer flex-col justify-between gap-3.5 p-5 border-[#222222] hover:border-[#3a3a3a] transition-all duration-150"
                 onClick={() => navigate(`/app/trends/detail/${trend.id}`)}
               >
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex flex-wrap gap-1.5">
-                      {trend.niches?.slice(0, 2).map((tag: string) => (
-                        <Badge key={tag} variant="brand">
+                      {trend.niches?.slice(0, 1).map((tag: string) => (
+                        <Badge key={tag} variant="neutral" className="text-[10px]">
                           {tag}
                         </Badge>
                       ))}
-                      <Badge variant="neutral">{trend.archetype}</Badge>
-                      {trend.vector_similarity && (
-                        <Badge
-                          variant="neutral"
-                          className="border-emerald-200 bg-emerald-50 text-emerald-700"
-                        >
-                          {Math.round(trend.vector_similarity * 100)}% Vector
-                          Match
-                        </Badge>
-                      )}
+                      <Badge variant="brand" className="text-[10px] capitalize">
+                        {trend.archetype}
+                      </Badge>
                     </div>
                     {trend.opportunity_score != null && (
-                      <span className="shrink-0 rounded-md bg-neutral-900 px-2 py-0.5 text-xs font-bold text-white shadow-sm">
-                        {Math.round(trend.opportunity_score ?? trend.tvs_score)}{" "}
-                        Fit
+                      <span className="shrink-0 rounded bg-[#1f1f1f] border border-[#2c2c2c] px-2 py-0.5 text-[10px] font-bold text-white">
+                        {Math.round(trend.opportunity_score ?? trend.tvs_score)} Fit
                       </span>
                     )}
                   </div>
 
-                  <h3 className="text-base font-bold text-neutral-900 group-hover:text-brand-600 transition-colors">
+                  <h3 className="text-sm font-bold text-white group-hover:text-indigo-400 transition-colors line-clamp-2">
                     {cleanTrendTitle(trend.topic)}
                   </h3>
 
                   {/* Video Concept Highlight */}
-                  <div className="rounded-xl border border-brand-200/90 bg-gradient-to-br from-brand-50/90 via-indigo-50/30 to-purple-50/20 p-3 shadow-2xs transition-all group-hover:border-brand-300">
-                    <div className="flex items-center justify-between gap-2 mb-1.5">
-                      <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-brand-800">
-                        <Sparkles className="h-3.5 w-3.5 text-brand-600" />
+                  <div className="rounded-lg border border-[#282828] bg-[#141414] p-3 transition-colors group-hover:border-[#383838]">
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 flex items-center gap-1">
+                        <Sparkles className="h-3 w-3 text-indigo-400" />
                         Video Concept
                       </span>
-                      <span className="inline-flex items-center gap-1 rounded-full bg-brand-100/80 px-2 py-0.5 text-[10px] font-semibold text-brand-700 border border-brand-200/60">
+                      <span className="text-[9px] font-medium text-neutral-500 flex items-center gap-1">
                         <Film className="h-2.5 w-2.5" />
                         {resolveVideoConceptBadge(trend)}
                       </span>
                     </div>
-                    <p className="text-xs sm:text-sm font-semibold text-neutral-900 leading-snug">
+                    <p className="text-xs font-medium text-neutral-200 leading-snug line-clamp-2">
                       &ldquo;{resolveVideoConcept(trend)}&rdquo;
                     </p>
                   </div>
 
                   {trend.why_predicted && (
-                    <div className="rounded-lg border border-neutral-200/80 bg-neutral-50/80 px-2.5 py-2 text-xs text-neutral-700">
-                      <span className="font-semibold text-neutral-900">
-                        Why Predicted:{" "}
-                      </span>
+                    <p className="text-xs text-neutral-400 line-clamp-2 leading-relaxed">
+                      <span className="font-semibold text-neutral-300">Why Predicted: </span>
                       {cleanTrendText(trend.why_predicted)}
-                    </div>
-                  )}
-
-                  {(trend.action_plan || trend.growth_tip) && (
-                    <div className="rounded-lg border border-neutral-200/80 bg-neutral-50/80 px-2.5 py-2 text-xs text-neutral-700">
-                      <span className="font-semibold text-neutral-900">
-                        Action Plan:{" "}
-                      </span>
-                      {cleanTrendText(trend.action_plan || trend.growth_tip)}
-                    </div>
+                    </p>
                   )}
                 </div>
 
-                <div className="flex items-center justify-between border-t border-neutral-100 pt-3">
-                  <span className="text-xs font-medium text-neutral-500">
-                    Velocity:{" "}
-                    <span className="font-semibold text-neutral-900">
-                      {trend.velocity}
-                    </span>
-                  </span>
+                <div className="flex items-center justify-between border-t border-[#1e1e1e] pt-3">
+                  <div className="flex items-center gap-1 text-xs font-medium text-neutral-400 group-hover:text-white transition-colors">
+                    <span>View Concept Graph</span>
+                    <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
+                  </div>
                   <Button
                     size="sm"
                     variant="secondary"
@@ -300,7 +302,7 @@ export const DashboardPage: React.FC = () => {
                       e.stopPropagation();
                       navigate(`/app/trends/detail/${trend.id}`);
                     }}
-                    className="shadow-sm"
+                    className="text-xs px-2.5 py-1 h-7 border-[#2a2a2a] bg-[#161616] hover:bg-[#202020] text-neutral-200"
                   >
                     <TrendingUp className="h-3.5 w-3.5" />
                     View Trend
@@ -312,24 +314,26 @@ export const DashboardPage: React.FC = () => {
         )}
       </div>
 
-      {/* Performance Forecast Chart & Priority Insights (Harmonized Light Theme) */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-        <Card variant="elevated" className="lg:col-span-8">
-          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      {/* Performance Forecast Chart & Priority Insights */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+        <Card variant="elevated" className="lg:col-span-8 p-5 border-[#222222]">
+          <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-sm font-semibold text-neutral-900">Performance forecast</h2>
-              <p className="text-xs text-neutral-500">Estimated growth from recent performance</p>
+              <h2 className="text-xs font-bold uppercase tracking-wider text-neutral-300">
+                Performance Forecast
+              </h2>
+              <p className="text-xs text-neutral-500">Projected view velocity over time</p>
             </div>
-            <div className="flex gap-1 rounded-xl border border-neutral-200 bg-neutral-50/80 p-1 shadow-inner">
+            <div className="flex gap-1 rounded-lg border border-[#242424] bg-[#121212] p-1">
               {(['28d', '90d', 'ALL'] as const).map((tab) => (
                 <button
                   key={tab}
                   type="button"
                   onClick={() => setForecastPeriod(tab)}
-                  className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
+                  className={`rounded px-2.5 py-1 text-xs font-medium transition-all cursor-pointer ${
                     forecastPeriod === tab
-                      ? 'bg-white text-neutral-900 shadow-sm'
-                      : 'text-neutral-500 hover:text-neutral-700'
+                      ? 'bg-[#222222] text-white'
+                      : 'text-neutral-500 hover:text-neutral-300'
                   }`}
                 >
                   {tab}
@@ -342,52 +346,53 @@ export const DashboardPage: React.FC = () => {
             highlightIndex={currentForecast.highlightIndex}
             formatValue={(v) => `${v}K views`}
           />
-          <div className="mt-4 flex items-center justify-between rounded-lg border border-brand-100 bg-gradient-to-r from-brand-50/80 to-transparent px-4 py-3">
-            <div className="flex items-center gap-2 text-sm text-brand-700">
-              <BarChart2 className="h-4 w-4" />
-              <span className="font-medium">{currentForecast.projectedGrowth} projected</span>
-              <span className="text-brand-600/70">{currentForecast.comparisonLabel}</span>
+          <div className="mt-4 flex items-center justify-between rounded-lg border border-[#222222] bg-[#141414] px-3.5 py-2.5 text-xs">
+            <div className="flex items-center gap-2 text-neutral-300">
+              <BarChart2 className="h-3.5 w-3.5 text-indigo-400" />
+              <span className="font-semibold text-white">{currentForecast.projectedGrowth} projected</span>
+              <span className="text-neutral-500">{currentForecast.comparisonLabel}</span>
             </div>
           </div>
         </Card>
 
-        <Card variant="elevated" className="lg:col-span-4 border border-brand-100 bg-gradient-to-b from-white via-neutral-50/50 to-brand-50/30">
-          <div className="mb-5 flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-100 text-brand-600 shadow-sm">
-              <Sparkles className="h-4 w-4" />
+        <Card variant="elevated" className="lg:col-span-4 p-5 border-[#222222]">
+          <div className="mb-4 flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#2a2a2a] bg-[#181818] text-neutral-300">
+              <Sparkles className="h-3.5 w-3.5 text-indigo-400" />
             </div>
             <div>
-              <h2 className="text-sm font-semibold text-neutral-900">AI Priority Insights</h2>
-              <p className="text-xs text-neutral-500">{insights.length} actions available</p>
+              <h2 className="text-xs font-bold uppercase tracking-wider text-neutral-300">
+                AI Priority Insights
+              </h2>
+              <p className="text-[11px] text-neutral-500">{insights.length} actions available</p>
             </div>
           </div>
           {insights.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
-              <Sparkles className="h-8 w-8 text-neutral-300" />
-              <p className="mt-2 text-sm font-medium text-neutral-700">No pending insights</p>
-              <p className="text-xs text-neutral-500">Your channel strategy is running smoothly.</p>
+              <p className="text-xs font-medium text-neutral-400">No pending insights</p>
+              <p className="mt-1 text-[11px] text-neutral-600">Your channel strategy is running smoothly.</p>
             </div>
           ) : (
             <div className="space-y-2">
               {insights.map((item, j) => (
                 <div
                   key={j}
-                  className="group rounded-xl border border-neutral-200/80 bg-white p-3.5 shadow-sm transition-all duration-200 hover:border-brand-200 hover:shadow-md"
+                  className="group rounded-lg border border-[#222222] bg-[#141414] p-3 transition-colors hover:border-[#333333]"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <Badge variant="brand" className="text-[10px]">
+                    <Badge variant="neutral" className="text-[9px]">
                       Priority {j + 1}
                     </Badge>
-                    <ChevronRight className="h-3.5 w-3.5 text-neutral-400 transition-transform group-hover:translate-x-0.5 group-hover:text-brand-600" />
+                    <ChevronRight className="h-3.5 w-3.5 text-neutral-600 group-hover:text-neutral-300 transition-colors" />
                   </div>
-                  <p className="mt-2 text-sm font-medium text-neutral-900">{item.title}</p>
-                  <p className="mt-1 text-xs text-neutral-500">{item.impact}</p>
+                  <p className="mt-1.5 text-xs font-medium text-neutral-200">{item.title}</p>
+                  <p className="mt-0.5 text-[11px] text-neutral-500">{item.impact}</p>
                 </div>
               ))}
             </div>
           )}
           <Link to="/app/trends">
-            <Button variant="secondary" className="mt-5 w-full">
+            <Button variant="secondary" className="mt-4 w-full text-xs">
               Explore All Trends
             </Button>
           </Link>

@@ -8,9 +8,9 @@ interface PublicLayoutProps {
 
 export const PublicLayout: React.FC<PublicLayoutProps> = ({ children }) => {
   return (
-    <div className="mesh-gradient min-h-screen text-neutral-900">
+    <div className="mesh-gradient min-h-screen bg-[#0a0a0a] text-[#ededed]">
       <Navbar />
-      <main>{children}</main>
+      <main className="bg-[#0a0a0a]">{children}</main>
       <Footer />
     </div>
   );

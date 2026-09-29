@@ -37,8 +37,8 @@ const chipClass = (active: boolean) =>
   cn(
     'rounded-xl border px-3 py-2.5 text-xs font-medium transition-all',
     active
-      ? 'border-brand-600 bg-brand-600 text-white shadow-md shadow-brand-600/20'
-      : 'border-neutral-200 bg-white text-neutral-600 hover:border-brand-200 hover:bg-brand-50/40'
+      ? 'border-brand-500 bg-brand-600 text-white shadow-md shadow-brand-500/20 ring-1 ring-brand-400/40'
+      : 'border-[#262626] bg-[#161616] text-neutral-400 hover:border-[#383838] hover:bg-[#1e1e1e] hover:text-neutral-200'
   );
 
 export const PreferencesStep: React.FC<PreferencesStepProps> = ({
@@ -68,7 +68,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
       cardClassName="space-y-6 text-left"
     >
       <div className="space-y-2">
-        <label className="text-xs font-medium text-neutral-600">Primary format</label>
+        <label className="text-xs font-medium text-neutral-400">Primary format</label>
         <div className="grid grid-cols-3 gap-2">
           {FORMATS.map((f) => (
             <button key={f.value} type="button" onClick={() => setFormat(f.value)} className={chipClass(format === f.value)}>
@@ -79,21 +79,21 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
       </div>
 
       <div className="space-y-2">
-        <label className="text-xs font-medium text-neutral-600">Posting frequency</label>
+        <label className="text-xs font-medium text-neutral-400">Posting frequency</label>
         <select
-          className="h-9 w-full rounded-lg border border-neutral-200 bg-white px-3 text-sm focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600/10"
+          className="h-9 w-full rounded-lg border border-[#282828] bg-[#161616] px-3 text-sm text-[#ededed] focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
           value={frequency || ''}
           onChange={(e) => setFrequency(e.target.value)}
         >
-          <option value="">Select frequency...</option>
-          <option value="daily">Daily</option>
-          <option value="3x_week">3x per week</option>
-          <option value="weekly">Weekly</option>
+          <option value="" className="bg-[#161616] text-neutral-400">Select frequency...</option>
+          <option value="daily" className="bg-[#161616] text-[#ededed]">Daily</option>
+          <option value="3x_week" className="bg-[#161616] text-[#ededed]">3x per week</option>
+          <option value="weekly" className="bg-[#161616] text-[#ededed]">Weekly</option>
         </select>
       </div>
 
       <div className="space-y-2">
-        <label className="text-xs font-medium text-neutral-600">Channel tone</label>
+        <label className="text-xs font-medium text-neutral-400">Channel tone</label>
         <div className="grid grid-cols-2 gap-2">
           {TONES.map((t) => (
             <button key={t} type="button" onClick={() => setTone(t)} className={cn(chipClass(tone === t), 'flex items-center justify-between')}>
@@ -105,7 +105,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
       </div>
 
       <div className="space-y-2">
-        <label className="text-xs font-medium text-neutral-600">Target audience location</label>
+        <label className="text-xs font-medium text-neutral-400">Target audience location</label>
         <div className="grid max-h-48 grid-cols-2 gap-2 overflow-y-auto pr-1 custom-scrollbar">
           {COUNTRIES.map((c) => (
             <button key={c} type="button" onClick={() => setCountry(c)} className={cn(chipClass(country === c), 'text-left')}>

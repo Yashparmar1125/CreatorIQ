@@ -60,13 +60,13 @@ export const NicheStep: React.FC<NicheStepProps> = ({
               className={cn(
                 'relative rounded-xl border px-4 py-2.5 text-xs font-medium transition-all',
                 isSelected
-                  ? 'border-brand-600 bg-brand-600 text-white shadow-md shadow-brand-600/25'
-                  : 'border-neutral-200 bg-white text-neutral-600 hover:border-brand-200 hover:bg-brand-50/50'
+                  ? 'border-brand-500 bg-brand-600 text-white shadow-lg shadow-brand-500/20 ring-1 ring-brand-400/40'
+                  : 'border-[#262626] bg-[#161616] text-neutral-400 hover:border-[#383838] hover:bg-[#1e1e1e] hover:text-neutral-200'
               )}
             >
               {n}
               {isDetected && (
-                <Badge variant="brand" className="absolute -right-2 -top-2 px-1.5 py-0 text-[9px]">
+                <Badge variant="brand" className="absolute -right-2 -top-2 px-1.5 py-0 text-[9px] bg-brand-950/80 text-brand-300 border border-brand-700/50">
                   Detected
                 </Badge>
               )}
@@ -83,7 +83,7 @@ export const NicheStep: React.FC<NicheStepProps> = ({
             exit={{ opacity: 0, height: 0 }}
             className="space-y-1.5 overflow-hidden"
           >
-            <label className="text-xs font-medium text-neutral-600">Custom niche</label>
+            <label className="text-xs font-medium text-neutral-400">Custom niche</label>
             <Input
               value={customNiche || ''}
               onChange={(e) => onCustomNicheChange(e.target.value)}

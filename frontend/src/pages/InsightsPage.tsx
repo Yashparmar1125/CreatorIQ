@@ -81,7 +81,7 @@ export const InsightsPage: React.FC = () => {
             <p className="mt-2 text-sm text-neutral-400">
               Step-by-step guides from first 1K subscribers to a consistent publishing system.
             </p>
-            <Button variant="secondary" className="mt-6 bg-white text-neutral-900 hover:bg-neutral-100">
+            <Button variant="secondary" className="mt-6 bg-[#1f1f1f] text-white border border-[#333333] hover:bg-[#282828]">
               Coming soon
             </Button>
           </Card>

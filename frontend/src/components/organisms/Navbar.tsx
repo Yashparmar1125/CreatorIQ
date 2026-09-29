@@ -17,11 +17,13 @@ export const Navbar: React.FC = () => {
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-neutral-200 bg-white/95 backdrop-blur-sm">
+    <header className="sticky top-0 z-50 border-b border-[#222222] bg-[#0a0a0a]/90 backdrop-blur-md">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
         <Link to="/" className="flex items-center gap-2.5 shrink-0">
-          <img src={logo} className="h-7 w-auto" alt="CreatorIQ" />
-          <span className="font-sora text-sm font-semibold text-neutral-900">
+          <div className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-lg bg-pure-white p-0.5">
+            <img src={logo} className="h-full w-full object-contain" alt="CreatorIQ" />
+          </div>
+          <span className="font-sora text-sm font-semibold text-white">
             Creator<span className="text-neutral-400">IQ</span>
           </span>
         </Link>
@@ -34,7 +36,7 @@ export const Navbar: React.FC = () => {
               className={({ isActive }) =>
                 cn(
                   'text-sm font-medium transition-colors',
-                  isActive ? 'text-brand-600' : 'text-neutral-600 hover:text-neutral-900'
+                  isActive ? 'text-white' : 'text-neutral-400 hover:text-white'
                 )
               }
             >
@@ -47,7 +49,7 @@ export const Navbar: React.FC = () => {
           {!isAuthenticated ? (
             <>
               <Link to="/login">
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" className="text-neutral-300 hover:text-white hover:bg-[#181818]">
                   Log in
                 </Button>
               </Link>
@@ -64,7 +66,7 @@ export const Navbar: React.FC = () => {
 
         <button
           type="button"
-          className="rounded-lg p-2 text-neutral-600 hover:bg-neutral-100 md:hidden"
+          className="rounded-lg p-2 text-neutral-400 hover:bg-[#181818] hover:text-white md:hidden"
           onClick={() => setOpen(!open)}
           aria-label={open ? 'Close menu' : 'Open menu'}
         >
@@ -73,24 +75,24 @@ export const Navbar: React.FC = () => {
       </div>
 
       {open && (
-        <div className="border-t border-neutral-200 bg-white px-4 py-4 md:hidden">
+        <div className="border-t border-[#222222] bg-[#0d0d0d] px-4 py-4 md:hidden">
           <nav className="flex flex-col gap-1">
             {navLinks.map((link) => (
               <Link
                 key={link.to}
                 to={link.to}
                 onClick={() => setOpen(false)}
-                className="rounded-lg px-3 py-2.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
+                className="rounded-lg px-3 py-2.5 text-sm font-medium text-neutral-300 hover:bg-[#181818] hover:text-white"
               >
                 {link.label}
               </Link>
             ))}
           </nav>
-          <div className="mt-4 flex flex-col gap-2 border-t border-neutral-100 pt-4">
+          <div className="mt-4 flex flex-col gap-2 border-t border-[#222222] pt-4">
             {!isAuthenticated ? (
               <>
                 <Link to="/login" onClick={() => setOpen(false)}>
-                  <Button variant="secondary" className="w-full">
+                  <Button variant="secondary" className="w-full bg-[#181818] border-[#2c2c2c] text-[#ededed]">
                     Log in
                   </Button>
                 </Link>

@@ -10,10 +10,10 @@ interface AlertProps {
 }
 
 const variantClasses: Record<AlertVariant, string> = {
-  error: 'border-red-200 bg-red-50 text-red-700',
-  success: 'border-green-200 bg-green-50 text-green-800',
-  info: 'border-brand-200 bg-brand-50 text-brand-800',
-  warning: 'border-amber-200 bg-amber-50 text-amber-800',
+  error: 'border-[#451a1a] bg-[#1e1010] text-[#fca5a5]',
+  success: 'border-[#14381e] bg-[#0c1f12] text-[#86efac]',
+  info: 'border-[#2e2b69] bg-[#15132d] text-[#c7d2fe]',
+  warning: 'border-[#4a2e0e] bg-[#221405] text-[#fde68a]',
 };
 
 export const Alert: React.FC<AlertProps> = ({ children, variant = 'info', className }) => (

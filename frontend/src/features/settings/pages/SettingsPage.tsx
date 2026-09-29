@@ -167,14 +167,14 @@ export const SettingsPage: React.FC = () => {
   };
 
   if (loading) {
-    return <div className="h-48 animate-pulse rounded-lg border border-neutral-200 bg-white" />;
+    return <div className="h-48 animate-pulse rounded-xl border border-[#222222] bg-[#121212]" />;
   }
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 animate-in">
       <PageHeader
-        title="Creator Profile & Preferences"
-        description="Configure how CreatorIQ & Qdrant Vector AI personalize your trend recommendations and opportunity scoring."
+        title={<span className="text-white font-semibold">Creator Profile & Preferences</span>}
+        description="Configure how CreatorIQ and Qdrant Vector AI personalize your trend recommendations and opportunity scoring."
       />
 
       {error && <Alert variant="error">{error}</Alert>}
@@ -183,14 +183,14 @@ export const SettingsPage: React.FC = () => {
       {profile && (
         <div className="space-y-6">
           {/* Channel Overview Card */}
-          <Card className="surface-card-elevated">
+          <Card className="bg-[#121212] border-[#222222] p-5">
             <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
               <div>
-                <h3 className="text-base font-bold text-neutral-900">
+                <h3 className="text-base font-bold text-[#ededed]">
                   {profile.channel_stats.channel_name || 'Channel Profile'}
                 </h3>
-                <p className="mt-1 text-xs text-neutral-500">
-                  {(profile.channel_stats.subscriber_count ?? 0).toLocaleString()} Subscribers
+                <p className="mt-1 text-xs text-neutral-400">
+                  <span className="font-mono text-neutral-300">{(profile.channel_stats.subscriber_count ?? 0).toLocaleString()}</span> Subscribers
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -200,168 +200,168 @@ export const SettingsPage: React.FC = () => {
           </Card>
 
           {/* MANUAL CUSTOM PROFILE SETTINGS */}
-          <Card variant="elevated" className="space-y-6">
-              <div>
-                <h3 className="text-sm font-bold text-neutral-900">Manual Profile Preferences</h3>
-                <p className="text-xs text-neutral-500">
-                  Customize your niche, audience geography, content format, and tone manually.
-                </p>
-              </div>
+          <Card variant="elevated" className="space-y-6 bg-[#121212] border-[#222222] p-6">
+            <div>
+              <h3 className="text-sm font-bold text-[#ededed]">Manual Profile Preferences</h3>
+              <p className="text-xs text-neutral-500">
+                Customize your niche, audience geography, content format, and channel tone manually.
+              </p>
+            </div>
 
-              {/* 1. Category / Niche Selection */}
-              <div className="space-y-3 border-t border-neutral-100 pt-4">
-                <label className="block text-xs font-bold text-neutral-900">
-                  1. Category / Niche (Select all that apply)
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {PRESET_NICHES.map((niche) => {
-                    const isSelected = selectedNiches.includes(niche);
-                    return (
-                      <button
-                        key={niche}
-                        type="button"
-                        onClick={() => toggleNiche(niche)}
-                        className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
-                          isSelected
-                            ? 'border-brand-500 bg-brand-50 text-brand-700 ring-2 ring-brand-400/20'
-                            : 'border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50'
-                        }`}
-                      >
-                        {isSelected ? '✓ ' : '+ '}
-                        {niche}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Custom Niche Add Input */}
-                <div className="flex gap-2 pt-2 sm:max-w-md">
-                  <input
-                    type="text"
-                    placeholder="Add custom niche (e.g. AI Automation)..."
-                    value={customNicheInput}
-                    onChange={(e) => setCustomNicheInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleAddCustomNiche();
-                      }
-                    }}
-                    className="flex-1 rounded-lg border border-neutral-300 px-3 py-1.5 text-xs focus:border-brand-500 focus:outline-none"
-                  />
-                  <Button size="sm" variant="secondary" type="button" onClick={handleAddCustomNiche}>
-                    <Plus className="h-3.5 w-3.5" />
-                    Add
-                  </Button>
-                </div>
-
-                {/* Currently Selected Badges */}
-                <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                  <span className="text-[11px] text-neutral-400">Selected ({selectedNiches.length}):</span>
-                  {selectedNiches.map((n) => (
-                    <span
-                      key={n}
-                      className="inline-flex items-center gap-1 rounded-md bg-brand-100 px-2 py-0.5 text-xs font-medium text-brand-800"
-                    >
-                      {n}
-                      <button
-                        type="button"
-                        onClick={() => toggleNiche(n)}
-                        className="text-brand-600 hover:text-brand-900"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {/* 2. Target Audience Geography */}
-              <div className="space-y-3 border-t border-neutral-100 pt-4">
-                <label className="block text-xs font-bold text-neutral-900">
-                  2. Target Audience Country
-                </label>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  {COUNTRIES.map((c) => (
+            {/* 1. Category / Niche Selection */}
+            <div className="space-y-3 border-t border-[#222222] pt-4">
+              <label className="block text-xs font-semibold text-[#ededed]">
+                1. Category / Niche (Select all that apply)
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {PRESET_NICHES.map((niche) => {
+                  const isSelected = selectedNiches.includes(niche);
+                  return (
                     <button
-                      key={c.code}
+                      key={niche}
                       type="button"
-                      onClick={() => setSelectedCountry(c.code)}
-                      className={`flex items-center justify-between rounded-lg border p-2.5 text-xs font-medium transition-all ${
-                        selectedCountry === c.code
-                          ? 'border-brand-500 bg-brand-50 text-brand-900 ring-2 ring-brand-400/20'
-                          : 'border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50'
+                      onClick={() => toggleNiche(niche)}
+                      className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
+                        isSelected
+                          ? 'border-brand-500/50 bg-brand-950/40 text-brand-300 ring-1 ring-brand-500/30'
+                          : 'border-[#262626] bg-[#161616] text-neutral-400 hover:bg-[#1e1e1e] hover:text-neutral-200'
                       }`}
                     >
-                      <span>{c.label}</span>
-                      {selectedCountry === c.code && <Check className="h-3.5 w-3.5 text-brand-600" />}
+                      {isSelected ? '✓ ' : '+ '}
+                      {niche}
                     </button>
-                  ))}
-                </div>
+                  );
+                })}
               </div>
 
-              {/* 3. Primary Content Format */}
-              <div className="space-y-3 border-t border-neutral-100 pt-4">
-                <label className="block text-xs font-bold text-neutral-900">
-                  3. Primary Content Format
-                </label>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                  {FORMAT_OPTIONS.map((f) => (
-                    <button
-                      key={f.id}
-                      type="button"
-                      onClick={() => setSelectedFormat(f.id)}
-                      className={`rounded-xl border p-3.5 text-left transition-all ${
-                        selectedFormat === f.id
-                          ? 'border-brand-500 bg-brand-50/80 ring-2 ring-brand-400/20'
-                          : 'border-neutral-200 bg-white hover:bg-neutral-50'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-neutral-900">{f.label}</span>
-                        {selectedFormat === f.id && <Check className="h-4 w-4 text-brand-600" />}
-                      </div>
-                      <p className="mt-1 text-[11px] text-neutral-500">{f.desc}</p>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* 4. Channel Tone */}
-              <div className="space-y-3 border-t border-neutral-100 pt-4">
-                <label className="block text-xs font-bold text-neutral-900">
-                  4. Channel Tone & Voice
-                </label>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                  {TONE_OPTIONS.map((t) => (
-                    <button
-                      key={t.id}
-                      type="button"
-                      onClick={() => setSelectedTone(t.id)}
-                      className={`rounded-lg border p-2.5 text-left transition-all ${
-                        selectedTone === t.id
-                          ? 'border-brand-500 bg-brand-50 text-brand-900 ring-2 ring-brand-400/20'
-                          : 'border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold capitalize">{t.label}</span>
-                        {selectedTone === t.id && <Check className="h-3.5 w-3.5 text-brand-600" />}
-                      </div>
-                      <p className="mt-0.5 text-[10px] text-neutral-500">{t.desc}</p>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Submit Button */}
-              <div className="border-t border-neutral-100 pt-4">
-                <Button onClick={() => void handleSaveManual()} disabled={savingManual} className="w-full sm:w-auto">
-                  <Save className={`h-4 w-4 ${savingManual ? 'animate-spin' : ''}`} />
-                  {savingManual ? 'Saving Preferences...' : 'Save Profile Settings'}
+              {/* Custom Niche Add Input */}
+              <div className="flex gap-2 pt-2 sm:max-w-md">
+                <input
+                  type="text"
+                  placeholder="Add custom niche (e.g. AI Automation)..."
+                  value={customNicheInput}
+                  onChange={(e) => setCustomNicheInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddCustomNiche();
+                    }
+                  }}
+                  className="flex-1 rounded-lg border border-[#2a2a2a] bg-[#161616] px-3 py-1.5 text-xs text-[#ededed] placeholder:text-neutral-600 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                />
+                <Button size="sm" variant="secondary" type="button" onClick={handleAddCustomNiche} className="bg-[#1a1a1a] border-[#2e2e2e] text-[#ededed]">
+                  <Plus className="h-3.5 w-3.5" />
+                  Add
                 </Button>
               </div>
-            </Card>
+
+              {/* Currently Selected Badges */}
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                <span className="text-[11px] text-neutral-500">Selected ({selectedNiches.length}):</span>
+                {selectedNiches.map((n) => (
+                  <span
+                    key={n}
+                    className="inline-flex items-center gap-1 rounded-md bg-[#1c1c1c] border border-[#2c2c2c] px-2 py-0.5 text-xs font-medium text-brand-300"
+                  >
+                    {n}
+                    <button
+                      type="button"
+                      onClick={() => toggleNiche(n)}
+                      className="text-neutral-500 hover:text-neutral-200"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* 2. Target Audience Geography */}
+            <div className="space-y-3 border-t border-[#222222] pt-4">
+              <label className="block text-xs font-semibold text-[#ededed]">
+                2. Target Audience Country
+              </label>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {COUNTRIES.map((c) => (
+                  <button
+                    key={c.code}
+                    type="button"
+                    onClick={() => setSelectedCountry(c.code)}
+                    className={`flex items-center justify-between rounded-lg border p-2.5 text-xs font-medium transition-all ${
+                      selectedCountry === c.code
+                        ? 'border-brand-500/50 bg-brand-950/40 text-white ring-1 ring-brand-500/30'
+                        : 'border-[#262626] bg-[#161616] text-neutral-400 hover:bg-[#1e1e1e] hover:text-neutral-200'
+                    }`}
+                  >
+                    <span>{c.label}</span>
+                    {selectedCountry === c.code && <Check className="h-3.5 w-3.5 text-brand-400" />}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 3. Primary Content Format */}
+            <div className="space-y-3 border-t border-[#222222] pt-4">
+              <label className="block text-xs font-semibold text-[#ededed]">
+                3. Primary Content Format
+              </label>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                {FORMAT_OPTIONS.map((f) => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => setSelectedFormat(f.id)}
+                    className={`rounded-xl border p-3.5 text-left transition-all ${
+                      selectedFormat === f.id
+                        ? 'border-brand-500/50 bg-brand-950/30 ring-1 ring-brand-500/30'
+                        : 'border-[#262626] bg-[#161616] hover:bg-[#1e1e1e]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-[#ededed]">{f.label}</span>
+                      {selectedFormat === f.id && <Check className="h-4 w-4 text-brand-400" />}
+                    </div>
+                    <p className="mt-1 text-[11px] text-neutral-500">{f.desc}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 4. Channel Tone */}
+            <div className="space-y-3 border-t border-[#222222] pt-4">
+              <label className="block text-xs font-semibold text-[#ededed]">
+                4. Channel Tone & Voice
+              </label>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {TONE_OPTIONS.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setSelectedTone(t.id)}
+                    className={`rounded-lg border p-2.5 text-left transition-all ${
+                      selectedTone === t.id
+                        ? 'border-brand-500/50 bg-brand-950/30 text-white ring-1 ring-brand-500/30'
+                        : 'border-[#262626] bg-[#161616] text-neutral-400 hover:bg-[#1e1e1e] hover:text-neutral-200'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold capitalize">{t.label}</span>
+                      {selectedTone === t.id && <Check className="h-3.5 w-3.5 text-brand-400" />}
+                    </div>
+                    <p className="mt-0.5 text-[10px] text-neutral-500">{t.desc}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Submit Button */}
+            <div className="border-t border-[#222222] pt-4">
+              <Button onClick={() => void handleSaveManual()} disabled={savingManual} className="w-full sm:w-auto">
+                <Save className={`h-4 w-4 ${savingManual ? 'animate-spin' : ''}`} />
+                {savingManual ? 'Saving Preferences...' : 'Save Profile Settings'}
+              </Button>
+            </div>
+          </Card>
         </div>
       )}
     </div>

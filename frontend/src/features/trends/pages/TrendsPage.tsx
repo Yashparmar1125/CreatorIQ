@@ -48,8 +48,6 @@ function formatSubs(n: number): string {
   return String(n);
 }
 
-
-
 export const TrendsPage: React.FC = () => {
   const navigate = useNavigate();
   const {
@@ -118,16 +116,16 @@ export const TrendsPage: React.FC = () => {
   }, [trends, activeFormatFilter]);
 
   return (
-    <div className="space-y-6 animate-in">
+    <div className="space-y-6 animate-in text-[#ededed]">
       <PageHeader
-        title={<span className="text-gradient-brand">Trends</span>}
-        description="Your personalized Top 15 opportunities ranked by vector similarity, niche fit, momentum, and audience geography."
+        title="Trends Intelligence"
+        description="Personalized top opportunities ranked by vector similarity, niche fit, momentum velocity, and audience geography."
         badge={
-          <div className="mb-2 flex flex-wrap items-center gap-2">
+          <div className="mb-2 flex flex-wrap items-center gap-1.5">
             {isPersonalized && <Badge variant="brand">Personalized</Badge>}
             {aiEnriched && (
               <Badge variant="neutral">
-                <Sparkles className="h-3 w-3" />
+                <Sparkles className="h-3 w-3 text-indigo-400" />
                 AI curated
               </Badge>
             )}
@@ -137,10 +135,10 @@ export const TrendsPage: React.FC = () => {
           !activeSearch ? (
             <div className="flex flex-wrap gap-2">
               <Button variant="secondary" onClick={() => setHistoryOpen(true)}>
-                <History className="h-4 w-4" />
+                <History className="h-3.5 w-3.5" />
                 History
                 {feedHistory.length > 0 && (
-                  <span className="ml-0.5 rounded-full bg-neutral-200 px-1.5 py-0.5 text-[10px] font-semibold text-neutral-600">
+                  <span className="ml-0.5 rounded bg-[#242424] px-1.5 py-0.5 text-[10px] font-semibold text-neutral-300">
                     {feedHistory.length}
                   </span>
                 )}
@@ -151,73 +149,73 @@ export const TrendsPage: React.FC = () => {
                 disabled={isRefreshing || isLoading}
               >
                 {isRefreshing ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 ) : (
-                  <RefreshCw className="h-4 w-4" />
+                  <RefreshCw className="h-3.5 w-3.5" />
                 )}
-                Refresh feed
+                Refresh
               </Button>
             </div>
           ) : undefined
         }
       />
 
-      {/* Search */}
+      {/* Search Input Bar */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="relative min-w-0 flex-1 rounded-xl border border-neutral-200/80 bg-white p-1 shadow-sm">
+        <div className="relative min-w-0 flex-1 rounded-lg border border-[#242424] bg-[#121212] p-1">
           <Input
-            icon={<Search className="h-4 w-4" />}
-            placeholder="Search a topic or niche..."
+            icon={<Search className="h-4 w-4 text-neutral-500" />}
+            placeholder="Search a topic, concept or niche..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') handlePredict();
             }}
-            className="pr-24"
+            className="border-transparent bg-transparent pr-24 focus:bg-transparent"
           />
           {activeSearch && (
             <button
               type="button"
               onClick={handleClearSearch}
-              className="absolute right-20 top-1/2 -translate-y-1/2 rounded p-1 text-neutral-400 hover:text-neutral-600"
+              className="absolute right-20 top-1/2 -translate-y-1/2 rounded p-1 text-neutral-500 hover:text-white"
               aria-label="Clear search"
             >
-              <X className="h-4 w-4" />
+              <X className="h-3.5 w-3.5" />
             </button>
           )}
           <Button
             size="sm"
-            className="absolute right-1 top-1/2 -translate-y-1/2"
+            className="absolute right-1 top-1/2 -translate-y-1/2 text-xs h-7 px-3"
             onClick={handlePredict}
             disabled={isLoading}
           >
-            {isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Search'}
+            {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Search'}
           </Button>
         </div>
       </div>
 
-      {/* Meta bar */}
+      {/* Meta info bar */}
       {!activeSearch && (geoContext?.badge || credits || isHistorical || snapshotAt) && (
-        <Card variant="glass" padding="sm" className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+        <Card variant="default" padding="sm" className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs border-[#222222] bg-[#121212]">
           {isHistorical && (
-            <span className="text-amber-800">
-              Viewing a past snapshot.{' '}
-              <button type="button" onClick={() => loadCurrentFeed()} className="font-medium text-brand-600 hover:underline">
+            <span className="text-amber-400">
+              Viewing past snapshot.{' '}
+              <button type="button" onClick={() => loadCurrentFeed()} className="font-medium text-indigo-400 hover:underline cursor-pointer">
                 Back to current
               </button>
             </span>
           )}
           {geoContext?.badge && (
-            <span className="flex items-center gap-1.5 text-neutral-600">
-              <Globe className="h-4 w-4 shrink-0" />
+            <span className="flex items-center gap-1.5 text-neutral-400">
+              <Globe className="h-3.5 w-3.5 shrink-0" />
               {geoContext.badge}
             </span>
           )}
-          <span className="text-xs text-emerald-700 font-medium">
-            Unlimited refreshes
+          <span className="text-[11px] text-emerald-400 font-medium">
+            Live stream active
           </span>
           {snapshotAt && (
-            <span className="ml-auto text-xs text-neutral-400">
+            <span className="ml-auto text-[11px] text-neutral-500">
               Updated {new Date(snapshotAt).toLocaleString()}
             </span>
           )}
@@ -234,17 +232,17 @@ export const TrendsPage: React.FC = () => {
         onSelectCurrent={() => loadCurrentFeed()}
       />
 
-      {/* Channel context + filters */}
+      {/* Channel context + format filters */}
       {(channelContext || activeSearch) && (
-        <Card variant="elevated" padding="sm" className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <Card variant="default" padding="sm" className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-[#222222] bg-[#121212]">
           {activeSearch ? (
             <div className="flex flex-wrap items-center gap-3">
               <div>
-                <p className="text-xs text-neutral-500">Search results for</p>
-                <p className="text-sm font-medium text-neutral-900">&ldquo;{activeSearch}&rdquo;</p>
+                <p className="text-[11px] text-neutral-500">Search results for</p>
+                <p className="text-xs font-semibold text-white">&ldquo;{activeSearch}&rdquo;</p>
               </div>
-              <Button variant="ghost" size="sm" onClick={handleClearSearch}>
-                Back to my feed
+              <Button variant="ghost" size="sm" onClick={handleClearSearch} className="text-xs h-7">
+                Back to feed
               </Button>
             </div>
           ) : channelContext ? (
@@ -253,25 +251,25 @@ export const TrendsPage: React.FC = () => {
                 <img
                   src={channelContext.thumbnail_url}
                   alt=""
-                  className="h-9 w-9 shrink-0 rounded-full object-cover"
+                  className="h-8 w-8 shrink-0 rounded-lg border border-[#2c2c2c] object-cover"
                 />
               ) : (
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-100 text-brand-600">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#1c1c1c] text-neutral-300">
                   <User className="h-4 w-4" />
                 </div>
               )}
               <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-neutral-900">
+                <p className="truncate text-xs font-semibold text-white">
                   {channelContext.name ?? 'Your channel'}
                   {channelContext.subscriber_count > 0 && (
-                    <span className="ml-2 text-neutral-400">
+                    <span className="ml-2 text-neutral-400 font-normal">
                       · {formatSubs(channelContext.subscriber_count)} subs
                     </span>
                   )}
                 </p>
                 <div className="mt-1 flex flex-wrap gap-1">
                   {channelContext.niches.slice(0, 4).map((niche) => (
-                    <Badge key={niche} variant="brand">
+                    <Badge key={niche} variant="neutral" className="text-[9px]">
                       {niche}
                     </Badge>
                   ))}
@@ -280,20 +278,20 @@ export const TrendsPage: React.FC = () => {
             </div>
           ) : null}
 
-          <div className="flex items-center gap-1 rounded-xl border border-neutral-200 bg-neutral-50/80 p-1 shadow-inner">
+          <div className="flex items-center gap-1 rounded-lg border border-[#242424] bg-[#161616] p-1">
             {FORMAT_TABS.map(({ key, label, Icon }) => (
               <button
                 key={key}
                 type="button"
                 onClick={() => setFormatFilter(key)}
                 className={cn(
-                  'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                  'flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer',
                   activeFormatFilter === key
-                    ? 'bg-white text-neutral-900 shadow-sm'
-                    : 'text-neutral-500 hover:text-neutral-700'
+                    ? 'bg-[#262626] text-white shadow-xs'
+                    : 'text-neutral-400 hover:text-neutral-200'
                 )}
               >
-                <Icon className="h-3.5 w-3.5" />
+                <Icon className="h-3 w-3" />
                 {label}
               </button>
             ))}
@@ -310,21 +308,19 @@ export const TrendsPage: React.FC = () => {
       {!isLoading && (
         <>
           {filteredTrends.length === 0 ? (
-            <Card className="py-16 text-center" variant="elevated">
-              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 ring-1 ring-brand-200/50">
-                <TrendingUp className="h-6 w-6 text-neutral-400" />
-              </div>
-              <h3 className="text-base font-semibold text-neutral-900">
-                {activeFormatFilter !== 'all' ? 'No trends match this filter' : 'No opportunities yet'}
+            <Card className="py-16 text-center border-[#222222] bg-[#121212]" variant="elevated">
+              <TrendingUp className="mx-auto h-7 w-7 text-neutral-600 mb-2" />
+              <h3 className="text-sm font-semibold text-neutral-200">
+                {activeFormatFilter !== 'all' ? 'No trends match this format filter' : 'No opportunities yet'}
               </h3>
-              <p className="mx-auto mt-2 max-w-md text-sm text-neutral-500">
+              <p className="mx-auto mt-1 max-w-md text-xs text-neutral-500">
                 {emptyReason ??
                   (activeFormatFilter !== 'all'
                     ? 'Try switching to All or a different format.'
-                    : 'Trend data is still collecting. Refresh in a few minutes or search a topic.')}
+                    : 'Trend signals are collecting. Refresh in a moment or search a topic.')}
               </p>
               {activeFormatFilter !== 'all' && (
-                <Button className="mt-6" size="sm" onClick={() => setFormatFilter('all')}>
+                <Button className="mt-4" size="sm" onClick={() => setFormatFilter('all')}>
                   Show all formats
                 </Button>
               )}
@@ -336,7 +332,7 @@ export const TrendsPage: React.FC = () => {
                   key={trend.id}
                   variant="elevated"
                   hover
-                  className="group flex cursor-pointer flex-col gap-4 transition-transform duration-200 hover:-translate-y-0.5"
+                  className="group flex cursor-pointer flex-col gap-3.5 p-5 border-[#222222] hover:border-[#383838] transition-all duration-150"
                   onClick={() => navigate(`/app/trends/detail/${trend.id}`)}
                   role="button"
                   tabIndex={0}
@@ -349,33 +345,33 @@ export const TrendsPage: React.FC = () => {
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex flex-wrap gap-1.5">
                       {trend.niches?.slice(0, 2).map((tag: string) => (
-                        <Badge key={tag} variant="brand">
+                        <Badge key={tag} variant="neutral" className="text-[10px]">
                           {tag}
                         </Badge>
                       ))}
-                      <Badge variant="neutral">{trend.archetype}</Badge>
+                      <Badge variant="brand" className="text-[10px] capitalize">{trend.archetype}</Badge>
                       {trend.vector_similarity && (
-                        <Badge variant="neutral" className="bg-emerald-50 text-emerald-700 border-emerald-200">
+                        <Badge variant="success" className="text-[10px]">
                           {Math.round(trend.vector_similarity * 100)}% Vector Match
                         </Badge>
                       )}
                     </div>
                     {trend.opportunity_score != null && (
-                      <span className="shrink-0 rounded-lg bg-neutral-900 px-2.5 py-1 text-xs font-bold text-white shadow-sm">
+                      <span className="shrink-0 rounded bg-[#1f1f1f] border border-[#2c2c2c] px-2 py-0.5 text-[10px] font-bold text-white">
                         {Math.round(trend.opportunity_score ?? trend.tvs_score)} Fit
                       </span>
                     )}
                   </div>
 
                   <div>
-                    <h3 className="text-base font-semibold text-neutral-900 group-hover:text-brand-600">
+                    <h3 className="text-sm font-bold text-white group-hover:text-indigo-400 transition-colors">
                       {cleanTrendTitle(trend.topic)}
                     </h3>
-                    <p className="mt-1 text-sm font-medium text-neutral-700">
+                    <p className="mt-1 text-xs text-neutral-400">
                       {cleanTrendHeadline(trend)}
                     </p>
                     {trend.is_youtube_video && trend.channel_name && (
-                      <p className="mt-2 text-xs text-neutral-500">
+                      <p className="mt-2 text-[11px] text-neutral-500">
                         {trend.channel_name}
                         {trend.video_url && (
                           <>
@@ -384,10 +380,10 @@ export const TrendsPage: React.FC = () => {
                               href={trend.video_url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center gap-0.5 text-brand-600 hover:underline"
+                              className="inline-flex items-center gap-0.5 text-indigo-400 hover:underline"
                               onClick={(e) => e.stopPropagation()}
                             >
-                              Watch <ExternalLink className="h-3 w-3" />
+                              Watch video <ExternalLink className="h-2.5 w-2.5" />
                             </a>
                           </>
                         )}
@@ -396,27 +392,27 @@ export const TrendsPage: React.FC = () => {
                   </div>
 
                   {/* Video Concept Highlight Box */}
-                  <div className="rounded-xl border border-brand-200/90 bg-gradient-to-br from-brand-50/90 via-indigo-50/30 to-purple-50/20 p-3.5 shadow-2xs transition-all group-hover:border-brand-300">
-                    <div className="flex items-center justify-between gap-2 mb-1.5">
-                      <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-brand-800">
-                        <Sparkles className="h-3.5 w-3.5 text-brand-600" />
+                  <div className="rounded-lg border border-[#282828] bg-[#141414] p-3 transition-colors group-hover:border-[#383838]">
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+                        <Sparkles className="h-3 w-3 text-indigo-400" />
                         Video Concept
                       </span>
                       <div className="flex items-center gap-1.5">
-                        <span className="inline-flex items-center gap-1 rounded-full bg-brand-100/80 px-2 py-0.5 text-[10px] font-semibold text-brand-700 border border-brand-200/60">
+                        <span className="inline-flex items-center gap-1 rounded bg-[#1e1e1e] px-1.5 py-0.5 text-[9px] font-medium text-neutral-400 border border-[#2c2c2c]">
                           <Film className="h-2.5 w-2.5" />
                           {resolveVideoConceptBadge(trend)}
                         </span>
                         <button
                           type="button"
                           onClick={(e) => handleCopyConcept(trend.id, resolveVideoConcept(trend), e)}
-                          title="Copy video concept"
-                          className="inline-flex items-center gap-1 rounded-md bg-white/90 px-1.5 py-0.5 text-[10px] font-medium text-brand-700 hover:text-brand-900 hover:bg-white border border-brand-200/70 transition-all shadow-2xs cursor-pointer"
+                          title="Copy concept"
+                          className="inline-flex items-center gap-1 rounded bg-[#1a1a1a] px-1.5 py-0.5 text-[9px] font-medium text-neutral-300 hover:bg-[#222222] border border-[#2c2c2c] transition-colors cursor-pointer"
                         >
                           {copiedConceptId === trend.id ? (
                             <>
-                              <Check className="h-2.5 w-2.5 text-emerald-600" />
-                              <span className="text-emerald-700">Copied</span>
+                              <Check className="h-2.5 w-2.5 text-emerald-400" />
+                              <span className="text-emerald-400">Copied</span>
                             </>
                           ) : (
                             <>
@@ -427,45 +423,37 @@ export const TrendsPage: React.FC = () => {
                         </button>
                       </div>
                     </div>
-                    <p className="text-xs sm:text-sm font-semibold text-neutral-900 leading-snug">
+                    <p className="text-xs font-semibold text-neutral-200 leading-snug">
                       &ldquo;{resolveVideoConcept(trend)}&rdquo;
                     </p>
                   </div>
 
-                  {/* Why Predicted For You Insight */}
+                  {/* Why Predicted */}
                   {trend.why_predicted && (
-                    <div className="rounded-lg border border-neutral-200/80 bg-neutral-50/80 px-2.5 py-2 text-xs text-neutral-700">
-                      <span className="font-semibold text-neutral-900">Why Predicted: </span>
+                    <p className="text-xs text-neutral-400 line-clamp-2 leading-relaxed">
+                      <span className="font-semibold text-neutral-300">Why Predicted: </span>
                       {cleanTrendText(trend.why_predicted)}
-                    </div>
+                    </p>
                   )}
 
-                  {/* Action Plan */}
-                  {(trend.action_plan || trend.growth_tip) && (
-                    <div className="rounded-lg border border-neutral-200/80 bg-neutral-50/80 px-2.5 py-2 text-xs text-neutral-700">
-                      <span className="font-semibold text-neutral-900">Action Plan: </span>
-                      {cleanTrendText(trend.action_plan || trend.growth_tip)}
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-3 gap-3 border-t border-neutral-100 pt-4 text-sm">
+                  <div className="grid grid-cols-3 gap-2 border-t border-[#1e1e1e] pt-3 text-xs">
                     <div>
-                      <p className="text-xs text-neutral-500">Velocity</p>
-                      <p className="font-medium text-neutral-900">{trend.velocity}</p>
+                      <p className="text-[11px] text-neutral-500">Velocity</p>
+                      <p className="font-medium text-neutral-200">{trend.velocity}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-neutral-500">Reach</p>
-                      <p className="font-medium text-neutral-900">{trend.volume}</p>
+                      <p className="text-[11px] text-neutral-500">Reach</p>
+                      <p className="font-medium text-neutral-200">{trend.volume}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-neutral-500">Stability</p>
-                      <p className="font-medium text-neutral-900">{Math.round(trend.stability_score ?? 50)}%</p>
+                      <p className="text-[11px] text-neutral-500">Stability</p>
+                      <p className="font-medium text-neutral-200">{Math.round(trend.stability_score ?? 50)}%</p>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between gap-2 border-t border-neutral-100 pt-4">
+                  <div className="flex items-center justify-between gap-2 border-t border-[#1e1e1e] pt-3">
                     {trend.key_indicator ? (
-                      <span className="min-w-0 truncate text-xs text-neutral-500">{trend.key_indicator}</span>
+                      <span className="min-w-0 truncate text-[11px] text-neutral-500">{trend.key_indicator}</span>
                     ) : (
                       <span />
                     )}
@@ -473,12 +461,13 @@ export const TrendsPage: React.FC = () => {
                       <Button
                         variant={trend.saved ? 'primary' : 'secondary'}
                         size="sm"
+                        className="text-xs h-7 px-2.5"
                         onClick={(e) => {
                           e.stopPropagation();
                           toggleSaveTrend(trend.id);
                         }}
                       >
-                        <Bookmark className="h-3.5 w-3.5" />
+                        <Bookmark className="h-3 w-3" />
                         {trend.saved ? 'Saved' : 'Save'}
                       </Button>
                     </div>

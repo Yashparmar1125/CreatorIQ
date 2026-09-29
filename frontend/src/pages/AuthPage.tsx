@@ -158,15 +158,15 @@ export const AuthPage: React.FC = () => {
       </div>
 
       {/* Form panel */}
-      <div className="surface-app flex w-full flex-col items-center justify-center px-4 py-10 sm:px-6 lg:w-1/2">
+      <div className="flex w-full flex-col items-center justify-center bg-[#0a0a0a] px-4 py-10 sm:px-6 lg:w-1/2">
         <div className="mb-8 flex items-center gap-3 lg:hidden">
           <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg bg-white p-0.5 shadow-sm">
             <img src={logo} alt="CreatorIQ" className="h-full w-full object-contain" />
           </div>
-          <span className="font-sora text-base font-semibold text-neutral-900">CreatorIQ</span>
+          <span className="font-sora text-base font-semibold text-white">CreatorIQ</span>
         </div>
 
-        <Card variant="elevated" className="w-full max-w-md shadow-xl shadow-neutral-900/5">
+        <Card variant="elevated" className="w-full max-w-md bg-[#121212] border-[#222222] p-8 shadow-2xl">
           <AnimatePresence mode="wait">
             <motion.div
               key={mode}
@@ -176,10 +176,10 @@ export const AuthPage: React.FC = () => {
               transition={{ duration: 0.2 }}
             >
               <div className="mb-6">
-                <h2 className="font-sora text-2xl font-semibold tracking-tight text-neutral-900">
+                <h2 className="font-sora text-2xl font-semibold tracking-tight text-white">
                   {mode === 'login' ? 'Welcome back' : 'Create your account'}
                 </h2>
-                <p className="mt-1.5 text-sm text-neutral-500">
+                <p className="mt-1.5 text-sm text-neutral-400">
                   {mode === 'login'
                     ? 'Sign in to continue to your workspace.'
                     : 'Start free — your first trend feed is on us.'}
@@ -202,39 +202,39 @@ export const AuthPage: React.FC = () => {
                       exit={{ opacity: 0, height: 0 }}
                       className="space-y-1.5 overflow-hidden"
                     >
-                      <label className="text-xs font-medium text-neutral-600">Full name</label>
+                      <label className="text-xs font-medium text-neutral-400">Full name</label>
                       <Input
                         {...registerField('name')}
                         icon={<User className="h-4 w-4" />}
                         placeholder="Your name"
-                        className={errors.name ? 'border-red-300' : ''}
+                        className={errors.name ? 'border-red-500/60' : ''}
                       />
                       {errors.name && (
-                        <p className="text-xs text-red-600">{errors.name.message}</p>
+                        <p className="text-xs text-red-400">{errors.name.message}</p>
                       )}
                     </motion.div>
                   )}
                 </AnimatePresence>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-neutral-600">Email</label>
+                  <label className="text-xs font-medium text-neutral-400">Email</label>
                   <Input
                     {...registerField('email')}
                     type="email"
                     icon={<Mail className="h-4 w-4" />}
                     placeholder="you@example.com"
-                    className={errors.email ? 'border-red-300' : ''}
+                    className={errors.email ? 'border-red-500/60' : ''}
                   />
                   {errors.email && (
-                    <p className="text-xs text-red-600">{errors.email.message}</p>
+                    <p className="text-xs text-red-400">{errors.email.message}</p>
                   )}
                 </div>
 
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-medium text-neutral-600">Password</label>
+                    <label className="text-xs font-medium text-neutral-400">Password</label>
                     {mode === 'login' && (
-                      <button type="button" className="text-xs font-medium text-brand-600 hover:text-brand-700">
+                      <button type="button" className="text-xs font-medium text-brand-400 hover:text-brand-300">
                         Forgot password?
                       </button>
                     )}
@@ -244,10 +244,10 @@ export const AuthPage: React.FC = () => {
                     type="password"
                     icon={<Lock className="h-4 w-4" />}
                     placeholder="At least 8 characters"
-                    className={errors.password ? 'border-red-300' : ''}
+                    className={errors.password ? 'border-red-500/60' : ''}
                   />
                   {errors.password && (
-                    <p className="text-xs text-red-600">{errors.password.message}</p>
+                    <p className="text-xs text-red-400">{errors.password.message}</p>
                   )}
                 </div>
 
@@ -261,27 +261,28 @@ export const AuthPage: React.FC = () => {
                   )}
                 </Button>
 
+
               </form>
 
-              <p className="mt-6 text-center text-sm text-neutral-500">
+              <p className="mt-6 text-center text-sm text-neutral-400">
                 {mode === 'login' ? "Don't have an account?" : 'Already have an account?'}{' '}
                 <button
                   type="button"
                   onClick={() => navigate(mode === 'login' ? '/signup' : '/login')}
-                  className="font-medium text-brand-600 hover:text-brand-700"
+                  className="font-medium text-brand-400 hover:text-brand-300"
                 >
                   {mode === 'login' ? 'Sign up' : 'Sign in'}
                 </button>
               </p>
 
               {mode === 'signup' && (
-                <p className="mt-6 text-center text-xs leading-relaxed text-neutral-400">
+                <p className="mt-6 text-center text-xs leading-relaxed text-neutral-500">
                   By signing up, you agree to our{' '}
-                  <Link to="/terms" className="text-neutral-600 hover:text-neutral-900">
+                  <Link to="/terms" className="text-neutral-400 hover:text-white">
                     Terms
                   </Link>{' '}
                   and{' '}
-                  <Link to="/privacy" className="text-neutral-600 hover:text-neutral-900">
+                  <Link to="/privacy" className="text-neutral-400 hover:text-white">
                     Privacy Policy
                   </Link>
                   .
@@ -291,13 +292,13 @@ export const AuthPage: React.FC = () => {
           </AnimatePresence>
         </Card>
 
-        <div className="mt-6 hidden items-center gap-6 text-xs text-neutral-400 lg:flex">
+        <div className="mt-6 hidden items-center gap-6 text-xs text-neutral-500 lg:flex">
           <span className="flex items-center gap-1.5">
-            <CheckCircle2 className="h-3.5 w-3.5 text-success-600" />
+            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
             Free first feed
           </span>
           <span className="flex items-center gap-1.5">
-            <CheckCircle2 className="h-3.5 w-3.5 text-success-600" />
+            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
             No credit card
           </span>
         </div>

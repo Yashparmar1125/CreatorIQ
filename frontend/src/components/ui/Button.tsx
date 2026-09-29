@@ -10,11 +10,11 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantClasses: Record<ButtonVariant, string> = {
-  primary: 'btn-primary-glow text-white border border-transparent hover:brightness-110',
+  primary: 'bg-white text-black font-semibold border border-transparent hover:bg-neutral-200 active:bg-neutral-300 shadow-xs',
   secondary:
-    'bg-white text-neutral-700 border border-neutral-200 shadow-sm hover:bg-neutral-50 hover:border-neutral-300 hover:shadow',
-  ghost: 'bg-transparent text-neutral-600 border border-transparent hover:bg-neutral-100',
-  danger: 'bg-white text-error-600 border border-neutral-200 hover:bg-red-50 hover:border-red-200',
+    'bg-[#181818] text-[#ededed] border border-[#2c2c2c] hover:bg-[#222222] hover:border-[#3a3a3a] shadow-xs',
+  ghost: 'bg-transparent text-[#a1a1aa] border border-transparent hover:bg-[#181818] hover:text-[#ededed]',
+  danger: 'bg-[#1e1313] text-[#f87171] border border-[#3f1d1d] hover:bg-[#2a1717]',
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
@@ -29,9 +29,9 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       ref={ref}
       disabled={disabled}
       className={cn(
-        'inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-200',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/30 focus-visible:ring-offset-2',
-        'disabled:pointer-events-none disabled:opacity-50',
+        'inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-150 cursor-pointer',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400/30 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]',
+        'disabled:pointer-events-none disabled:opacity-40',
         variantClasses[variant],
         sizeClasses[size],
         className
