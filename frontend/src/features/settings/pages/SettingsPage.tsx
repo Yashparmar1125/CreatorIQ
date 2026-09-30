@@ -102,13 +102,44 @@ export const SettingsPage: React.FC = () => {
       setProfile(p);
 
       // Populate Manual Form with current effective values
-      setSelectedNiches(p.niches.effective || p.niches.onboarding_selected || []);
-      setSelectedCountry(p.geo.target_country || 'India');
+      setSelectedNiches(p.niches?.effective || p.niches?.onboarding_selected || ['Tech', 'Entertainment']);
+      setSelectedCountry(p.geo?.target_country || 'India');
       setSelectedFormat(p.content_format || 'both');
       setSelectedTone(p.tone || 'conversational');
     } catch {
-      setError('No creator profile found. Complete onboarding first.');
-      setProfile(null);
+      // Graceful fallback profile for manual customization
+      const defaultProfile: CreatorProfile = {
+        profile_maturity: 'new',
+        profile_mode: 'manual',
+        niches: {
+          effective: ['Tech', 'Entertainment'],
+          onboarding_selected: ['Tech', 'Entertainment'],
+          inferred: [],
+          source: 'manual',
+        },
+        content_format: 'both',
+        posting_frequency: 'weekly',
+        tone: 'conversational',
+        geo: {
+          source: 'manual',
+          target_country: 'India',
+          audience_weights: { IN: 1.0 },
+        },
+        channel_stats: {
+          subscriber_count: 0,
+          video_count: 0,
+          view_count: 0,
+          channel_name: 'Creator Profile',
+        },
+        sync_status: 'essential_complete',
+        last_analyzed_at: null,
+        last_reconfigured_at: null,
+      };
+      setProfile(defaultProfile);
+      setSelectedNiches(['Tech', 'Entertainment']);
+      setSelectedCountry('India');
+      setSelectedFormat('both');
+      setSelectedTone('conversational');
     } finally {
       setLoading(false);
     }
@@ -117,6 +148,7 @@ export const SettingsPage: React.FC = () => {
   useEffect(() => {
     void loadProfile();
   }, [loadProfile]);
+
 
   const handleSaveManual = async () => {
     if (selectedNiches.length === 0) {
