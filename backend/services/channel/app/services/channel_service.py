@@ -252,10 +252,19 @@ class ChannelService:
     async def get_creator_profile(self, db: AsyncSession, user_id: uuid.UUID) -> dict:
         profile = await self.profile_repo.get_by_user_id(db, user_id)
         if not profile:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail={"code": "NOT_FOUND", "message": "Creator profile not found. Complete onboarding first.", "details": {}},
+            profile_dict = await self.pipeline.run(
+                db,
+                user_id=user_id,
+                mode="manual",
+                niche=["Tech", "Entertainment"],
+                primary_format="both",
+                posting_frequency="weekly",
+                channel_tone="conversational",
+                country="India",
+                run_analysis=False,
             )
+            await db.commit()
+            return {"data": profile_dict, "meta": {"request_id": "local-dev"}}
         return {"data": self.pipeline.serialize_profile(profile), "meta": {"request_id": "local-dev"}}
 
     async def update_creator_profile(
@@ -270,10 +279,19 @@ class ChannelService:
     ) -> dict:
         profile = await self.profile_repo.get_by_user_id(db, user_id)
         if not profile:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail={"code": "NOT_FOUND", "message": "Creator profile not found. Complete onboarding first.", "details": {}},
+            profile_dict = await self.pipeline.run(
+                db,
+                user_id=user_id,
+                mode="manual",
+                niche=niches or ["Tech", "Entertainment"],
+                primary_format=content_format or "both",
+                posting_frequency="weekly",
+                channel_tone=tone or "conversational",
+                country=target_country or "India",
+                run_analysis=False,
             )
+            await db.commit()
+            return {"data": profile_dict, "meta": {"request_id": "local-dev"}}
 
         if niches is not None:
             profile.niches_onboarding = niches
@@ -290,6 +308,8 @@ class ChannelService:
         await db.commit()
         await db.refresh(profile)
         return {"data": self.pipeline.serialize_profile(profile), "meta": {"request_id": "local-dev"}}
+
+
 
     def _format_for_pipeline(self, content_format: str) -> str:
         if content_format == "long_form":
