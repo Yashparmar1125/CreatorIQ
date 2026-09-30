@@ -5,8 +5,10 @@ from contextlib import asynccontextmanager
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI
 
+import app.models.chat_models  # noqa: F401 - Register models
 import app.models.concept_models  # noqa: F401 - Register models
 import app.models.trend_models  # noqa: F401 - Register models
+
 from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.db import SessionLocal, engine

@@ -20,10 +20,11 @@ def resolve_target(path: str) -> RouteTarget:
         return RouteTarget(service="auth", base_url=settings.auth_service_url)
     if first == "channels":
         return RouteTarget(service="channel", base_url=settings.channel_service_url)
-    if first == "trends":
+    if first in {"trends", "strategy", "chat"}:
         return RouteTarget(service="trend", base_url=settings.trend_service_url)
     if first == "ml":
         return RouteTarget(service="ml", base_url=settings.ml_service_url)
+
 
     return RouteTarget(service="unknown", base_url="")
 

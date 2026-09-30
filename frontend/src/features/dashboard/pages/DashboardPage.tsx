@@ -79,14 +79,14 @@ export const DashboardPage: React.FC = () => {
   const handleChatSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!chatQuery.trim()) return;
-    navigate("/app/trends", {
-      state: { search: chatQuery },
+    navigate("/app/strategy", {
+      state: { prompt: chatQuery },
     });
   };
 
   const handleQuickPrompt = (promptText: string) => {
-    navigate("/app/trends", {
-      state: { search: promptText },
+    navigate("/app/strategy", {
+      state: { prompt: promptText },
     });
   };
 
@@ -94,9 +94,7 @@ export const DashboardPage: React.FC = () => {
   const currentForecast =
     FORECAST_PERIOD_DATA[forecastPeriod] ?? FORECAST_PERIOD_DATA['28d'];
 
-  const displayName = user?.full_name?.toLowerCase().includes("navnath")
-    ? "Ndk"
-    : (user?.full_name?.split(" ")[0] || "Ndk");
+  const displayName = user?.full_name?.trim() || user?.email?.split("@")[0] || "Creator";
 
   return (
     <div className="space-y-8 pb-12">
@@ -121,7 +119,7 @@ export const DashboardPage: React.FC = () => {
             type="button"
             className="mr-2.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-neutral-400 hover:bg-[#2c2c2c] hover:text-white transition-colors cursor-pointer"
             title="Attach signal context"
-            onClick={() => handleQuickPrompt("Analyze my connected channel upload velocity")}
+            onClick={() => handleQuickPrompt("Analyze my channel niche velocity and growth gaps")}
           >
             <span className="text-xl font-light leading-none">+</span>
           </button>
@@ -131,7 +129,7 @@ export const DashboardPage: React.FC = () => {
             type="text"
             value={chatQuery}
             onChange={(e) => setChatQuery(e.target.value)}
-            placeholder="Ask anything"
+            placeholder="Ask anything about video ideas, viral hooks, script breakdowns..."
             className="flex-1 bg-transparent text-sm text-white placeholder-neutral-500 focus:outline-none border-0"
           />
 
@@ -139,7 +137,7 @@ export const DashboardPage: React.FC = () => {
           <div className="flex items-center gap-2 shrink-0 ml-2">
             <button
               type="button"
-              onClick={() => handleQuickPrompt(chatQuery ? `Deep research: ${chatQuery}` : "Deep research trending concepts")}
+              onClick={() => handleQuickPrompt(chatQuery ? `Deep research: ${chatQuery}` : "Deep research rising trending concepts in India")}
               className="flex items-center gap-1.5 rounded-full border border-[#333333] bg-[#181818] px-3 py-1.5 text-xs font-medium text-neutral-300 hover:border-[#444444] hover:text-white transition-colors cursor-pointer"
             >
               <Lightbulb className="h-3.5 w-3.5 text-neutral-400" />
@@ -150,7 +148,7 @@ export const DashboardPage: React.FC = () => {
               type="button"
               className="flex h-8 w-8 items-center justify-center rounded-full text-neutral-400 hover:bg-[#2a2a2a] hover:text-white transition-colors cursor-pointer"
               title="Voice dictation"
-              onClick={() => handleQuickPrompt("Brainstorm video ideas for my niche")}
+              onClick={() => handleQuickPrompt("Brainstorm 5 high-CTR video concepts for my niche")}
             >
               <Mic className="h-4 w-4" />
             </button>
@@ -169,23 +167,24 @@ export const DashboardPage: React.FC = () => {
         {/* ChatGPT Prompt Suggestion Pills */}
         <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-xs">
           {[
-            { label: "What should I create this week?", icon: Sparkles },
-            { label: "Why is this trend growing?", icon: TrendingUp },
-            { label: "Viral hook for my niche", icon: Zap },
-            { label: "Compare Shorts vs Long-form", icon: Film },
-          ].map((prompt, idx) => (
+            { label: "🚀 5 Viral Short Ideas for my Niche", prompt: "Give me 5 viral short video ideas tailored to my channel niche with high novelty.", icon: Sparkles },
+            { label: "🪝 3-Second Retention Hook Architect", prompt: "Design 3 irresistible first 3-second hook variations (Visual + Audio script) for my next video.", icon: Zap },
+            { label: "📈 Breakout Content Angles in India", prompt: "What are the biggest rising trend opportunities and audience demand gaps in India right now?", icon: TrendingUp },
+            { label: "🗓️ 7-Day Growth Content Plan", prompt: "Create a strategic 7-day YouTube posting calendar balancing viral shorts and high-retention concepts.", icon: Film },
+          ].map((item, idx) => (
             <button
               key={idx}
               type="button"
-              onClick={() => handleQuickPrompt(prompt.label)}
+              onClick={() => handleQuickPrompt(item.prompt)}
               className="inline-flex items-center gap-1.5 rounded-full border border-[#2a2a2a] bg-[#161616] px-3.5 py-1.5 text-xs text-neutral-300 hover:border-[#3a3a3a] hover:bg-[#1f1f1f] hover:text-white transition-colors cursor-pointer shadow-xs"
             >
-              <prompt.icon className="h-3 w-3 text-neutral-400" />
-              <span>{prompt.label}</span>
+              <item.icon className="h-3 w-3 text-neutral-400" />
+              <span>{item.label}</span>
             </button>
           ))}
         </div>
       </div>
+
 
       {/* Channel Metric Stat Cards */}
       <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-4 pt-4">
