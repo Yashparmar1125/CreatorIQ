@@ -79,14 +79,14 @@ export const DashboardPage: React.FC = () => {
   const handleChatSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!chatQuery.trim()) return;
-    navigate("/app/trends", {
-      state: { search: chatQuery },
+    navigate("/app/strategy", {
+      state: { prompt: chatQuery },
     });
   };
 
   const handleQuickPrompt = (promptText: string) => {
-    navigate("/app/trends", {
-      state: { search: promptText },
+    navigate("/app/strategy", {
+      state: { prompt: promptText },
     });
   };
 
@@ -94,20 +94,74 @@ export const DashboardPage: React.FC = () => {
   const currentForecast =
     FORECAST_PERIOD_DATA[forecastPeriod] ?? FORECAST_PERIOD_DATA['28d'];
 
-  const displayName = user?.full_name?.toLowerCase().includes("navnath")
-    ? "Ndk"
-    : (user?.full_name?.split(" ")[0] || "Ndk");
+  const displayName = user?.full_name?.trim() || user?.email?.split("@")[0] || "Creator";
+
+  // Typewriter phrases
+  const TYPEWRITER_PHRASES = [
+    "What do you want to build or create today?",
+    "Need a high-retention 3-second hook for your next Short?",
+    "Looking for breakout viral topics in your niche?",
+    "Want a full high-CTR video script outline?",
+    "Analyze momentum signals & velocity across YouTube trends?",
+  ];
+
+  const [phraseIndex, setPhraseIndex] = useState(0);
+  const [displayedText, setDisplayedText] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    const currentPhrase = TYPEWRITER_PHRASES[phraseIndex];
+    let timer: NodeJS.Timeout;
+
+    if (!isDeleting) {
+      if (displayedText.length < currentPhrase.length) {
+        timer = setTimeout(() => {
+          setDisplayedText(currentPhrase.slice(0, displayedText.length + 1));
+        }, 50);
+      } else {
+        timer = setTimeout(() => {
+          setIsDeleting(true);
+        }, 2200);
+      }
+    } else {
+      if (displayedText.length > 0) {
+        timer = setTimeout(() => {
+          setDisplayedText(currentPhrase.slice(0, displayedText.length - 1));
+        }, 25);
+      } else {
+        setIsDeleting(false);
+        setPhraseIndex((prev) => (prev + 1) % TYPEWRITER_PHRASES.length);
+      }
+    }
+
+    return () => clearTimeout(timer);
+  }, [displayedText, isDeleting, phraseIndex]);
 
   return (
     <div className="space-y-8 pb-12">
-      {/* ChatGPT Center Hero Greeting */}
-      <div className="pt-10 pb-4 text-center space-y-2">
-        <h1 className="font-sora text-3xl sm:text-4xl font-semibold tracking-tight text-white">
-          How can I help, {displayName}?
+      {/* ChatGPT/Gemini Center Hero Greeting with Typewriter */}
+      <div className="pt-8 pb-2 text-center space-y-2.5">
+        <h1 className="font-sora text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-white">
+          How can I help,{" "}
+          <span className="bg-gradient-to-r from-white via-neutral-200 to-neutral-400 bg-clip-text text-transparent">
+            {displayName}
+          </span>
+          ?
         </h1>
-        <p className="text-xs text-neutral-400">
-          CreatorIQ Intelligence &bull; Powered by Qdrant Vector AI &amp; YouTube Trend Engine
-        </p>
+
+        {/* Dynamic Typewriter Subtitle */}
+        <div
+          onClick={() => {
+            setChatQuery(TYPEWRITER_PHRASES[phraseIndex]);
+          }}
+          className="h-8 flex items-center justify-center gap-1 cursor-pointer group"
+          title="Click to use this prompt"
+        >
+          <span className="text-sm sm:text-base text-neutral-400 group-hover:text-indigo-300 transition-colors font-medium">
+            {displayedText}
+          </span>
+          <span className="inline-block w-0.5 h-4 bg-indigo-400 animate-pulse ml-0.5" />
+        </div>
       </div>
 
       {/* ChatGPT-Style Capsule Input Bar */}
@@ -121,7 +175,7 @@ export const DashboardPage: React.FC = () => {
             type="button"
             className="mr-2.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-neutral-400 hover:bg-[#2c2c2c] hover:text-white transition-colors cursor-pointer"
             title="Attach signal context"
-            onClick={() => handleQuickPrompt("Analyze my connected channel upload velocity")}
+            onClick={() => handleQuickPrompt("Analyze my channel niche velocity and growth gaps")}
           >
             <span className="text-xl font-light leading-none">+</span>
           </button>
@@ -131,7 +185,7 @@ export const DashboardPage: React.FC = () => {
             type="text"
             value={chatQuery}
             onChange={(e) => setChatQuery(e.target.value)}
-            placeholder="Ask anything"
+            placeholder="Ask anything about video ideas, viral hooks, script breakdowns..."
             className="flex-1 bg-transparent text-sm text-white placeholder-neutral-500 focus:outline-none border-0"
           />
 
@@ -139,7 +193,7 @@ export const DashboardPage: React.FC = () => {
           <div className="flex items-center gap-2 shrink-0 ml-2">
             <button
               type="button"
-              onClick={() => handleQuickPrompt(chatQuery ? `Deep research: ${chatQuery}` : "Deep research trending concepts")}
+              onClick={() => handleQuickPrompt(chatQuery ? `Deep research: ${chatQuery}` : "Deep research rising trending concepts in India")}
               className="flex items-center gap-1.5 rounded-full border border-[#333333] bg-[#181818] px-3 py-1.5 text-xs font-medium text-neutral-300 hover:border-[#444444] hover:text-white transition-colors cursor-pointer"
             >
               <Lightbulb className="h-3.5 w-3.5 text-neutral-400" />
@@ -150,7 +204,7 @@ export const DashboardPage: React.FC = () => {
               type="button"
               className="flex h-8 w-8 items-center justify-center rounded-full text-neutral-400 hover:bg-[#2a2a2a] hover:text-white transition-colors cursor-pointer"
               title="Voice dictation"
-              onClick={() => handleQuickPrompt("Brainstorm video ideas for my niche")}
+              onClick={() => handleQuickPrompt("Brainstorm 5 high-CTR video concepts for my niche")}
             >
               <Mic className="h-4 w-4" />
             </button>
@@ -169,23 +223,24 @@ export const DashboardPage: React.FC = () => {
         {/* ChatGPT Prompt Suggestion Pills */}
         <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-xs">
           {[
-            { label: "What should I create this week?", icon: Sparkles },
-            { label: "Why is this trend growing?", icon: TrendingUp },
-            { label: "Viral hook for my niche", icon: Zap },
-            { label: "Compare Shorts vs Long-form", icon: Film },
-          ].map((prompt, idx) => (
+            { label: "🚀 5 Viral Short Ideas for my Niche", prompt: "Give me 5 viral short video ideas tailored to my channel niche with high novelty.", icon: Sparkles },
+            { label: "🪝 3-Second Retention Hook Architect", prompt: "Design 3 irresistible first 3-second hook variations (Visual + Audio script) for my next video.", icon: Zap },
+            { label: "📈 Breakout Content Angles in India", prompt: "What are the biggest rising trend opportunities and audience demand gaps in India right now?", icon: TrendingUp },
+            { label: "🗓️ 7-Day Growth Content Plan", prompt: "Create a strategic 7-day YouTube posting calendar balancing viral shorts and high-retention concepts.", icon: Film },
+          ].map((item, idx) => (
             <button
               key={idx}
               type="button"
-              onClick={() => handleQuickPrompt(prompt.label)}
+              onClick={() => handleQuickPrompt(item.prompt)}
               className="inline-flex items-center gap-1.5 rounded-full border border-[#2a2a2a] bg-[#161616] px-3.5 py-1.5 text-xs text-neutral-300 hover:border-[#3a3a3a] hover:bg-[#1f1f1f] hover:text-white transition-colors cursor-pointer shadow-xs"
             >
-              <prompt.icon className="h-3 w-3 text-neutral-400" />
-              <span>{prompt.label}</span>
+              <item.icon className="h-3 w-3 text-neutral-400" />
+              <span>{item.label}</span>
             </button>
           ))}
         </div>
       </div>
+
 
       {/* Channel Metric Stat Cards */}
       <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-4 pt-4">

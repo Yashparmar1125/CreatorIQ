@@ -14,6 +14,8 @@ import { DashboardPage } from './features/dashboard/pages/DashboardPage';
 import { TrendsPage } from './features/trends/pages/TrendsPage';
 import { TrendDetailPage } from './features/trends/pages/TrendDetailPage';
 import { SettingsPage } from './features/settings/pages/SettingsPage';
+import { StrategyPage } from './features/strategy/pages/StrategyPage';
+
 
 // Public Pages
 import { ProductPage } from './pages/ProductPage';
@@ -111,9 +113,14 @@ const router = createBrowserRouter([
         element: <TrendDetailPage />,
       },
       {
+        path: 'strategy',
+        element: <StrategyPage />,
+      },
+      {
         path: 'settings',
         element: <SettingsPage />,
       },
+
       {
         path: '*',
         element: (

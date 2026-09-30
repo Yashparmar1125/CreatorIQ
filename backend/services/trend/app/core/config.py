@@ -10,9 +10,11 @@ class Settings(BaseSettings):
     environment: str = "development"
 
     database_url: str = ""
+    redis_url: str = Field(default="redis://redis:6379/0", validation_alias=AliasChoices("REDIS_URL"))
     internal_service_token: str = "change-me"
     ml_service_url: str = "http://127.0.0.1:8007"
     channel_service_url: str = "http://127.0.0.1:8002"
+
 
     # Qdrant Vector Database
     qdrant_url: str = "http://qdrant:6333"
