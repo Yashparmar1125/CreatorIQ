@@ -1,11 +1,9 @@
-import json
 import logging
 import uuid
 from datetime import datetime, timezone
 from typing import Any
 
 import httpx
-import redis.asyncio as aioredis
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,40 +14,17 @@ from app.models.concept_models import TrendConcept
 
 logger = logging.getLogger(__name__)
 
-REDIS_TTL = 86400 * 7  # 7 days
-
 
 class StrategyService:
-    def __init__(self) -> None:
-        self._redis_client: aioredis.Redis | None = None
-
-    def _get_redis(self) -> aioredis.Redis:
-        if self._redis_client is None:
-            self._redis_client = aioredis.from_url(
-                settings.redis_url or "redis://redis:6379/0",
-                decode_responses=True,
-            )
-        return self._redis_client
-
     async def list_sessions(self, db: AsyncSession, user_id: uuid.UUID) -> list[dict[str, Any]]:
-        r = self._get_redis()
-        cache_key = f"chat_sessions:{user_id}"
-
-        try:
-            cached = await r.get(cache_key)
-            if cached:
-                return json.loads(cached)
-        except Exception as e:
-            logger.warning("Redis read error in list_sessions: %s", e)
-
-        # Fallback to DB
+        """Fetch all chat sessions for a user directly from PostgreSQL."""
         res = await db.execute(
             select(ChatSession)
             .where(ChatSession.user_id == user_id)
             .order_by(desc(ChatSession.updated_at))
         )
         sessions = res.scalars().all()
-        result = [
+        return [
             {
                 "id": str(s.id),
                 "title": s.title,
@@ -59,16 +34,10 @@ class StrategyService:
             for s in sessions
         ]
 
-        try:
-            await r.set(cache_key, json.dumps(result), ex=REDIS_TTL)
-        except Exception as e:
-            logger.warning("Redis write error in list_sessions: %s", e)
-
-        return result
-
     async def create_session(
         self, db: AsyncSession, user_id: uuid.UUID, title: str = "New Strategy Chat"
     ) -> dict[str, Any]:
+        """Create a new chat session in PostgreSQL."""
         session = ChatSession(
             id=uuid.uuid4(),
             user_id=user_id,
@@ -77,13 +46,6 @@ class StrategyService:
         db.add(session)
         await db.commit()
         await db.refresh(session)
-
-        # Invalidate sessions list cache
-        r = self._get_redis()
-        try:
-            await r.delete(f"chat_sessions:{user_id}")
-        except Exception:
-            pass
 
         return {
             "id": str(session.id),
@@ -95,16 +57,7 @@ class StrategyService:
     async def get_session_messages(
         self, db: AsyncSession, user_id: uuid.UUID, session_id: uuid.UUID
     ) -> list[dict[str, Any]]:
-        r = self._get_redis()
-        cache_key = f"chat_history:{user_id}:{session_id}"
-
-        try:
-            cached = await r.get(cache_key)
-            if cached:
-                return json.loads(cached)
-        except Exception as e:
-            logger.warning("Redis read error in get_session_messages: %s", e)
-
+        """Fetch all messages in a session directly from PostgreSQL."""
         # Verify session ownership
         s_res = await db.execute(
             select(ChatSession).where(ChatSession.id == session_id, ChatSession.user_id == user_id)
@@ -118,7 +71,7 @@ class StrategyService:
             .order_by(ChatMessage.created_at.asc())
         )
         messages = res.scalars().all()
-        result = [
+        return [
             {
                 "id": str(m.id),
                 "role": m.role,
@@ -129,14 +82,8 @@ class StrategyService:
             for m in messages
         ]
 
-        try:
-            await r.set(cache_key, json.dumps(result), ex=REDIS_TTL)
-        except Exception as e:
-            logger.warning("Redis write error in get_session_messages: %s", e)
-
-        return result
-
     async def delete_session(self, db: AsyncSession, user_id: uuid.UUID, session_id: uuid.UUID) -> bool:
+        """Delete session and its messages from PostgreSQL."""
         res = await db.execute(
             select(ChatSession).where(ChatSession.id == session_id, ChatSession.user_id == user_id)
         )
@@ -146,14 +93,6 @@ class StrategyService:
 
         await db.delete(session)
         await db.commit()
-
-        r = self._get_redis()
-        try:
-            await r.delete(f"chat_history:{user_id}:{session_id}")
-            await r.delete(f"chat_sessions:{user_id}")
-        except Exception:
-            pass
-
         return True
 
     async def _get_creator_context(self, user_id: uuid.UUID) -> dict[str, Any]:
@@ -168,17 +107,24 @@ class StrategyService:
                     return res.json().get("data", {})
         except Exception:
             pass
-        return {"niches": ["General Tech & Entertainment"], "tone": "conversational", "country": "India"}
+        return {"niches": ["Tech & AI", "Entertainment"], "tone": "energetic & insightful", "country": "India"}
 
-    async def _get_top_trend_signals(self, db: AsyncSession, limit: int = 5) -> list[str]:
+    async def _get_top_trend_signals(self, db: AsyncSession, prompt: str = "", limit: int = 8) -> list[str]:
         try:
             res = await db.execute(
-                select(TrendConcept.canonical_title)
+                select(TrendConcept)
                 .order_by(desc(TrendConcept.raw_momentum))
                 .limit(limit)
             )
-            return [str(row) for row in res.scalars().all()]
-        except Exception:
+            concepts = res.scalars().all()
+            signals = []
+            for c in concepts:
+                indicator = f" ({c.key_indicator})" if c.key_indicator else ""
+                momentum = f" [Velocity Score: {float(c.raw_momentum):.1f}]" if c.raw_momentum else ""
+                signals.append(f"• {c.canonical_title}{indicator}{momentum} (Lifecycle: {c.lifecycle.value if hasattr(c.lifecycle, 'value') else c.lifecycle})")
+            return signals
+        except Exception as e:
+            logger.warning("Error fetching trend signals for strategy: %s", e)
             return []
 
     async def chat(
@@ -188,7 +134,7 @@ class StrategyService:
         session_id: uuid.UUID | None,
         prompt: str,
     ) -> dict[str, Any]:
-        # 1. Ensure Session exists
+        # 1. Ensure Session exists in PostgreSQL
         session: ChatSession | None = None
         if session_id:
             s_res = await db.execute(
@@ -196,9 +142,7 @@ class StrategyService:
             )
             session = s_res.scalar_one_or_none()
 
-        is_new_session = False
         if not session:
-            is_new_session = True
             session = ChatSession(
                 id=uuid.uuid4(),
                 user_id=user_id,
@@ -207,7 +151,7 @@ class StrategyService:
             db.add(session)
             await db.flush()
 
-        # 2. Add user message
+        # 2. Add user message in PostgreSQL
         user_msg = ChatMessage(
             id=uuid.uuid4(),
             session_id=session.id,
@@ -218,23 +162,27 @@ class StrategyService:
         db.add(user_msg)
         await db.flush()
 
-        # 3. Load prior history
+        # 3. Load prior history from PostgreSQL
         history = await self.get_session_messages(db, user_id, session.id)
 
         # 4. Creator Context & Trend Signals
         creator_ctx = await self._get_creator_context(user_id)
-        top_trends = await self._get_top_trend_signals(db)
+        top_trends = await self._get_top_trend_signals(db, prompt=prompt)
 
         system_prompt = (
-            "You are CreatorIQ AI Strategy Architect, a world-class YouTube content strategist and viral hook engineer. "
-            f"Creator Context: Niches={creator_ctx.get('niches', [])}, Tone={creator_ctx.get('tone', 'conversational')}, "
-            f"Target Audience={creator_ctx.get('country', 'India')}. "
-            f"Current Live Trending Signals in Engine: {', '.join(top_trends) if top_trends else 'Breakout Shorts & AI trends'}. "
-            "Give ultra-actionable, punchy, high-retention content blueprints. Structure your output with:\n"
-            "1. 🎯 Strategic Angle & Opportunity\n"
-            "2. 💡 3 High-CTR Title & Concept Variations\n"
-            "3. 🪝 Hook Architect (Visual Opening + Audio Hook in first 3 seconds)\n"
-            "4. 📈 Engagement & Retention Blueprint"
+            "You are CreatorIQ AI Strategy Architect, the premier AI co-pilot for high-growth YouTube & Shorts creators.\n\n"
+            "=== CREATOR REAL-TIME CONTEXT ===\n"
+            f"• Niches: {', '.join(creator_ctx.get('niches', ['Tech & Entertainment']))}\n"
+            f"• Target Region/Country: {creator_ctx.get('country', 'India')}\n"
+            f"• Preferred Tone & Vibe: {creator_ctx.get('tone', 'High energy, authentic, actionable')}\n\n"
+            "=== LIVE SIGNALS FROM CREATORIQ TREND RADAR ===\n"
+            + ("\n".join(top_trends) if top_trends else "• Breakout Shorts Velocity, AI Workflow Tools, Viral Edits") + "\n\n"
+            "=== INSTRUCTIONS ===\n"
+            "• Respond in clear, beautifully formatted Markdown with emojis, bold highlights, and punchy bullet points.\n"
+            "• Tailor all advice, hooks, concept titles, and pacing strategies specifically to the creator's niche and audience.\n"
+            "• If the user asks for ideas, hooks, or strategy, provide concrete high-CTR examples (numbers, curiosity gap, emotional triggers).\n"
+            "• If asked about current trends or viral topics, directly leverage and cite the live signals above.\n"
+            "• Keep your tone empowering, world-class, sharp, and concise."
         )
 
         llm_messages = [{"role": "system", "content": system_prompt}]
@@ -244,7 +192,7 @@ class StrategyService:
 
         # 5. Generate AI Completion with OpenRouter (or fallback)
         try:
-            ai_text = await chat_completion(llm_messages, temperature=0.6)
+            ai_text = await chat_completion(llm_messages, temperature=0.7)
         except Exception as e:
             logger.warning("OpenRouter API call failed (%s), generating tailored strategic response", e)
             niche_str = ", ".join(creator_ctx.get("niches", ["Creators"]))
@@ -262,7 +210,7 @@ class StrategyService:
                 f"- Deliver the core payoff at 45% mark, then introduce a twist/bonus tip before the CTA."
             )
 
-        # 6. Save Assistant message to DB
+        # 6. Save Assistant message to PostgreSQL
         assistant_msg = ChatMessage(
             id=uuid.uuid4(),
             session_id=session.id,
@@ -272,23 +220,12 @@ class StrategyService:
         )
         db.add(assistant_msg)
 
-        # Update session timestamp & title if needed
+        # Update session timestamp & title in PostgreSQL
         session.updated_at = datetime.now(timezone.utc)
         if session.title == "New Strategy Chat":
             session.title = prompt[:45].strip()
 
         await db.commit()
-
-        # 7. Update Redis Cache
-        r = self._get_redis()
-        try:
-            # Refresh history cache
-            updated_history = await self.get_session_messages(db, user_id, session.id)
-            await r.set(f"chat_history:{user_id}:{session.id}", json.dumps(updated_history), ex=REDIS_TTL)
-            # Invalidate sessions list cache
-            await r.delete(f"chat_sessions:{user_id}")
-        except Exception as e:
-            logger.warning("Redis write error in chat: %s", e)
 
         return {
             "session": {

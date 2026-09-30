@@ -50,13 +50,13 @@ function SidebarNav({
 
   const handleNewChat = async () => {
     clearCurrentSession();
-    navigate('/app/strategy');
+    navigate('/app/strategy?new=true');
     if (onNavigate) onNavigate();
   };
 
   const handleSelectSession = async (sessionId: string) => {
     await selectSession(sessionId);
-    navigate('/app/strategy');
+    navigate(`/app/strategy?session=${sessionId}`);
     if (onNavigate) onNavigate();
   };
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useLocation } from 'react-router';
+import { useLocation, useSearchParams } from 'react-router';
 import { useStrategyStore } from '../../../stores/useStrategyStore';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { Button } from '../../../components/ui/Button';
@@ -16,7 +16,6 @@ import {
   Bot,
   ArrowRight,
 } from 'lucide-react';
-
 
 const SUGGESTIONS = [
   {
@@ -47,6 +46,7 @@ const SUGGESTIONS = [
 
 export const StrategyPage: React.FC = () => {
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const user = useAuthStore((s) => s.user);
   const {
     messages,
@@ -54,20 +54,33 @@ export const StrategyPage: React.FC = () => {
     isLoadingMessages,
     error,
     sendMessage,
-    createSession,
+    selectSession,
     fetchSessions,
     clearCurrentSession,
   } = useStrategyStore();
-
 
   const [inputPrompt, setInputPrompt] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const initialTriggered = useRef(false);
 
+  const sessionParam = searchParams.get('session');
+  const isNewParam = searchParams.get('new');
+
+  // Fetch sessions and restore conversation on mount / reload
   useEffect(() => {
-    fetchSessions();
-  }, [fetchSessions]);
+    const init = async () => {
+      const loadedSessions = await fetchSessions();
+      if (sessionParam) {
+        await selectSession(sessionParam);
+      } else if (!isNewParam && !location.state?.prompt && loadedSessions.length > 0) {
+        // Auto restore most recent session on page reload
+        await selectSession(loadedSessions[0].id);
+        setSearchParams({ session: loadedSessions[0].id }, { replace: true });
+      }
+    };
+    init();
+  }, [sessionParam, isNewParam]);
 
   // Handle incoming navigation state (e.g. from Dashboard or Trends page)
   useEffect(() => {
@@ -77,10 +90,14 @@ export const StrategyPage: React.FC = () => {
       initialTriggered.current = true;
       const initialText = state.prompt || (state.topic ? `Deep strategy and viral hooks for: ${state.topic}` : '');
       if (initialText) {
-        sendMessage(initialText);
+        sendMessage(initialText).then((newSessionId) => {
+          if (newSessionId) {
+            setSearchParams({ session: newSessionId }, { replace: true });
+          }
+        });
       }
     }
-  }, [location.state, sendMessage]);
+  }, [location.state, sendMessage, setSearchParams]);
 
   // Auto scroll to bottom
   useEffect(() => {
@@ -92,7 +109,10 @@ export const StrategyPage: React.FC = () => {
     if (!inputPrompt.trim() || isSending) return;
     const p = inputPrompt;
     setInputPrompt('');
-    await sendMessage(p);
+    const newSessionId = await sendMessage(p);
+    if (newSessionId && searchParams.get('session') !== newSessionId) {
+      setSearchParams({ session: newSessionId }, { replace: true });
+    }
   };
 
   const handleCopy = (id: string, text: string) => {
@@ -103,7 +123,7 @@ export const StrategyPage: React.FC = () => {
 
   const handleNewChat = async () => {
     clearCurrentSession();
-    await createSession('New Strategy Chat');
+    setSearchParams({ new: 'true' }, { replace: true });
   };
 
   const renderFormattedContent = (content: string) => {

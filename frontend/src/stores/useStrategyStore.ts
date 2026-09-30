@@ -25,11 +25,11 @@ interface StrategyState {
   isSending: boolean;
   error: string | null;
 
-  fetchSessions: () => Promise<void>;
+  fetchSessions: () => Promise<ChatSession[]>;
   selectSession: (sessionId: string) => Promise<void>;
   createSession: (title?: string) => Promise<string>;
   deleteSession: (sessionId: string) => Promise<void>;
-  sendMessage: (prompt: string, sessionId?: string) => Promise<void>;
+  sendMessage: (prompt: string, sessionId?: string) => Promise<string | undefined>;
   clearCurrentSession: () => void;
 }
 
@@ -48,8 +48,10 @@ export const useStrategyStore = create<StrategyState>((set, get) => ({
       const { data } = await api.get('/strategy/sessions');
       const sessions = data.data || [];
       set({ sessions, isLoadingSessions: false });
+      return sessions;
     } catch (e: any) {
       set({ isLoadingSessions: false, error: e.response?.data?.error?.message || 'Failed to load sessions' });
+      return [];
     }
   },
 
@@ -148,11 +150,13 @@ export const useStrategyStore = create<StrategyState>((set, get) => ({
           isSending: false,
         };
       });
+      return session.id;
     } catch (e: any) {
       set({
         isSending: false,
         error: e.response?.data?.error?.message || e.response?.data?.detail?.message || 'Failed to generate strategy.',
       });
+      return undefined;
     }
   },
 
