@@ -6,7 +6,6 @@ import {
   TrendingUp,
   Settings,
   Search,
-  Bell,
   Menu,
   X,
   User,
@@ -300,16 +299,8 @@ export const MainLayout: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3">
-            <button
-              type="button"
-              className="relative rounded-lg border border-[#242424] bg-[#121212] p-2 text-neutral-400 hover:bg-[#181818] hover:text-white transition-colors cursor-pointer"
-              aria-label="Notifications"
-            >
-              <Bell className="h-3.5 w-3.5" />
-              <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-indigo-500" />
-            </button>
-            <div className="hidden items-center gap-2.5 sm:flex border-l border-[#242424] pl-3">
-              <div className="text-right">
+            <div className="flex items-center gap-2.5">
+              <div className="text-right hidden sm:block">
                 <p className="text-xs font-medium text-[#ededed] leading-tight">
                   {user?.full_name ?? 'Creator Account'}
                 </p>

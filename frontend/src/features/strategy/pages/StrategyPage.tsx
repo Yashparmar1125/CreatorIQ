@@ -5,7 +5,6 @@ import remarkGfm from 'remark-gfm';
 import { useStrategyStore, type ChatMessage } from '../../../stores/useStrategyStore';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { Button } from '../../../components/ui/Button';
-import { Badge } from '../../../components/ui/Badge';
 import {
   Sparkles,
   Send,
@@ -169,13 +168,10 @@ export const StrategyPage: React.FC = () => {
             </div>
             <div>
               <h1 className="text-sm font-bold text-white flex items-center gap-2">
-                Creator Strategy Architect
-                <Badge variant="brand" className="text-[10px] py-0 px-1.5 font-mono">
-                  ML + GPT-4o
-                </Badge>
+                AI Strategy Architect
               </h1>
               <p className="text-[11px] text-neutral-400">
-                Personalized with PostgreSQL DB signals, Prophet Time-Series ML, and YouTube Trends
+                Grounded Creator Strategy &amp; Live Trend Radar
               </p>
             </div>
           </div>
@@ -203,7 +199,7 @@ export const StrategyPage: React.FC = () => {
                   What blueprint shall we build, {user?.full_name?.split(' ')[0] || 'Creator'}?
                 </h2>
                 <p className="text-xs text-neutral-400 leading-relaxed">
-                  Autonomous AI co-pilot with live access to YouTube trends, custom ML Prophet forecast, and CreatorIQ Ingest DB.
+                  Ask about viral hooks, channel velocity, script breakdowns, or pick a prompt below.
                 </p>
               </div>
 
@@ -429,17 +425,15 @@ export const StrategyPage: React.FC = () => {
           {isSending && (
             <div className="flex items-start gap-3 justify-start animate-in">
               <div className="h-7 w-7 shrink-0 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 mt-1">
-                <Bot className="h-3.5 w-3.5 animate-spin" />
+                <Bot className="h-3.5 w-3.5" />
               </div>
-              <div className="bg-[#121214] border border-[#242429] rounded-2xl p-4 flex items-center gap-3">
-                <div className="flex gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-indigo-500 animate-bounce" />
-                  <span className="h-2 w-2 rounded-full bg-purple-500 animate-bounce [animation-delay:0.2s]" />
-                  <span className="h-2 w-2 rounded-full bg-pink-500 animate-bounce [animation-delay:0.4s]" />
+              <div className="bg-[#121215] border border-[#22222a] rounded-2xl px-4 py-3 flex items-center gap-2.5 shadow-md">
+                <div className="flex gap-1 items-center">
+                  <span className="h-1.5 w-1.5 rounded-full bg-neutral-400 animate-pulse" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-neutral-400 animate-pulse [animation-delay:0.2s]" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-neutral-400 animate-pulse [animation-delay:0.4s]" />
                 </div>
-                <span className="text-xs text-neutral-400 font-mono">
-                  Executing tools &amp; synthesizing strategic blueprint...
-                </span>
+                <span className="text-xs text-neutral-400 font-medium">Thinking...</span>
               </div>
             </div>
           )}

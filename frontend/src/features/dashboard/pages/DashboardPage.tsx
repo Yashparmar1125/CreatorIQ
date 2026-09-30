@@ -140,12 +140,7 @@ export const DashboardPage: React.FC = () => {
   return (
     <div className="space-y-8 pb-12">
       {/* ChatGPT/Gemini Center Hero Greeting with Typewriter */}
-      <div className="pt-8 pb-3 text-center space-y-3">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-pink-500/10 border border-indigo-500/20 text-[11px] font-medium text-indigo-400">
-          <Sparkles className="h-3 w-3 animate-pulse" />
-          <span>CreatorIQ AI Strategy Engine &bull; GPT-4o &amp; Qdrant Vector Intelligence</span>
-        </div>
-
+      <div className="pt-8 pb-2 text-center space-y-2.5">
         <h1 className="font-sora text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-white">
           How can I help,{" "}
           <span className="bg-gradient-to-r from-white via-neutral-200 to-neutral-400 bg-clip-text text-transparent">
