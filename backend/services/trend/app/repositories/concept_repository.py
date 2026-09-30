@@ -3,6 +3,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import desc, func, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.concept_models import ConceptLifecycle, ConceptSignal, ConceptSignalSource, TrendConcept
@@ -33,51 +34,49 @@ class ConceptRepository:
         aliases: list[str] | None = None,
     ) -> TrendConcept:
         slug = slugify(title)
-        res = await db.execute(select(TrendConcept).where(TrendConcept.title_slug == slug))
-        existing = res.scalar_one_or_none()
         now = datetime.now(timezone.utc)
 
-        if existing:
-            existing.canonical_title = title
-            existing.niche_tags = list(dict.fromkeys((existing.niche_tags or []) + niche_tags))[:5]
-            if geo_strength:
-                existing.geo_strength = {**existing.geo_strength, **geo_strength}
-            existing.youtube_video_velocity = max(float(existing.youtube_video_velocity), youtube_video_velocity)
-            existing.youtube_search_velocity = max(float(existing.youtube_search_velocity), youtube_search_velocity)
-            existing.google_trends_growth = max(float(existing.google_trends_growth), google_trends_growth)
-            existing.search_volume_est = max(int(existing.search_volume_est), search_volume_est)
-            existing.raw_momentum = max(float(existing.raw_momentum), raw_momentum)
-            existing.lifecycle = lifecycle
-            existing.why_trending = why_trending or existing.why_trending
-            existing.key_indicator = key_indicator or existing.key_indicator
-            existing.sources = list(dict.fromkeys((existing.sources or []) + sources))[:6]
-            if aliases:
-                existing.aliases = list(dict.fromkeys((existing.aliases or []) + aliases))[:10]
-            existing.last_signal_at = now
-            await db.flush()
-            return existing
-
-        concept = TrendConcept(
-            canonical_title=title,
-            title_slug=slug,
-            aliases=aliases or [],
-            niche_tags=niche_tags[:5],
-            geo_strength=geo_strength or {},
-            lifecycle=lifecycle,
-            raw_momentum=raw_momentum,
-            youtube_video_velocity=youtube_video_velocity,
-            youtube_search_velocity=youtube_search_velocity,
-            google_trends_growth=google_trends_growth,
-            search_volume_est=search_volume_est,
-            why_trending=why_trending,
-            key_indicator=key_indicator,
-            sources=sources,
-            first_seen_at=now,
-            last_signal_at=now,
+        stmt = (
+            pg_insert(TrendConcept)
+            .values(
+                canonical_title=title,
+                title_slug=slug,
+                aliases=aliases or [],
+                niche_tags=niche_tags[:5],
+                geo_strength=geo_strength or {},
+                lifecycle=lifecycle,
+                raw_momentum=raw_momentum,
+                youtube_video_velocity=youtube_video_velocity,
+                youtube_search_velocity=youtube_search_velocity,
+                google_trends_growth=google_trends_growth,
+                search_volume_est=search_volume_est,
+                why_trending=why_trending,
+                key_indicator=key_indicator,
+                sources=sources,
+                first_seen_at=now,
+                last_signal_at=now,
+            )
+            .on_conflict_do_update(
+                index_elements=["title_slug"],
+                set_={
+                    "canonical_title": title,
+                    "lifecycle": lifecycle,
+                    "raw_momentum": func.greatest(TrendConcept.raw_momentum, raw_momentum),
+                    "youtube_video_velocity": func.greatest(TrendConcept.youtube_video_velocity, youtube_video_velocity),
+                    "youtube_search_velocity": func.greatest(TrendConcept.youtube_search_velocity, youtube_search_velocity),
+                    "google_trends_growth": func.greatest(TrendConcept.google_trends_growth, google_trends_growth),
+                    "search_volume_est": func.greatest(TrendConcept.search_volume_est, search_volume_est),
+                    "why_trending": func.coalesce(why_trending, TrendConcept.why_trending),
+                    "key_indicator": func.coalesce(key_indicator, TrendConcept.key_indicator),
+                    "last_signal_at": now,
+                },
+            )
+            .returning(TrendConcept)
         )
-        db.add(concept)
+        res = await db.execute(stmt)
         await db.flush()
-        return concept
+        return res.scalar_one()
+
 
     async def add_signal(
         self,
