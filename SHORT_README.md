@@ -8,29 +8,29 @@ CreatorIQ is an autonomous AI co-pilot and growth platform for YouTube & Shorts 
 
 ```mermaid
 graph TD
-    User([👤 Creator / Frontend UI]) -->|1. Prompt / Strategy Query| Gateway[🌐 API Gateway :8000]
+    User([👤 Creator / Frontend UI]) -->|1. Strategy / Trend Query| Gateway[🌐 API Gateway :8000]
     Gateway -->|2. Route Request| Trend[⚡ Trend & Strategy Service :8003]
 
     subgraph "🧠 Autonomous AI Agent & Tool Execution"
-        Trend -->|3. Tool-Enabled LLM Request| LLM[🤖 OpenRouter GPT-4o-mini]
+        Trend -->|3. Function Calling Loop| LLM[🤖 OpenRouter GPT-4o-mini]
         
-        LLM -.->|Tool Call 1: Fetch Live YouTube Signals| YT[🎥 YouTube Data API / Search Spikes]
-        LLM -.->|Tool Call 2: Predict Growth Curve| ML[📈 Prophet ML Forecast Engine :8007]
-        LLM -.->|Tool Call 3: Scored Concept Radar| DB[(🗄️ PostgreSQL Database)]
-        LLM -.->|Tool Call 4: Channel Context| Channel[👤 Channel Service :8002]
+        LLM -.->|Tool 1: Live YouTube Signals| YT[🎥 YouTube Data API / Velocity]
+        LLM -.->|Tool 2: Predict Growth Curve| ML[📈 Prophet ML Forecast Engine :8007]
+        LLM -.->|Tool 3: Scored Concept Radar| DB[(🗄️ PostgreSQL Database)]
+        LLM -.->|Tool 4: Channel Context| Channel[👤 Channel Service :8002]
 
-        YT -.->|Live Video Velocity & Views| Trend
+        YT -.->|Live Videos, Views, Velocity| Trend
         ML -.->|28-Day Trajectory & Peak Dates| Trend
         DB -.->|TVS Scores & Lifecycle| Trend
         Channel -.->|Niche & Target Region| Trend
 
-        Trend -->|4. Return Tool Results to LLM| LLM
-        LLM -->|5. Grounded Viral Blueprint & Hooks| Trend
+        Trend -->|4. Feed Tool Payloads to LLM| LLM
+        LLM -->|5. Grounded Blueprint + Structured Tool Metadata| Trend
     end
 
-    Trend -->|6. Save User & Assistant Messages| DB
-    Trend -->|7. Return Response| Gateway
-    Gateway -->|8. Render GitHub README-Style Document| User
+    Trend -->|6. Save Session, Message & Tool Meta| DB
+    Trend -->|7. Return Response + Sources| Gateway
+    Gateway -->|8. Render Markdown & Sources Drawer| User
 ```
 
 ---
@@ -38,22 +38,23 @@ graph TD
 ## ✨ Core Features
 
 ### 1. 🤖 Autonomous Tool-Calling AI Strategist
-- **Live Tool Loop**: AI autonomously selects and calls internal tools (`get_youtube_trends`, `predict_trend_forecast_ml`, `query_creatoriq_database`, `get_creator_profile`).
-- **Tool Execution Transparency**: Each AI response in chat displays an interactive **"Executed Tools"** badge bar showing exactly which tools were triggered (e.g. `[⚡ YouTube Data Signals]`, `[📈 Prophet ML Forecast Engine]`, `[🗄️ CreatorIQ Ingest Radar]`).
-- **No Generic Disclaimers**: Directly cites live YouTube video data (views, velocity, channels) and proprietary momentum scores.
+- **Autonomous Tool Execution**: LLM intelligently decides when to invoke internal tools (`get_youtube_trends`, `predict_trend_forecast_ml`, `query_creatoriq_database`, `get_creator_profile`).
+- **Executed Tools Bar**: Each AI response highlights active tools (e.g. `⚡ YouTube Data Signals`, `📈 Prophet ML Forecast Engine`, `🗄️ CreatorIQ Ingest Radar`).
+- **Sources Drawer (Gemini / ChatGPT Style)**: Interactive slide-over drawer accessible via **"View Sources"** showing exact video velocity metrics, direct YouTube links, ML forecast stats, and concept matches.
 
-### 2. 📈 Trained Prophet ML Forecast Engine (`:8007`)
-- Time-series trend growth prediction over **7-day**, **28-day**, and **90-day** horizons.
-- Calculates **TVS velocity scores**, **lifecycle state** (*emerging, growing, peaking*), and **peak date windows**.
+### 2. 📈 Prophet ML Forecast Engine (`:8007`)
+- Time-series trend trajectory predictions across **7-day**, **28-day**, and **90-day** horizons.
+- Evaluates **TVS velocity scores**, **lifecycle stages** (*emerging, growing, peaking*), and **peak date windows**.
 
-### 3. 🗄️ Real-Time Database Ingest Radar
-- PostgreSQL database stores scored concepts, momentum velocity, search spikes, and creator blueprints.
-- User-isolated conversation history persisted permanently in `chat_sessions` and `chat_messages` tables.
+### 3. 🎯 Trends Intelligence & Dark Mode Feed History
+- **Personalized Signals**: Scored by vector similarity, niche alignment, and geographic audience fit.
+- **Dark Mode Feed History Drawer**: Full snapshot archive browser styled in unified dark mode (`#0d0d11`, `#20202a`) with seamless snapshot jumping.
+- **Clean Scanner Loader**: Subtle shimmer grid and calm pulse indicators replacing cluttered UI overlays.
 
 ### 4. 📄 GitHub README.md Style UI & Markdown Renderer
-- **Rich Document Rendering**: GitHub-standard headers, bordered tables, code snippets, blockquotes, and lists powered by `react-markdown` and `remark-gfm`.
-- **Sleek Input Box**: Auto-expanding multiline capsule with keyboard shortcuts (`Enter` to send, `Shift+Enter` for newline) and one-click tool quick-launch pills.
-- **Auto-Restore & URL Sync**: Conversation state automatically syncs with URL (`?session=<id>`) and persists on page reloads.
+- **Rich Document Rendering**: GitHub-standard headers, bordered tables, code blocks, blockquotes, and lists via `react-markdown` + `remark-gfm`.
+- **Stable UX & Minimalist Nav**: Removed flickering hover buttons, simplified headers, eliminated noisy notification bells, and added stable copy/source actions.
+- **Session Persistence**: Permanent chat storage in PostgreSQL with automatic URL state sync (`?session=<id>`).
 
 ---
 
@@ -70,4 +71,4 @@ docker compose up -d
 cd frontend
 bun run dev
 ```
-Open **http://localhost:5173** to access the Dashboard and AI Strategy Console.
+Open **http://localhost:5173** to access the Dashboard, Trends Intelligence, and AI Strategy Console.
