@@ -341,7 +341,7 @@ class TrendEnrichmentService:
             temperature=0.6,
             response_format_json=True,
         )
-        data = json.loads(raw)
+        data = raw if isinstance(raw, dict) else json.loads(raw)
         ideas = data.get("title_ideas") or data.get("titles") or []
         return [str(t).strip() for t in ideas if str(t).strip()][:5]
 

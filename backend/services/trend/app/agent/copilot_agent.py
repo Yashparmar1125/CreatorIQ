@@ -189,7 +189,11 @@ class CopilotAgent:
                 return
 
             # Append assistant message with tool calls to conversation trajectory
-            messages.append(response)
+            messages.append({
+                "role": "assistant",
+                "content": response.get("content") or None,
+                "tool_calls": tool_calls,
+            })
 
             # Execute tool calls
             for tc in tool_calls:
