@@ -24,8 +24,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.core.config import settings
 from app.core.youtube_router import youtube_router, MAX_DAILY_SEARCH_QUERIES
-from app.models.concept_models import Concept, ConceptDailySignal, ConceptSignal
-from app.models.trend_models import TrendConcept, TrendFeedSnapshot
+from app.models.concept_models import Concept, ConceptDailySignal, ConceptSignal, TrendConcept, TrendFeedSnapshot
 from app.services.pipeline_engine import PipelineEngine
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
