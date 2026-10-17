@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.integrations.youtube_data_client import YouTubeDataClient
 from app.models.concept_models import TrendConcept, ConceptDailySignal
-from app.models.trend_models import TrendSaved
+from app.models.trend_models import SavedTrend, Trend
 from app.repositories.memory_repository import MemoryRepository
 
 logger = logging.getLogger(__name__)
@@ -204,18 +204,22 @@ class ToolRegistry:
 
             elif tool_name == "get_my_saved_trends":
                 res = await db.execute(
-                    select(TrendSaved).where(TrendSaved.user_id == user_id).order_by(TrendSaved.saved_at.desc()).limit(10)
+                    select(SavedTrend, Trend.topic)
+                    .outerjoin(Trend, SavedTrend.trend_id == Trend.id)
+                    .where(SavedTrend.user_id == user_id)
+                    .order_by(SavedTrend.created_at.desc())
+                    .limit(10)
                 )
-                saved_items = res.scalars().all()
+                saved_rows = res.all()
                 return {
-                    "count": len(saved_items),
+                    "count": len(saved_rows),
                     "saved_trends": [
                         {
                             "trend_id": str(s.trend_id),
-                            "topic": s.trend_data.get("topic") if s.trend_data else "Saved Concept",
-                            "saved_at": s.saved_at.isoformat() if s.saved_at else None,
+                            "topic": topic or "Saved Concept",
+                            "saved_at": s.created_at.isoformat() if s.created_at else None,
                         }
-                        for s in saved_items
+                        for s, topic in saved_rows
                     ],
                 }
 
