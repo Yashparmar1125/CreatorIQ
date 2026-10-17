@@ -64,6 +64,14 @@ class Settings(BaseSettings):
     )
     enable_trend_enrichment: bool = True
 
+    # Free Model Providers & Web Search
+    groq_api_keys: str = ""
+    groq_api_key: str = ""
+    gemini_api_keys: str = ""
+    gemini_api_key: str = ""
+    tavily_api_keys: str = ""
+    tavily_api_key: str = ""
+
     # Feed refresh credits — set False for unlimited refreshes
     enable_feed_credit_limits: bool = False
 
