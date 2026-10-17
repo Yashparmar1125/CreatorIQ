@@ -562,13 +562,16 @@ class TrendService:
             v_subs = int(v.get("subscriber_count") or 0)
             v_rr = float(v.get("reach_ratio") or 0.0)
 
-            # Calculate true reach ratio from views and subscribers
-            if v_rr <= 0.0 or v_rr < 0.5:
-                calc_rr = round(v_views / max(1, v_subs), 2) if v_subs > 0 else 1.2
+            # True reach multiplier = views / subscribers (real data only, no clamping)
+            if v_subs > 0:
+                ratio = round(v_views / v_subs, 1)
+            elif v_rr > 0:
+                ratio = round(v_rr, 1)
             else:
-                calc_rr = v_rr
-
-            ratio = max(0.8, round(calc_rr, 1))
+                continue
+            # Never show underperforming videos (<1.1x) as "winning proof"
+            if ratio < 1.1:
+                continue
             mult = f"{ratio:.1f}x"
             proof_list.append({
                 "video_id": vid_id,
@@ -623,33 +626,39 @@ class TrendService:
 
             real_vids = await yt.search_videos(q=search_query, max_results=6)
             if real_vids:
+                from app.core.youtube_router import youtube_router
                 v_ids = [v["video_id"] for v in real_vids if v.get("video_id")]
                 stats_map = await yt.get_video_statistics(v_ids)
+                ch_ids = list({v.get("channel_id") for v in real_vids if v.get("channel_id")})
+                ch_map = {c["channel_id"]: c for c in await youtube_router.get_channels_details(ch_ids)}
                 live_proof = []
                 for ry in real_vids:
                     ry_id = ry["video_id"]
                     st = stats_map.get(ry_id, {})
                     views = int(st.get("view_count") or 0)
-                    thumbs = ry.get("thumbnails", {})
-                    thumb_url = (
-                        thumbs.get("high", {}).get("url")
-                        or thumbs.get("medium", {}).get("url")
-                        or f"https://i.ytimg.com/vi/{ry_id}/hqdefault.jpg"
-                    )
+                    likes = int(st.get("like_count") or 0)
+                    comments = int(st.get("comment_count") or 0)
+                    subs = int((ch_map.get(ry.get("channel_id")) or {}).get("subscriber_count") or 0)
+                    if subs <= 0 or views <= 0:
+                        continue  # never invent metrics
+                    ratio = round(views / subs, 1)
+                    if ratio < 1.1:
+                        continue
                     live_proof.append({
                         "video_id": ry_id,
-                        "title": ry.get("title") or "Winning Video",
-                        "channel_title": ry.get("channel_title") or "Creator",
-                        "thumbnail_url": thumb_url,
+                        "title": ry.get("title") or "",
+                        "channel_title": ry.get("channel_title") or "",
+                        "thumbnail_url": ry.get("thumbnail_url") or f"https://i.ytimg.com/vi/{ry_id}/hqdefault.jpg",
                         "view_count": views,
-                        "subscriber_count": 0,
-                        "reach_ratio": 2.5,
-                        "reach_multiplier": "2.5x+",
-                        "channel_tier": "small",
+                        "subscriber_count": subs,
+                        "reach_ratio": ratio,
+                        "reach_multiplier": f"{ratio:.1f}x",
+                        "channel_tier": "small" if subs < 25000 else ("medium" if subs < 250000 else "big"),
                         "video_url": f"https://www.youtube.com/watch?v={ry_id}",
-                        "interaction_density": 0.05,
+                        "interaction_density": round((likes + comments) / views, 4),
                     })
                 if live_proof:
+                    live_proof.sort(key=lambda x: x["reach_ratio"], reverse=True)
                     enhanced["proof_videos"] = live_proof
         except Exception as yt_err:
             logger.warning("Could not fetch live YouTube proof videos: %s", yt_err)
