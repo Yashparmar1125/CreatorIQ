@@ -146,9 +146,11 @@ class YouTubeKeyRouter:
             "videoDimension": "2d",
             "safeSearch": "moderate",
         }
-        if published_after:
+        # Guard: In environments where the system clock is set ahead (e.g. 2026),
+        # only send publishedAfter/Before if <= 2025 so YouTube doesn't return 0 videos.
+        if published_after and published_after.year <= 2025:
             params["publishedAfter"] = published_after.strftime("%Y-%m-%dT%H:%M:%SZ")
-        if published_before:
+        if published_before and published_before.year <= 2025:
             params["publishedBefore"] = published_before.strftime("%Y-%m-%dT%H:%M:%SZ")
 
         # Try active keys in rotation

@@ -100,15 +100,11 @@ class YouTubePipelineClient:
     """Async YouTube Data API v3 client with 50-ID batching, quota logging, and calibrated fallback."""
 
     @staticmethod
-    def build_query(include_terms: list[str], exclude_terms: list[str]) -> str:
-        inc_part = " | ".join(include_terms or [])
-        if len(include_terms or []) > 1:
-            inc_part = f"({inc_part})"
-        exc_part = " ".join(f"-{t}" for t in (exclude_terms or []))
-        query = inc_part
-        if exc_part:
-            query = f"{query} {exc_part}"
-        return query.strip()
+    def build_query(include_terms: list[str], exclude_terms: list[str], concept_name: str = "") -> str:
+        clean_name = (concept_name or "").replace("&", " ").strip()
+        if include_terms and len(include_terms) > 0:
+            return f"{clean_name} {include_terms[0]}".strip()
+        return clean_name
 
     async def _log_api_call(
         self,
@@ -387,9 +383,9 @@ class PipelineEngine:
         window_start = datetime(target_date.year, target_date.month, target_date.day, 0, 0, 0, tzinfo=timezone.utc) - timedelta(days=settings.youtube_search_days or 7)
         window_end = datetime(target_date.year, target_date.month, target_date.day, 23, 59, 59, tzinfo=timezone.utc)
 
-        q = YouTubePipelineClient.build_query(concept.include_terms or [], concept.exclude_terms or [])
+        q = YouTubePipelineClient.build_query(concept.include_terms or [], concept.exclude_terms or [], concept.name)
         if not q or len(q.strip()) < 3:
-            q = concept.name
+            q = concept.name.replace("&", " ").strip()
 
         raw_candidates: list[dict[str, Any]] = []
         video_details_map: dict[str, dict[str, Any]] = {}
@@ -433,6 +429,7 @@ class PipelineEngine:
 
         processed_videos: list[dict[str, Any]] = []
         concept_text = f"{concept.name}: {concept.description or ''} {' '.join(concept.include_terms or [])}".strip()
+        concept_words = [w.lower() for w in concept.name.replace("&", " ").split() if len(w) > 3]
 
         for cand in raw_candidates:
             v_id = cand["video_id"]
@@ -478,7 +475,10 @@ class PipelineEngine:
             # Stage 3: Semantic Concept Identity Gate (all-MiniLM-L6-v2)
             video_text = f"{title} {description[:300]}".strip()
             sem_score = self.semantic.compute_similarity(concept_text, video_text)
-            if sem_score <= settings.semantic_score_threshold:
+            title_lower = title.lower()
+            keyword_match = any(w in title_lower for w in concept_words)
+
+            if sem_score <= settings.semantic_score_threshold and not keyword_match:
                 rejected_by_semantic_threshold += 1
                 continue
 
