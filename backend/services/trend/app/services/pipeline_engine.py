@@ -195,13 +195,17 @@ class YouTubePipelineClient:
         db: AsyncSession,
         video_ids: list[str],
     ) -> list[dict[str, Any]]:
-        if not video_ids or not settings.youtube_api_key:
+        if not video_ids:
             return []
 
+        from app.core.youtube_router import youtube_router
         results: list[dict[str, Any]] = []
         async with httpx.AsyncClient(timeout=20.0) as client:
             for i in range(0, len(video_ids), 50):
                 chunk = video_ids[i : i + 50]
+                key = await youtube_router.get_active_key_async() or settings.youtube_api_key
+                if not key:
+                    break
                 t0 = time.perf_counter()
                 try:
                     resp = await client.get(
@@ -209,7 +213,7 @@ class YouTubePipelineClient:
                         params={
                             "part": "snippet,statistics,contentDetails",
                             "id": ",".join(chunk),
-                            "key": settings.youtube_api_key,
+                            "key": key,
                         },
                     )
                     duration_ms = int((time.perf_counter() - t0) * 1000)
@@ -247,6 +251,8 @@ class YouTubePipelineClient:
                             success=True,
                             metadata={"requested_count": len(chunk), "returned_count": len(items)},
                         )
+                    elif resp.status_code == 429 or "quotaExceeded" in resp.text:
+                        await youtube_router._mark_key_exhausted_global(key)
                 except Exception as exc:
                     logger.warning("videos.list failed for chunk: %s", exc)
         return results
@@ -256,13 +262,17 @@ class YouTubePipelineClient:
         db: AsyncSession,
         channel_ids: list[str],
     ) -> list[dict[str, Any]]:
-        if not channel_ids or not settings.youtube_api_key:
+        if not channel_ids:
             return []
 
+        from app.core.youtube_router import youtube_router
         results: list[dict[str, Any]] = []
         async with httpx.AsyncClient(timeout=20.0) as client:
             for i in range(0, len(channel_ids), 50):
                 chunk = channel_ids[i : i + 50]
+                key = await youtube_router.get_active_key_async() or settings.youtube_api_key
+                if not key:
+                    break
                 t0 = time.perf_counter()
                 try:
                     resp = await client.get(
@@ -270,7 +280,7 @@ class YouTubePipelineClient:
                         params={
                             "part": "snippet,statistics",
                             "id": ",".join(chunk),
-                            "key": settings.youtube_api_key,
+                            "key": key,
                         },
                     )
                     duration_ms = int((time.perf_counter() - t0) * 1000)
@@ -300,6 +310,8 @@ class YouTubePipelineClient:
                             success=True,
                             metadata={"requested_count": len(chunk), "returned_count": len(items)},
                         )
+                    elif resp.status_code == 429 or "quotaExceeded" in resp.text:
+                        await youtube_router._mark_key_exhausted_global(key)
                 except Exception as exc:
                     logger.warning("channels.list failed for chunk: %s", exc)
         return results

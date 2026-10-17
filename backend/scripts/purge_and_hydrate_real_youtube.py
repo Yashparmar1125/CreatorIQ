@@ -68,24 +68,53 @@ async def main() -> None:
         logger.info("--- Step 2: Fetching canonical concepts to hydrate ---")
         res = await session.execute(select(Concept).where(Concept.active == True).order_by(Concept.name))
         concepts = list(res.scalars().all())
-        logger.info("Found %d active canonical concepts to hydrate.", len(concepts))
+        logger.info("Found %d active canonical concepts.", len(concepts))
 
-        if len(concepts) > MAX_DAILY_SEARCH_QUERIES:
-            logger.warning("Active concepts count (%d) exceeds daily search query limit (%d). Truncating.", len(concepts), MAX_DAILY_SEARCH_QUERIES)
-            concepts = concepts[:MAX_DAILY_SEARCH_QUERIES]
+        today = datetime.now(timezone.utc).date()
+        # Find concepts that already have population_size > 0 today
+        existing_res = await session.execute(
+            select(ConceptDailySignal.concept_id).where(
+                ConceptDailySignal.video_date == today,
+                ConceptDailySignal.population_size > 0,
+            )
+        )
+        already_populated_ids = set(existing_res.scalars().all())
+        logger.info(
+            "Found %d concepts already populated with real YouTube data for %s (conserving quota).",
+            len(already_populated_ids),
+            today,
+        )
+
+        concepts_to_hydrate = [c for c in concepts if c.id not in already_populated_ids]
+        logger.info("Concepts requiring hydration: %d", len(concepts_to_hydrate))
 
         pipeline = PipelineEngine()
-        today = datetime.now(timezone.utc).date()
-        successful_hydrations = 0
+        successful_hydrations = len(already_populated_ids)
         total_real_videos = 0
 
-        logger.info("--- Step 3: Executing genuine YouTube searches via 3-key pool router ---")
-        logger.info("Daily Quota Limit: %d search queries/day. Multi-key pool loaded with %d keys.", MAX_DAILY_SEARCH_QUERIES, len(youtube_router._keys))
+        # Sum existing real videos
+        v_sum_res = await session.execute(
+            select(ConceptDailySignal.population_size).where(
+                ConceptDailySignal.video_date == today,
+                ConceptDailySignal.population_size > 0,
+            )
+        )
+        total_real_videos += sum(v_sum_res.scalars().all() or [0])
 
-        for idx, concept in enumerate(concepts, 1):
+        used_searches = await youtube_router.get_daily_searches_used_async()
+        logger.info("--- Step 3: Executing genuine YouTube searches via 3-key pool router ---")
+        logger.info(
+            "Daily Quota Limit: %d search queries/day. Searches already used today: %d. Remaining: %d. Multi-key pool loaded with %d keys.",
+            MAX_DAILY_SEARCH_QUERIES,
+            used_searches,
+            max(0, MAX_DAILY_SEARCH_QUERIES - used_searches),
+            len(youtube_router._keys),
+        )
+
+        for idx, concept in enumerate(concepts_to_hydrate, 1):
             c_name = concept.name
             c_cat = concept.category
-            logger.info("[%d/%d] Hydrating concept: '%s' (%s)", idx, len(concepts), c_name, c_cat)
+            logger.info("[%d/%d] Hydrating concept: '%s' (%s)", idx, len(concepts_to_hydrate), c_name, c_cat)
             try:
                 run_res = await pipeline.execute_concept_run(session, concept, today)
                 pop_size = run_res.get("population_size", 0)
@@ -103,11 +132,12 @@ async def main() -> None:
                 await session.rollback()
                 logger.error("   -> ERROR during hydration of '%s': %s", c_name, e)
 
+        final_searches = await youtube_router.get_daily_searches_used_async()
         logger.info("=================================================================")
         logger.info("HYDRATION COMPLETED SUMMARY:")
         logger.info("Concepts successfully hydrated with real YouTube videos: %d / %d", successful_hydrations, len(concepts))
         logger.info("Total real YouTube videos verified & persisted: %d", total_real_videos)
-        logger.info("YouTube search queries used today: %d / %d limit", youtube_router.get_daily_searches_used(), MAX_DAILY_SEARCH_QUERIES)
+        logger.info("YouTube search queries used today: %d / %d limit", final_searches, MAX_DAILY_SEARCH_QUERIES)
         logger.info("=================================================================")
 
     await engine.dispose()
