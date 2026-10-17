@@ -167,3 +167,48 @@ async def recompute_score(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     return await service.recompute_score(db, uuid.UUID(trend_id))
+
+
+@router.post("/internal/trends/discovery/run")
+async def run_discovery(
+    categories: list[str] | None = None,
+    _: None = Depends(require_internal_token),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    from app.services.discovery.discovery_engine import DiscoveryEngine
+    engine = DiscoveryEngine()
+    summary = await engine.run_discovery_cycle(db, categories=categories)
+    return {"status": "success", "data": summary}
+
+
+@router.get("/internal/trends/candidates")
+async def list_candidates(
+    status: str = Query(default="pending"),
+    limit: int = Query(default=20, ge=1, le=100),
+    _: None = Depends(require_internal_token),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    from app.models.concept_models import ConceptCandidate
+    from sqlalchemy import select
+    res = await db.execute(
+        select(ConceptCandidate)
+        .where(ConceptCandidate.status == status)
+        .order_by(ConceptCandidate.created_at.desc())
+        .limit(limit)
+    )
+    items = res.scalars().all()
+    return {
+        "status": "success",
+        "data": [
+            {
+                "id": str(c.id),
+                "proposed_name": c.proposed_name,
+                "category": c.category,
+                "description": c.description,
+                "confidence_score": c.confidence_score,
+                "status": c.status,
+                "created_at": c.created_at.isoformat() if c.created_at else None,
+            }
+            for c in items
+        ],
+    }

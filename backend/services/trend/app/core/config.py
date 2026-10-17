@@ -64,7 +64,7 @@ class Settings(BaseSettings):
     backfill_days: int = 30
 
     # Background collector interval (hours)
-    collector_interval_hours: int = 4
+    collector_interval_hours: int = 6
 
     # OpenRouter — AI enrichment for feed cards (https://openrouter.ai)
     openrouter_api_key: str = ""

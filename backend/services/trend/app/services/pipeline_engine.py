@@ -936,19 +936,35 @@ class PipelineEngine:
     ) -> dict[str, Any]:
         """
         Seeds canonical concepts from YAML and executes genuine 100% real YouTube data runs
-        for each active concept (strictly within the daily 270 queries limit).
+        for all active concepts (both static YAML seeds and dynamically discovered concepts),
+        strictly adhering to the daily 270 queries quota ceiling.
         """
-        concepts = await self.seed_concepts_from_yaml(db)
+        # 1. Seed/sync base canonical concepts from YAML
+        yaml_concepts = await self.seed_concepts_from_yaml(db)
+
+        # 2. Select ALL active concepts from DB (static + dynamic)
+        stmt = select(Concept).where(Concept.active == True)
         if categories:
-            cat_set = {c.lower() for c in categories}
-            concepts = [c for c in concepts if c.category.lower() in cat_set]
+            cat_list = [c.lower() for c in categories]
+            stmt = stmt.where(func.lower(Concept.category).in_(cat_list))
+        res = await db.execute(stmt)
+        active_concepts = list(res.scalars().all())
 
         today = datetime.now(timezone.utc).date()
         processed_runs = 0
 
-        for concept in concepts:
-            if not concept.active:
-                continue
+        from app.core.youtube_router import youtube_router
+
+        for concept in active_concepts:
+            # Check remaining daily quota before launching search
+            daily_used = await youtube_router.get_daily_searches_used_async()
+            if daily_used >= (settings.youtube_max_daily_queries - 10):
+                logger.warning(
+                    "YouTube daily quota near governor ceiling (%d/%d), pausing further concept hydration.",
+                    daily_used,
+                    settings.youtube_max_daily_queries,
+                )
+                break
 
             try:
                 await self.execute_concept_run(db, concept, today)
@@ -958,6 +974,7 @@ class PipelineEngine:
 
         await db.commit()
         return {
-            "concepts_seeded": len(concepts),
+            "concepts_seeded": len(yaml_concepts),
+            "active_concepts_evaluated": len(active_concepts),
             "daily_signals_processed": processed_runs,
         }

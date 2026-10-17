@@ -47,6 +47,12 @@ class Concept(Base):
     category: Mapped[str] = mapped_column(String(100), default="Fitness", nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     active: Mapped[bool] = mapped_column(BOOLEAN, default=True, nullable=False)
+    is_dynamic: Mapped[bool] = mapped_column(BOOLEAN, default=False, nullable=False)
+    discovery_source: Mapped[str] = mapped_column(String(50), default="yaml_seed", nullable=False)
+    confidence_score: Mapped[float] = mapped_column(FLOAT, default=1.0, nullable=False)
+    last_decay_check: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True), server_default=func.now(), nullable=False
+    )
     include_terms: Mapped[list[str]] = mapped_column(JSONB, nullable=False, server_default="[]")
     exclude_terms: Mapped[list[str]] = mapped_column(JSONB, nullable=False, server_default="[]")
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
@@ -56,6 +62,30 @@ class Concept(Base):
 
     daily_signals: Mapped[list["ConceptDailySignal"]] = relationship(
         "ConceptDailySignal", back_populates="concept", cascade="all, delete-orphan"
+    )
+
+
+class ConceptCandidate(Base):
+    __tablename__ = "concept_candidates"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    proposed_name: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    category: Mapped[str] = mapped_column(String(100), default="General", nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    include_terms: Mapped[list[str]] = mapped_column(JSONB, nullable=False, server_default="[]")
+    exclude_terms: Mapped[list[str]] = mapped_column(JSONB, nullable=False, server_default="[]")
+    discovery_source: Mapped[str] = mapped_column(String(50), nullable=False)  # 'youtube_popular', 'google_trends', 'tavily'
+    raw_signals: Mapped[list] = mapped_column(JSONB, nullable=False, server_default="[]")
+    confidence_score: Mapped[float] = mapped_column(FLOAT, default=0.5, nullable=False)
+    status: Mapped[str] = mapped_column(String(30), default="pending", nullable=False)  # 'pending', 'promoted', 'rejected'
+    rejection_reason: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    __table_args__ = (
+        Index("idx_concept_candidates_status", "status"),
     )
 
 

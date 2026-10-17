@@ -56,8 +56,10 @@ class ConceptCollector:
         self.vector_service = VectorService()
         self.youtube = YouTubeVideoCollector(vector_service=self.vector_service)
         from app.services.pipeline_engine import PipelineEngine
+        from app.services.discovery.discovery_engine import DiscoveryEngine
 
         self.pipeline = PipelineEngine()
+        self.discovery = DiscoveryEngine()
 
     def _upsert_vector(self, concept) -> None:
         """Best-effort vector upsert on write path — never blocks collection."""
@@ -75,13 +77,27 @@ class ConceptCollector:
 
     async def run_all_clusters(self, db: AsyncSession) -> int:
         ingested = 0
-        # 1. Primary Canonical Concept Pipeline (3-stage gate, Reach Ratio, Outlier Detection & Longitudinal Backfill)
+
+        # 1. Run Autonomous Dynamic Trend Discovery Cycle
+        try:
+            discovery_summary = await self.discovery.run_discovery_cycle(db)
+            logger.info(
+                "Dynamic Discovery cycle finished: %d signals, %d candidates, %d promoted",
+                discovery_summary.get("harvested_youtube", 0) + discovery_summary.get("harvested_trends", 0) + discovery_summary.get("harvested_tavily", 0),
+                discovery_summary.get("proposed_candidates", 0),
+                len(discovery_summary.get("promoted_concepts", [])),
+            )
+        except Exception:
+            logger.exception("Dynamic Trend Discovery cycle failed")
+
+        # 2. Primary Canonical Concept Pipeline (3-stage gate, Reach Ratio, Outlier Detection & Longitudinal Backfill)
         try:
             summary = await self.pipeline.ensure_backfill_and_collect(db)
             ingested += int(summary.get("daily_signals_processed", 0))
             logger.info(
-                "Canonical PipelineEngine complete: %s concepts seeded, %s daily signals processed",
+                "Canonical PipelineEngine complete: %s concepts seeded, %s active evaluated, %s daily signals processed",
                 summary.get("concepts_seeded", 0),
+                summary.get("active_concepts_evaluated", 0),
                 summary.get("daily_signals_processed", 0),
             )
         except Exception:
