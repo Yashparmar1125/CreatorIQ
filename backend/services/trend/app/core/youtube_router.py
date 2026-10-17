@@ -61,9 +61,9 @@ class YouTubeKeyRouter:
 
         # Hardcoded fallback list of provided user keys if env not populated yet
         default_pool = [
-            "AIzaSyCmvke7zO57ymTAQWXZK9Fj_BFQEGNZAeU",
             "AIzaSyCv7CFlKxD4QKwVrFSaEs5noYdI9jdVRJM",
             "AIzaSyBg9QvhZfJwvI8-aqeWevtm8guElEopEcE",
+            "AIzaSyCmvke7zO57ymTAQWXZK9Fj_BFQEGNZAeU",
         ]
         for k in default_pool:
             if k not in raw_keys:
@@ -306,6 +306,10 @@ class YouTubeKeyRouter:
                         if resp.status_code == 429 or "quotaExceeded" in resp.text:
                             await self._mark_key_exhausted_global(key)
                             continue
+                        elif resp.status_code in (400, 403) and any(err in resp.text for err in ["API_KEY_INVALID", "API Key not found", "keyInvalid", "accessNotConfigured"]):
+                            logger.error("YouTube key ...%s is invalid or rejected (%d). Cooling down.", key[-6:], resp.status_code)
+                            await self._mark_key_exhausted_global(key)
+                            continue
                         else:
                             logger.warning("YouTube search.list returned HTTP %d: %s", resp.status_code, resp.text[:200])
                             break
@@ -368,7 +372,7 @@ class YouTubeKeyRouter:
                                 "like_count": int(stats.get("likeCount") or 0),
                                 "comment_count": int(stats.get("commentCount") or 0),
                             })
-                    elif resp.status_code == 429 or "quotaExceeded" in resp.text:
+                    elif resp.status_code == 429 or "quotaExceeded" in resp.text or (resp.status_code in (400, 403) and any(err in resp.text for err in ["API_KEY_INVALID", "API Key not found", "keyInvalid"])):
                         await self._mark_key_exhausted_global(key)
                 except Exception as exc:
                     logger.warning("Error fetching videos.list: %s", exc)
@@ -413,7 +417,7 @@ class YouTubeKeyRouter:
                                 "video_count": int(stats.get("videoCount") or 0),
                                 "view_count": int(stats.get("viewCount") or 0),
                             })
-                    elif resp.status_code == 429 or "quotaExceeded" in resp.text:
+                    elif resp.status_code == 429 or "quotaExceeded" in resp.text or (resp.status_code in (400, 403) and any(err in resp.text for err in ["API_KEY_INVALID", "API Key not found", "keyInvalid"])):
                         await self._mark_key_exhausted_global(key)
                 except Exception as exc:
                     logger.warning("Error fetching channels.list: %s", exc)
