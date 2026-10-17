@@ -2,15 +2,24 @@
 
 from __future__ import annotations
 
+import hashlib
 import logging
 from typing import Any
 
-from qdrant_client import QdrantClient
-from qdrant_client.models import (
-    Distance,
-    VectorParams,
-    PointStruct,
-)
+try:
+    from qdrant_client import QdrantClient
+    from qdrant_client.models import (
+        Distance,
+        VectorParams,
+        PointStruct,
+    )
+    HAS_QDRANT = True
+except ImportError:
+    QdrantClient = Any  # type: ignore[misc,assignment]
+    Distance = Any  # type: ignore[misc,assignment]
+    VectorParams = Any  # type: ignore[misc,assignment]
+    PointStruct = Any  # type: ignore[misc,assignment]
+    HAS_QDRANT = False
 
 from app.core.config import settings
 
@@ -21,11 +30,14 @@ VECTOR_DIM = 384  # all-MiniLM-L6-v2 output dimension
 
 # Lazy-loaded singleton — model is ~90MB, only loaded once per process
 _sentence_model = None
+_model_failed = False
 
 
 def _get_model():
     """Returns the loaded SentenceTransformer model (lazy singleton)."""
-    global _sentence_model
+    global _sentence_model, _model_failed
+    if _model_failed:
+        return None
     if _sentence_model is None:
         try:
             from sentence_transformers import SentenceTransformer
@@ -33,39 +45,50 @@ def _get_model():
             _sentence_model = SentenceTransformer("all-MiniLM-L6-v2")
             logger.info("SentenceTransformer model loaded successfully.")
         except Exception as e:
-            logger.error(f"Failed to load SentenceTransformer model: {e}")
-            raise
+            _model_failed = True
+            logger.warning(f"SentenceTransformer unavailable ({e}); using deterministic hash embedding fallback.")
+            return None
     return _sentence_model
 
 
 def generate_semantic_vector(text: str, tags: list[str] | None = None) -> list[float]:
     """
-    Deterministic 384-dim embedding using all-MiniLM-L6-v2.
-    Replaces the broken hash()-based vectorizer which produced random vectors
-    across process restarts (due to PYTHONHASHSEED randomization).
+    Deterministic 384-dim embedding using all-MiniLM-L6-v2 (with SHA-256 fallback).
     """
     combined = (text + " " + " ".join(tags or [])).strip()
     if not combined:
         return [0.0] * VECTOR_DIM
     try:
         model = _get_model()
-        embedding = model.encode([combined])[0]
-        return embedding.tolist()
+        if model is not None:
+            embedding = model.encode([combined])[0]
+            return embedding.tolist()
     except Exception as e:
-        logger.error(f"Embedding generation failed: {e}")
-        return [0.0] * VECTOR_DIM
+        logger.warning(f"Embedding generation fallback: {e}")
+
+    # Deterministic SHA-256 trigram projection to 384 dims
+    vec = [0.0] * VECTOR_DIM
+    for token in combined.lower().split():
+        digest = hashlib.sha256(token.encode("utf-8")).digest()
+        for i, b in enumerate(digest):
+            idx = (i * 12 + b) % VECTOR_DIM
+            vec[idx] += (b / 255.0) - 0.5
+    norm = sum(v * v for v in vec) ** 0.5 or 1.0
+    return [round(v / norm, 6) for v in vec]
 
 
 class VectorService:
     def __init__(self) -> None:
-        self._client: QdrantClient | None = None
+        self._client: Any = None
         self._initialized = False
 
-    def get_client(self) -> QdrantClient | None:
+    def get_client(self) -> Any:
+        if not HAS_QDRANT or not settings.enable_vector_search:
+            return None
         if self._client is not None:
             return self._client
         try:
-            self._client = QdrantClient(url=settings.qdrant_url, timeout=5.0)
+            self._client = QdrantClient(url=settings.qdrant_url, timeout=2.5)
             return self._client
         except Exception as e:
             logger.warning(f"Could not connect to Qdrant at {settings.qdrant_url}: {e}")

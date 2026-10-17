@@ -2,20 +2,20 @@ name: creatoriq-backend
 
 # Shared environment for all services (overrides .env host-specific values like Azure DB / 127.0.0.1 URLs)
 x-common-env: &common-env
-  ENVIRONMENT: ${ENVIRONMENT:-development}
+  ENVIRONMENT: development
   LOG_LEVEL: INFO
-  DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://creatoriq:creatoriq@postgres:5432/creatoriq}
-  REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
-  JWT_ISSUER: ${JWT_ISSUER:-creatoriq-auth}
-  JWT_AUDIENCE: ${JWT_AUDIENCE:-creatoriq-api}
-  JWT_PUBLIC_KEY_PATH: ${JWT_PUBLIC_KEY_PATH:-/run/secrets/jwt_public.pem}
-  JWT_PRIVATE_KEY_PATH: ${JWT_PRIVATE_KEY_PATH:-/run/secrets/jwt_private.pem}
-  AUTH_SERVICE_URL: ${AUTH_SERVICE_URL:-http://auth:8001}
-  CHANNEL_SERVICE_URL: ${CHANNEL_SERVICE_URL:-http://channel:8002}
-  TREND_SERVICE_URL: ${TREND_SERVICE_URL:-http://trend:8003}
-  ML_SERVICE_URL: ${ML_SERVICE_URL:-http://ml:8007}
-  QDRANT_URL: ${QDRANT_URL:-http://qdrant:6333}
-  FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+  DATABASE_URL: postgresql+asyncpg://creatoriq:creatoriq@postgres:5432/creatoriq
+  REDIS_URL: redis://redis:6379/0
+  JWT_ISSUER: creatoriq-auth
+  JWT_AUDIENCE: creatoriq-api
+  JWT_PUBLIC_KEY_PATH: /run/secrets/jwt_public.pem
+  JWT_PRIVATE_KEY_PATH: /run/secrets/jwt_private.pem
+  AUTH_SERVICE_URL: http://auth:8001
+  CHANNEL_SERVICE_URL: http://channel:8002
+  TREND_SERVICE_URL: http://trend:8003
+  ML_SERVICE_URL: http://ml:8007
+  QDRANT_URL: http://qdrant:6333
+  FRONTEND_URL: ${FRONTEND_URL:-https://creatoriq.yashparmar.in,http://localhost:5173}
 
 x-service-defaults: &service-defaults
   env_file:
@@ -35,7 +35,7 @@ services:
       POSTGRES_USER: creatoriq
       POSTGRES_PASSWORD: creatoriq
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:

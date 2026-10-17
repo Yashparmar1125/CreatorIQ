@@ -50,7 +50,7 @@ class MlService:
         latency_ms = float(accuracy.get("latency_ms", 0.0))
         data_source = str(forecast_data.get("data_source", "real_history"))
         obs_count = int(forecast_data.get("observations_count", len(history or [])))
-        model_used = str(forecast_data.get("model_used", "Prophet_Additive"))
+        model_used = str(forecast_data.get("model_used", "LightGBM_300Trees_85Features"))
 
         # Tier 1: Log structured event to rotating JSONL file
         try:
@@ -94,7 +94,7 @@ class MlService:
 
         return {
             "data": forecast_data,
-            "meta": {"request_id": "ml-prophet"},
+            "meta": {"request_id": "ml-lightgbm"},
         }
 
     def score_idea(self, payload: dict[str, Any]) -> dict:

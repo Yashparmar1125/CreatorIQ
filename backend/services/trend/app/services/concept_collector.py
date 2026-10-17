@@ -55,6 +55,9 @@ class ConceptCollector:
         self.repo = ConceptRepository()
         self.vector_service = VectorService()
         self.youtube = YouTubeVideoCollector(vector_service=self.vector_service)
+        from app.services.pipeline_engine import PipelineEngine
+
+        self.pipeline = PipelineEngine()
 
     def _upsert_vector(self, concept) -> None:
         """Best-effort vector upsert on write path — never blocks collection."""
@@ -72,21 +75,19 @@ class ConceptCollector:
 
     async def run_all_clusters(self, db: AsyncSession) -> int:
         ingested = 0
-        if settings.enable_youtube_collector and settings.youtube_api_key:
-            try:
-                n = await self.youtube.collect_all_clusters(db)
-                ingested += n
-                logger.info("YouTube video collection: %s concepts", n)
-            except Exception:
-                logger.exception("YouTube video collection failed")
+        # 1. Primary Canonical Concept Pipeline (3-stage gate, Reach Ratio, Outlier Detection & Longitudinal Backfill)
+        try:
+            summary = await self.pipeline.ensure_backfill_and_collect(db)
+            ingested += int(summary.get("daily_signals_processed", 0))
+            logger.info(
+                "Canonical PipelineEngine complete: %s concepts seeded, %s daily signals processed",
+                summary.get("concepts_seeded", 0),
+                summary.get("daily_signals_processed", 0),
+            )
+        except Exception:
+            logger.exception("Canonical PipelineEngine collection failed")
 
-        if not settings.serpapi_api_key:
-            if ingested:
-                return ingested
-            logger.warning("SERPAPI_API_KEY not set — skipping SerpApi collection")
-            return ingested
-
-        if not settings.enable_serpapi_collector:
+        if not settings.serpapi_api_key or not settings.enable_serpapi_collector:
             return ingested
 
         for cluster_name, cfg in NICHE_CLUSTERS.items():
@@ -107,12 +108,11 @@ class ConceptCollector:
         max_queries: int = 4,
     ) -> int:
         ingested = 0
-        if settings.enable_youtube_collector and settings.youtube_api_key and niches:
-            try:
-                n = await self.youtube.collect_for_niches(db, niches, region_code=geo, max_queries=max_queries)
-                ingested += n
-            except Exception:
-                logger.exception("YouTube on-demand collection failed")
+        try:
+            summary = await self.pipeline.ensure_backfill_and_collect(db, categories=niches or None)
+            ingested += int(summary.get("daily_signals_processed", 0))
+        except Exception:
+            logger.exception("Canonical PipelineEngine on-demand collection failed")
 
         if not settings.serpapi_api_key or not niches:
             return ingested

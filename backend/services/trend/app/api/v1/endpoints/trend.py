@@ -78,6 +78,14 @@ async def get_feed_snapshot(
     return await service.get_feed_snapshot(db, user, uuid.UUID(feed_id))
 
 
+@router.get("/trends/saved")
+async def list_saved_trends(
+    user: UserContext = Depends(get_user_context),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    return await service.list_saved_trends(db, user)
+
+
 @router.get("/trends/{trend_id}")
 async def trend_detail(
     trend_id: str,

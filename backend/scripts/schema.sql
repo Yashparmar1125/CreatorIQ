@@ -272,8 +272,94 @@ CREATE TABLE IF NOT EXISTS saved_trends (
     id UUID PRIMARY KEY,
     user_id UUID NOT NULL,
     trend_id UUID NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT uq_saved_trends_user_trend UNIQUE (user_id, trend_id)
+);
+
+-- Canonical Seed Concepts & Daily Signals Pipeline Tables
+CREATE TABLE IF NOT EXISTS concepts (
+    id VARCHAR(36) PRIMARY KEY,
+    name VARCHAR(255) UNIQUE NOT NULL,
+    category VARCHAR(100) NOT NULL DEFAULT 'Fitness',
+    description TEXT,
+    active BOOLEAN NOT NULL DEFAULT true,
+    include_terms JSONB NOT NULL DEFAULT '[]',
+    exclude_terms JSONB NOT NULL DEFAULT '[]',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS concept_daily_signals (
+    id SERIAL PRIMARY KEY,
+    concept_id VARCHAR(36) NOT NULL REFERENCES concepts(id) ON DELETE CASCADE,
+    concept_name VARCHAR(255) NOT NULL,
+    processed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    video_date DATE NOT NULL,
+    population_size INTEGER NOT NULL,
+    reach_ratio_median FLOAT,
+    interaction_density_median FLOAT,
+    semantic_score_mean FLOAT,
+    trend_score_median FLOAT,
+    top_outlier_video_id VARCHAR(255),
+    top_outlier_reach_ratio FLOAT,
+    top_outlier_interaction_density FLOAT,
+    top_outlier_semantic_score FLOAT,
+    top_outlier_channel_tier VARCHAR(50),
+    outlier_streak INTEGER NOT NULL DEFAULT 0,
+    big_channel_count INTEGER NOT NULL DEFAULT 0,
+    medium_channel_count INTEGER NOT NULL DEFAULT 0,
+    small_channel_count INTEGER NOT NULL DEFAULT 0,
+    keywords JSONB,
+    population JSONB,
+    high_variance_flags JSONB,
+    filter_audit JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT uq_concept_id_video_date UNIQUE (concept_id, video_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_concept_signals_concept_date ON concept_daily_signals (concept_id, video_date);
+
+CREATE TABLE IF NOT EXISTS api_request_logs (
+    id SERIAL PRIMARY KEY,
+    requested_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    api_name VARCHAR(50) NOT NULL,
+    endpoint VARCHAR(100) NOT NULL,
+    operation VARCHAR(100) NOT NULL,
+    http_status INTEGER,
+    quota_cost INTEGER,
+    duration_ms INTEGER,
+    attempt INTEGER NOT NULL DEFAULT 1,
+    success BOOLEAN NOT NULL,
+    error_code VARCHAR(50),
+    error_message TEXT,
+    request_metadata JSONB
+);
+
+CREATE INDEX IF NOT EXISTS idx_api_logs_requested_at ON api_request_logs (requested_at);
+
+-- Strategy AI Chat Tables
+CREATE TABLE IF NOT EXISTS chat_sessions (
+    id UUID PRIMARY KEY,
+    user_id UUID NOT NULL,
+    title VARCHAR(255) NOT NULL DEFAULT 'New Strategy Chat',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_chat_sessions_user_id ON chat_sessions (user_id);
+
+CREATE TABLE IF NOT EXISTS chat_messages (
+    id UUID PRIMARY KEY,
+    session_id UUID NOT NULL REFERENCES chat_sessions(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL,
+    role VARCHAR(32) NOT NULL,
+    content TEXT NOT NULL,
+    metadata_json JSONB,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+CREATE INDEX IF NOT EXISTS idx_chat_messages_session_id ON chat_messages (session_id);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_user_id ON chat_messages (user_id);
 
 -- ML Evaluations Table
 CREATE TABLE IF NOT EXISTS ml_model_evaluations (
@@ -296,3 +382,4 @@ CREATE TABLE IF NOT EXISTS ml_model_evaluations (
     error_message TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+

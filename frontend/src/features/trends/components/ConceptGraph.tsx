@@ -22,6 +22,13 @@ interface ConceptGraphProps {
     volume?: string;
     stability_score?: number;
     vector_similarity?: number;
+    saturation_index?: number;
+    reach_ratio_median?: number;
+    interaction_density_median?: number;
+    small_channel_count?: number;
+    medium_channel_count?: number;
+    big_channel_count?: number;
+    outlier_streak?: number;
   };
   className?: string;
 }
@@ -43,18 +50,40 @@ export const ConceptGraph: React.FC<ConceptGraphProps> = ({ trend, className }) 
 
   const conceptTitle = cleanTrendTitle(trend.topic);
   const oppScore = Math.round(trend.opportunity_score ?? trend.tvs_score ?? 78);
-  const vectorMatch = (trend as any).vector_similarity
-    ? Math.round((trend as any).vector_similarity * 100)
-    : 92;
+  const vectorMatch = trend.vector_similarity
+    ? Math.round(trend.vector_similarity * 100)
+    : Math.min(98, Math.max(72, Math.round(oppScore * 0.95 + 8)));
+
+  const reachRatioStr =
+    trend.reach_ratio_median != null
+      ? `${Number(trend.reach_ratio_median).toFixed(2)}x Reach Ratio`
+      : trend.interaction_density_median != null
+      ? `${(Number(trend.interaction_density_median) * 100).toFixed(1)}% Eng Density`
+      : `${Math.round(trend.stability_score ?? 82)}% Stability`;
+
+  const totalChannels =
+    (trend.small_channel_count ?? 0) +
+    (trend.medium_channel_count ?? 0) +
+    (trend.big_channel_count ?? 0);
+  const marketDensityStr =
+    totalChannels > 0
+      ? `S:${trend.small_channel_count ?? 0} · M:${trend.medium_channel_count ?? 0} · B:${trend.big_channel_count ?? 0}`
+      : trend.saturation_index != null && trend.saturation_index > 55
+      ? `Moderate (${Math.round(trend.saturation_index)}% Sat)`
+      : 'Low (Early Window)';
+
+  const outlierOrYieldStr =
+    trend.outlier_streak && trend.outlier_streak > 0
+      ? `${trend.outlier_streak}d μ+1.65σ Streak`
+      : `${oppScore}/100 Yield Fit`;
 
   // Harmoniously positioned nodes around center (cx=450, cy=220 on 900x440 viewBox)
-  // Plenty of clearance from all edges and between nodes
   const nodes: GraphNode[] = [
     {
       id: 'velocity',
       label: 'Search Velocity',
       category: 'Momentum',
-      value: trend.velocity || '245K/hr',
+      value: trend.velocity || 'Rising Velocity',
       status: 'high',
       x: 180,
       y: 95,
@@ -62,9 +91,9 @@ export const ConceptGraph: React.FC<ConceptGraphProps> = ({ trend, className }) 
     },
     {
       id: 'audience',
-      label: 'Audience Retention',
-      category: 'Engagement',
-      value: '72% at 0:30',
+      label: 'Reach & Interaction',
+      category: 'Signal Efficiency',
+      value: reachRatioStr,
       status: 'optimal',
       x: 720,
       y: 95,
@@ -74,7 +103,7 @@ export const ConceptGraph: React.FC<ConceptGraphProps> = ({ trend, className }) 
       id: 'niche',
       label: 'Category Cluster',
       category: 'Semantic Niche',
-      value: trend.niches?.[0] || 'Tech / AI',
+      value: trend.niches?.slice(0, 2).join(' · ') || 'General',
       status: 'optimal',
       x: 180,
       y: 335,
@@ -82,9 +111,9 @@ export const ConceptGraph: React.FC<ConceptGraphProps> = ({ trend, className }) 
     },
     {
       id: 'saturation',
-      label: 'Market Density',
-      category: 'Competition',
-      value: 'Low (Early Window)',
+      label: 'Channel Distribution',
+      category: 'Creator Tiers (S/M/B)',
+      value: marketDensityStr,
       status: 'medium',
       x: 720,
       y: 335,
@@ -92,9 +121,9 @@ export const ConceptGraph: React.FC<ConceptGraphProps> = ({ trend, className }) 
     },
     {
       id: 'monetization',
-      label: 'Monetization Depth',
-      category: 'Commercial Fit',
-      value: 'High RPM ($14-22)',
+      label: 'Outlier & Yield Signal',
+      category: 'Statistical Breakout',
+      value: outlierOrYieldStr,
       status: 'optimal',
       x: 450,
       y: 365,

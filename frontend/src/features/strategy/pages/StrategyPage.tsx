@@ -7,12 +7,10 @@ import { useAuthStore } from '../../../stores/useAuthStore';
 import { Button } from '../../../components/ui/Button';
 import {
   Sparkles,
-  Send,
   Plus,
   Zap,
   Copy,
   Check,
-  Bot,
   ArrowRight,
   Database,
   BarChart3,
@@ -23,6 +21,9 @@ import {
   X,
   Layers,
   UserCheck,
+  Lightbulb,
+  Target,
+  TrendingUp,
 } from 'lucide-react';
 
 const SUGGESTIONS = [
@@ -157,383 +158,322 @@ export const StrategyPage: React.FC = () => {
   const toolsUsed = sourcesDrawerMessage?.metadata?.tools_used || [];
 
   return (
-    <div className="relative flex h-[calc(100vh-4.5rem)] overflow-hidden max-w-6xl mx-auto animate-in">
+    <div className="relative flex h-full w-full overflow-hidden bg-[#0a0a0a] animate-in">
       {/* Main Chat Workspace */}
-      <div className="flex flex-1 flex-col h-full min-w-0 pr-0 lg:pr-2">
-        {/* Top Header Bar */}
-        <div className="flex items-center justify-between border-b border-[#1c1c1c] pb-3 shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600/20 border border-indigo-500/30 text-indigo-400">
-              <Sparkles className="h-4 w-4" />
-            </div>
-            <div>
-              <h1 className="text-sm font-bold text-white flex items-center gap-2">
-                AI Strategy Architect
-              </h1>
-              <p className="text-[11px] text-neutral-400">
-                Grounded Creator Strategy &amp; Live Trend Radar
-              </p>
-            </div>
+      <div className="relative flex flex-1 flex-col h-full min-w-0">
+        {/* Subtle Floating Top-Right New Chat Action (Gemini / ChatGPT style) */}
+        {messages.length > 0 && (
+          <div className="pointer-events-none absolute top-3 right-4 z-10 flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={handleNewChat}
+              className="pointer-events-auto rounded-full bg-[#161616]/90 backdrop-blur-md border-[#282828] px-3.5 py-1.5 text-xs hover:bg-[#222222] text-neutral-300 shadow-lg"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              New Chat
+            </Button>
           </div>
+        )}
 
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={handleNewChat}
-            className="bg-[#161616] border-[#2a2a2a] text-xs hover:bg-[#202020] text-neutral-300"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            New Chat
-          </Button>
-        </div>
-
-        {/* Messages Thread Container */}
-        <div className="flex-1 overflow-y-auto py-6 space-y-6 custom-scrollbar pr-2">
-          {messages.length === 0 && !isLoadingMessages && (
-            <div className="flex flex-col items-center justify-center py-8 text-center space-y-6">
-              <div className="h-12 w-12 rounded-2xl bg-[#181818] border border-[#2a2a2a] flex items-center justify-center text-indigo-400 shadow-xl">
-                <Bot className="h-6 w-6" />
-              </div>
-              <div className="space-y-1.5 max-w-md">
-                <h2 className="text-base font-bold text-white font-sora">
-                  What blueprint shall we build, {user?.full_name?.split(' ')[0] || 'Creator'}?
-                </h2>
-                <p className="text-xs text-neutral-400 leading-relaxed">
-                  Ask about viral hooks, channel velocity, script breakdowns, or pick a prompt below.
-                </p>
-              </div>
-
-              {/* Prompt Cards Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-2xl pt-2">
-                {SUGGESTIONS.map((s, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => sendMessage(s.prompt)}
-                    className="flex flex-col text-left p-3.5 rounded-xl border border-[#222222] bg-[#121212] hover:bg-[#181818] hover:border-[#383838] transition-all group cursor-pointer shadow-xs"
-                  >
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-xs font-semibold text-white group-hover:text-indigo-300 transition-colors flex items-center gap-1.5">
-                        <s.icon className="h-3.5 w-3.5 text-indigo-400" />
-                        {s.title}
-                      </span>
-                      <ArrowRight className="h-3 w-3 text-neutral-600 group-hover:text-neutral-300 transition-transform group-hover:translate-x-0.5" />
-                    </div>
-                    <p className="text-[11px] text-neutral-500 leading-normal">{s.desc}</p>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {messages.map((m) => {
-            const isUser = m.role === 'user';
-            const msgTools = m.metadata?.tools_used || [];
-            return (
-              <div
-                key={m.id}
-                className={`flex items-start gap-3 ${isUser ? 'justify-end' : 'justify-start'}`}
-              >
-                {!isUser && (
-                  <div className="h-7 w-7 shrink-0 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 mt-1">
-                    <Bot className="h-3.5 w-3.5" />
+        {/* Full-Width Scrollable Stream (Scrollbar hidden — pure ChatGPT / Gemini canvas) */}
+        <div className="flex-1 w-full overflow-y-auto no-scrollbar px-4 sm:px-6 pt-6 pb-8">
+          <div className="mx-auto w-full max-w-3xl space-y-8">
+            {messages.length === 0 && !isLoadingMessages && (
+              <div className="flex min-h-[62vh] flex-col items-center justify-center text-center space-y-7">
+                <div className="space-y-2.5 max-w-lg">
+                  <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-2xl border border-[#262626] bg-[#141414] text-indigo-400 shadow-lg">
+                    <Sparkles className="h-5 w-5" />
                   </div>
-                )}
+                  <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white font-sora">
+                    Hello, {user?.full_name?.split(' ')[0] || 'Creator'}
+                  </h2>
+                  <p className="text-sm text-neutral-400 leading-relaxed">
+                    How can I help you architect your next viral video today?
+                  </p>
+                </div>
 
-                <div
-                  className={`max-w-3xl rounded-2xl p-4 sm:p-5 text-xs sm:text-sm ${
-                    isUser
-                      ? 'bg-[#222222] border border-[#333333] text-white shadow-sm'
-                      : 'bg-[#121215] border border-[#22222a] text-[#dedee6] shadow-md'
-                  }`}
-                >
-                  {isUser ? (
-                    <p className="whitespace-pre-wrap leading-relaxed font-normal">{m.content}</p>
-                  ) : (
-                    <div className="space-y-3">
-                      {/* Top Stable Message Bar */}
-                      <div className="flex items-center justify-between pb-2.5 border-b border-[#202028] text-xs">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-white font-sora text-xs">
-                            Strategy Blueprint
-                          </span>
-                          <span className="rounded bg-[#1a1a24] border border-[#2c2c3e] px-1.5 py-0.2 text-[10px] font-mono text-indigo-300">
-                            Grounded AI
-                          </span>
-                        </div>
-
-                        {msgTools.length > 0 && (
-                          <button
-                            type="button"
-                            onClick={() => setSourcesDrawerMessage(m)}
-                            className="inline-flex items-center gap-1.5 rounded-lg bg-[#181824] border border-[#2c2c3e] px-2.5 py-1 text-[11px] font-mono text-indigo-300 hover:text-white hover:bg-[#202030] hover:border-indigo-500/50 transition-colors cursor-pointer"
-                          >
-                            <Globe className="h-3 w-3 text-indigo-400" />
-                            <span>{msgTools.length} Sources &amp; Signals</span>
-                            <ArrowRight className="h-2.5 w-2.5 text-neutral-400" />
-                          </button>
-                        )}
-                      </div>
-
-                      {/* GitHub README.md Style Markdown Document Rendering */}
-                      <div className="prose prose-invert max-w-none space-y-3">
-                        <ReactMarkdown
-                          remarkPlugins={[remarkGfm]}
-                          components={{
-                            h1: ({ children }) => (
-                              <h1 className="text-lg font-bold text-white border-b border-[#2d2d34] pb-2 mb-3 mt-1 font-sora flex items-center gap-2">
-                                {children}
-                              </h1>
-                            ),
-                            h2: ({ children }) => (
-                              <h2 className="text-base font-semibold text-white border-b border-[#24242b] pb-1.5 mb-2 mt-4 font-sora flex items-center gap-2 text-indigo-200">
-                                {children}
-                              </h2>
-                            ),
-                            h3: ({ children }) => (
-                              <h3 className="text-sm font-semibold text-indigo-300 mt-3 mb-1.5 flex items-center gap-1.5">
-                                {children}
-                              </h3>
-                            ),
-                            h4: ({ children }) => (
-                              <h4 className="text-xs font-semibold uppercase tracking-wider text-neutral-300 mt-2 mb-1">
-                                {children}
-                              </h4>
-                            ),
-                            p: ({ children }) => (
-                              <p className="text-neutral-300 leading-relaxed my-1.5 text-xs sm:text-sm">
-                                {children}
-                              </p>
-                            ),
-                            ul: ({ children }) => (
-                              <ul className="space-y-1.5 my-2 pl-4 list-disc text-neutral-300 marker:text-indigo-400">
-                                {children}
-                              </ul>
-                            ),
-                            ol: ({ children }) => (
-                              <ol className="space-y-1.5 my-2 pl-4 list-decimal text-neutral-300 marker:text-indigo-400 font-mono">
-                                {children}
-                              </ol>
-                            ),
-                            li: ({ children }) => (
-                              <li className="text-xs sm:text-sm leading-relaxed">{children}</li>
-                            ),
-                            blockquote: ({ children }) => (
-                              <blockquote className="border-l-3 border-indigo-500 bg-[#16161c] px-3.5 py-2 my-3 rounded-r-lg text-neutral-300 italic text-xs sm:text-sm">
-                                {children}
-                              </blockquote>
-                            ),
-                            table: ({ children }) => (
-                              <div className="overflow-x-auto my-3 rounded-lg border border-[#2d2d35]">
-                                <table className="min-w-full divide-y divide-[#2d2d35] text-left text-xs">
-                                  {children}
-                                </table>
-                              </div>
-                            ),
-                            thead: ({ children }) => (
-                              <thead className="bg-[#181820] text-neutral-200 font-semibold">{children}</thead>
-                            ),
-                            th: ({ children }) => (
-                              <th className="px-3 py-2 border-b border-[#2d2d35]">{children}</th>
-                            ),
-                            td: ({ children }) => (
-                              <td className="px-3 py-2 border-t border-[#22222a] text-neutral-300">{children}</td>
-                            ),
-                            code: ({ children, className }) => {
-                              const isBlock = className || (typeof children === 'string' && children.includes('\n'));
-                              if (isBlock) {
-                                return (
-                                  <div className="my-3 rounded-lg border border-[#2b2b36] bg-[#0c0c0e] overflow-hidden">
-                                    <div className="flex items-center justify-between px-3 py-1.5 bg-[#17171d] border-b border-[#24242e] text-[10px] text-neutral-400 font-mono">
-                                      <span className="flex items-center gap-1.5">
-                                        <Code2 className="h-3 w-3 text-indigo-400" />
-                                        Snippet / Blueprint
-                                      </span>
-                                    </div>
-                                    <pre className="p-3 text-xs text-indigo-200 font-mono overflow-x-auto">
-                                      <code>{children}</code>
-                                    </pre>
-                                  </div>
-                                );
-                              }
-                              return (
-                                <code className="rounded bg-[#1e1e26] px-1.5 py-0.5 font-mono text-[11px] text-indigo-300 border border-[#2e2e3a]">
-                                  {children}
-                                </code>
-                              );
-                            },
-                            hr: () => <hr className="border-t border-[#262630] my-4" />,
-                            strong: ({ children }) => (
-                              <strong className="text-white font-bold">{children}</strong>
-                            ),
-                          }}
-                        >
-                          {m.content}
-                        </ReactMarkdown>
-                      </div>
-
-                      {/* Bottom Clean Action Footer Bar */}
-                      <div className="mt-3 pt-2.5 border-t border-[#1e1e26] flex items-center justify-between text-xs not-prose">
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => handleCopy(m.id, m.content)}
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium text-neutral-400 hover:text-white hover:bg-[#1c1c24] border border-[#252530] transition-colors cursor-pointer"
-                          >
-                            {copiedId === m.id ? (
-                              <>
-                                <Check className="h-3.5 w-3.5 text-emerald-400" />
-                                <span className="text-emerald-400 text-xs">Copied</span>
-                              </>
-                            ) : (
-                              <>
-                                <Copy className="h-3.5 w-3.5" />
-                                <span>Copy</span>
-                              </>
-                            )}
-                          </button>
-
-                          {msgTools.length > 0 && (
-                            <button
-                              type="button"
-                              onClick={() => setSourcesDrawerMessage(m)}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium text-neutral-400 hover:text-indigo-300 hover:bg-[#1c1c24] border border-[#252530] transition-colors cursor-pointer"
-                            >
-                              <Globe className="h-3.5 w-3.5 text-indigo-400" />
-                              <span>View Sources ({msgTools.length})</span>
-                            </button>
-                          )}
-                        </div>
-
-                        <span className="text-[10px] font-mono text-neutral-500">
-                          GPT-4o-mini &bull; Ingest DB
+                {/* Gemini / ChatGPT Suggestion Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-2xl">
+                  {SUGGESTIONS.map((s, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => sendMessage(s.prompt)}
+                      className="flex flex-col justify-between text-left p-4 rounded-2xl border border-[#222222] bg-[#141414] hover:bg-[#1b1b1b] hover:border-[#333333] transition-all group cursor-pointer"
+                    >
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-xs font-semibold text-neutral-200 group-hover:text-white transition-colors flex items-center gap-2">
+                          <s.icon className="h-4 w-4 text-indigo-400 shrink-0" />
+                          {s.title}
                         </span>
+                        <ArrowRight className="h-3.5 w-3.5 text-neutral-600 group-hover:text-neutral-300 transition-transform group-hover:translate-x-0.5" />
                       </div>
+                      <p className="text-xs text-neutral-500 leading-relaxed">{s.desc}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {messages.map((m) => {
+              const isUser = m.role === 'user';
+              const msgTools = m.metadata?.tools_used || [];
+              const cleanContent = m.content.replace(
+                /[\p{Extended_Pictographic}\u{1F300}-\u{1FAFF}\uFE0F\u20E3]/gu,
+                ''
+              );
+
+              if (isUser) {
+                return (
+                  <div key={m.id} className="flex justify-end">
+                    <div className="max-w-[78%] rounded-3xl bg-[#212121] px-5 py-3 text-[14px] leading-relaxed text-[#ececec]">
+                      <p className="whitespace-pre-wrap font-normal">{cleanContent}</p>
                     </div>
-                  )}
-                </div>
-
-                {isUser && (
-                  <div className="h-7 w-7 shrink-0 rounded-lg bg-purple-600 flex items-center justify-center text-white text-xs font-bold mt-1 shadow-xs">
-                    {user?.full_name?.charAt(0) || 'U'}
                   </div>
-                )}
-              </div>
-            );
-          })}
+                );
+              }
 
-          {isSending && (
-            <div className="flex items-start gap-3 justify-start animate-in">
-              <div className="h-7 w-7 shrink-0 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 mt-1">
-                <Bot className="h-3.5 w-3.5" />
-              </div>
-              <div className="bg-[#121215] border border-[#22222a] rounded-2xl px-4 py-3 flex items-center gap-2.5 shadow-md">
-                <div className="flex gap-1 items-center">
-                  <span className="h-1.5 w-1.5 rounded-full bg-neutral-400 animate-pulse" />
-                  <span className="h-1.5 w-1.5 rounded-full bg-neutral-400 animate-pulse [animation-delay:0.2s]" />
-                  <span className="h-1.5 w-1.5 rounded-full bg-neutral-400 animate-pulse [animation-delay:0.4s]" />
+              return (
+                <div key={m.id} className="flex items-start gap-4">
+                  {/* Gemini / ChatGPT Circular Sparkle Avatar */}
+                  <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[#2a2a35] bg-[#14141c] text-indigo-400">
+                    <Sparkles className="h-3.5 w-3.5" />
+                  </div>
+
+                  {/* Open-Canvas Assistant Response (No Box Border!) */}
+                  <div className="min-w-0 flex-1 space-y-3">
+                    <div className="prose prose-invert max-w-none space-y-3">
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          h1: ({ children }) => (
+                            <h1 className="text-lg font-bold text-white pb-1 mb-2 mt-2 font-sora flex items-center gap-2">
+                              <Sparkles className="h-4 w-4 text-indigo-400 shrink-0" />
+                              <span>{children}</span>
+                            </h1>
+                          ),
+                          h2: ({ children }) => (
+                            <h2 className="text-base font-semibold text-white pb-1 mb-2 mt-5 font-sora flex items-center gap-2">
+                              <Target className="h-4 w-4 text-indigo-400 shrink-0" />
+                              <span>{children}</span>
+                            </h2>
+                          ),
+                          h3: ({ children }) => (
+                            <h3 className="text-sm font-semibold text-neutral-100 mt-4 mb-1.5 flex items-center gap-2">
+                              <Lightbulb className="h-3.5 w-3.5 text-indigo-400 shrink-0" />
+                              <span>{children}</span>
+                            </h3>
+                          ),
+                          h4: ({ children }) => (
+                            <h4 className="text-xs font-semibold uppercase tracking-wider text-neutral-300 mt-3 mb-1 flex items-center gap-1.5">
+                              <TrendingUp className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                              <span>{children}</span>
+                            </h4>
+                          ),
+                          p: ({ children }) => (
+                            <p className="text-[#e3e3e3] leading-7 my-2 text-[14px]">
+                              {children}
+                            </p>
+                          ),
+                          ul: ({ children }) => (
+                            <ul className="space-y-1.5 my-2.5 pl-5 list-disc text-[#dcdce0] marker:text-neutral-500">
+                              {children}
+                            </ul>
+                          ),
+                          ol: ({ children }) => (
+                            <ol className="space-y-2 my-2.5 pl-5 list-decimal text-[#dcdce0] marker:text-neutral-400">
+                              {children}
+                            </ol>
+                          ),
+                          li: ({ children }) => (
+                            <li className="text-[14px] leading-7">{children}</li>
+                          ),
+                          blockquote: ({ children }) => (
+                            <blockquote className="border-l-2 border-indigo-500/70 bg-[#141418] px-4 py-2.5 my-3 rounded-r-xl text-neutral-300 text-[13.5px]">
+                              {children}
+                            </blockquote>
+                          ),
+                          table: ({ children }) => (
+                            <div className="overflow-x-auto my-4 rounded-xl border border-[#262626]">
+                              <table className="min-w-full divide-y divide-[#262626] text-left text-xs">
+                                {children}
+                              </table>
+                            </div>
+                          ),
+                          thead: ({ children }) => (
+                            <thead className="bg-[#161616] text-neutral-200 font-semibold">{children}</thead>
+                          ),
+                          th: ({ children }) => (
+                            <th className="px-3.5 py-2.5 border-b border-[#262626]">{children}</th>
+                          ),
+                          td: ({ children }) => (
+                            <td className="px-3.5 py-2.5 border-t border-[#1e1e1e] text-neutral-300">{children}</td>
+                          ),
+                          code: ({ children, className }) => {
+                            const isBlock = className || (typeof children === 'string' && children.includes('\n'));
+                            if (isBlock) {
+                              return (
+                                <div className="my-3 rounded-xl border border-[#262626] bg-[#111113] overflow-hidden">
+                                  <div className="flex items-center justify-between px-3.5 py-1.5 bg-[#18181b] border-b border-[#242429] text-[11px] text-neutral-400 font-mono">
+                                    <span className="flex items-center gap-1.5">
+                                      <Code2 className="h-3 w-3 text-indigo-400" />
+                                      Blueprint
+                                    </span>
+                                  </div>
+                                  <pre className="p-3.5 text-xs text-neutral-200 font-mono overflow-x-auto">
+                                    <code>{children}</code>
+                                  </pre>
+                                </div>
+                              );
+                            }
+                            return (
+                              <code className="rounded-md bg-[#1c1c22] px-1.5 py-0.5 font-mono text-xs text-indigo-300">
+                                {children}
+                              </code>
+                            );
+                          },
+                          hr: () => <hr className="border-t border-[#1f1f1f] my-5" />,
+                          strong: ({ children }) => (
+                            <strong className="text-white font-semibold">{children}</strong>
+                          ),
+                        }}
+                      >
+                        {cleanContent}
+                      </ReactMarkdown>
+                    </div>
+
+                    {/* Subtle ChatGPT / Gemini Action Bar Under Response */}
+                    <div className="flex items-center gap-2 pt-1 not-prose">
+                      <button
+                        type="button"
+                        onClick={() => handleCopy(m.id, cleanContent)}
+                        className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium text-neutral-500 hover:bg-[#181818] hover:text-neutral-200 transition-colors cursor-pointer"
+                        title="Copy response"
+                      >
+                        {copiedId === m.id ? (
+                          <>
+                            <Check className="h-3.5 w-3.5 text-emerald-400" />
+                            <span className="text-emerald-400">Copied</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-3.5 w-3.5" />
+                            <span>Copy</span>
+                          </>
+                        )}
+                      </button>
+
+                      {msgTools.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setSourcesDrawerMessage(m)}
+                          className="inline-flex items-center gap-1.5 rounded-full border border-[#262626] bg-[#141414] px-3 py-1 text-xs font-medium text-neutral-400 hover:border-[#383838] hover:bg-[#1c1c1c] hover:text-white transition-colors cursor-pointer"
+                        >
+                          <Globe className="h-3 w-3 text-indigo-400" />
+                          <span>{msgTools.length} Sources</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <span className="text-xs text-neutral-400 font-medium">Thinking...</span>
+              );
+            })}
+
+            {isSending && (
+              <div className="flex items-start gap-4 animate-in">
+                <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[#2a2a35] bg-[#14141c] text-indigo-400">
+                  <Sparkles className="h-3.5 w-3.5 animate-spin" />
+                </div>
+                <div className="flex items-center gap-2 py-1.5">
+                  <span className="text-sm text-neutral-400 animate-pulse">Thinking...</span>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {error && (
-            <div className="rounded-xl border border-red-900/40 bg-red-950/20 p-3 text-xs text-red-300 flex items-center justify-between">
-              <span>{error}</span>
-              <button
-                type="button"
-                onClick={() => useStrategyStore.getState().fetchSessions()}
-                className="underline text-red-200 hover:text-white"
-              >
-                Retry
-              </button>
-            </div>
-          )}
+            {error && (
+              <div className="rounded-xl border border-red-900/40 bg-red-950/20 p-3 text-xs text-red-300 flex items-center justify-between">
+                <span>{error}</span>
+                <button
+                  type="button"
+                  onClick={() => useStrategyStore.getState().fetchSessions()}
+                  className="underline text-red-200 hover:text-white"
+                >
+                  Retry
+                </button>
+              </div>
+            )}
 
-          <div ref={messagesEndRef} />
+            <div ref={messagesEndRef} />
+          </div>
         </div>
 
-        {/* GitHub README / ChatGPT Style Multiline Markdown Input Box */}
-        <div className="pt-2 pb-4 shrink-0">
-          {/* Quick Tool Selector Pills */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-2 custom-scrollbar text-[11px]">
-            <span className="text-neutral-500 text-[10px] font-mono uppercase shrink-0 mr-1">Tools:</span>
-            <button
-              type="button"
-              onClick={() => setInputPrompt('Query CreatorIQ Database for top trending concepts in my niche')}
-              className="flex items-center gap-1 rounded-full border border-[#2a2a32] bg-[#141418] px-2.5 py-1 text-neutral-300 hover:bg-[#1f1f26] hover:text-white hover:border-[#3d3d4a] transition-all cursor-pointer shrink-0"
+        {/* ChatGPT / Gemini Bottom Capsule Composer (Never overlaps text, zero scrollbar clutter) */}
+        <div className="shrink-0 w-full bg-[#0a0a0a] px-4 pb-4 pt-1">
+          <div className="mx-auto w-full max-w-3xl">
+            <form
+              onSubmit={handleSend}
+              className="relative rounded-3xl border border-[#2e2e2e] bg-[#1b1b1b] px-4 pt-3 pb-2.5 shadow-[0_8px_30px_rgba(0,0,0,0.6)] focus-within:border-[#404040] transition-all"
             >
-              <Database className="h-3 w-3 text-emerald-400" />
-              <span>DB Radar</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setInputPrompt('Run ML Prophet trend forecast for 28-day growth curve on ')}
-              className="flex items-center gap-1 rounded-full border border-[#2a2a32] bg-[#141418] px-2.5 py-1 text-neutral-300 hover:bg-[#1f1f26] hover:text-white hover:border-[#3d3d4a] transition-all cursor-pointer shrink-0"
-            >
-              <BarChart3 className="h-3 w-3 text-indigo-400" />
-              <span>ML Forecast</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setInputPrompt('Show me top 3 trending videos in Fitness in India right now')}
-              className="flex items-center gap-1 rounded-full border border-[#2a2a32] bg-[#141418] px-2.5 py-1 text-neutral-300 hover:bg-[#1f1f26] hover:text-white hover:border-[#3d3d4a] transition-all cursor-pointer shrink-0"
-            >
-              <Flame className="h-3 w-3 text-amber-400" />
-              <span>YouTube Signals</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setInputPrompt('Design 3 irresistible first 3-second hook variations (Visual + Audio script) for ')}
-              className="flex items-center gap-1 rounded-full border border-[#2a2a32] bg-[#141418] px-2.5 py-1 text-neutral-300 hover:bg-[#1f1f26] hover:text-white hover:border-[#3d3d4a] transition-all cursor-pointer shrink-0"
-            >
-              <Zap className="h-3 w-3 text-purple-400" />
-              <span>Hook Architect</span>
-            </button>
-          </div>
+              <textarea
+                ref={textareaRef}
+                rows={1}
+                value={inputPrompt}
+                onChange={(e) => setInputPrompt(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Ask anything about video ideas, hooks, or trend forecasts..."
+                className="w-full resize-none bg-transparent px-1 py-0.5 text-sm text-white placeholder-neutral-500 focus:outline-none no-scrollbar font-normal leading-relaxed max-h-36 min-h-[28px]"
+              />
 
-          {/* The Markdown Input Box Capsule */}
-          <form
-            onSubmit={handleSend}
-            className="relative rounded-2xl border border-[#2c2c34] bg-[#16161a] p-2.5 shadow-2xl focus-within:border-indigo-500/60 focus-within:ring-1 focus-within:ring-indigo-500/40 transition-all"
-          >
-            {/* Multiline Growing Textarea */}
-            <textarea
-              ref={textareaRef}
-              rows={1}
-              value={inputPrompt}
-              onChange={(e) => setInputPrompt(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Ask about viral hooks, YouTube velocity, or run ML Prophet forecasting on any trend... (Enter to send, Shift+Enter for new line)"
-              className="w-full resize-none bg-transparent px-2.5 py-1 text-xs sm:text-sm text-white placeholder-neutral-500 focus:outline-none custom-scrollbar font-normal leading-relaxed max-h-44 min-h-[38px]"
-            />
+              {/* Integrated Bottom Action Row inside Capsule (ChatGPT / Gemini style) */}
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+                  <button
+                    type="button"
+                    onClick={() => setInputPrompt('Query CreatorIQ Database for top trending concepts in my niche')}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-[#2e2e2e] bg-[#242424] px-2.5 py-1 text-[11px] font-medium text-neutral-300 hover:bg-[#2e2e2e] hover:text-white transition-colors cursor-pointer shrink-0"
+                  >
+                    <Database className="h-3 w-3 text-emerald-400" />
+                    <span>DB Radar</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInputPrompt('Run ML trend forecast for 28-day growth curve on ')}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-[#2e2e2e] bg-[#242424] px-2.5 py-1 text-[11px] font-medium text-neutral-300 hover:bg-[#2e2e2e] hover:text-white transition-colors cursor-pointer shrink-0"
+                  >
+                    <BarChart3 className="h-3 w-3 text-indigo-400" />
+                    <span>ML Forecast</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInputPrompt('Show me top 3 trending videos in my niche in India right now')}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-[#2e2e2e] bg-[#242424] px-2.5 py-1 text-[11px] font-medium text-neutral-300 hover:bg-[#2e2e2e] hover:text-white transition-colors cursor-pointer shrink-0"
+                  >
+                    <Flame className="h-3 w-3 text-amber-400" />
+                    <span>YouTube Signals</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInputPrompt('Design 3 irresistible first 3-second hook variations (Visual + Audio script) for ')}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-[#2e2e2e] bg-[#242424] px-2.5 py-1 text-[11px] font-medium text-neutral-300 hover:bg-[#2e2e2e] hover:text-white transition-colors cursor-pointer shrink-0"
+                  >
+                    <Zap className="h-3 w-3 text-purple-400" />
+                    <span>Hook Architect</span>
+                  </button>
+                </div>
 
-            {/* Bottom Toolbar inside the Input Box */}
-            <div className="flex items-center justify-between pt-2 border-t border-[#23232b] mt-1 px-1">
-              <div className="flex items-center gap-2 text-[10px] text-neutral-500 font-mono">
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#1e1e24] border border-[#2a2a34] text-neutral-400">
-                  <Code2 className="h-2.5 w-2.5 text-indigo-400" />
-                  Markdown Supported
-                </span>
-                <span className="hidden sm:inline text-neutral-600">&bull;</span>
-                <span className="hidden sm:inline text-neutral-500">
-                  Shift + Return for new line
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2">
                 <button
                   type="submit"
                   disabled={!inputPrompt.trim() || isSending}
-                  className="flex h-7.5 w-7.5 items-center justify-center rounded-xl bg-indigo-600 text-white hover:bg-indigo-500 disabled:opacity-40 disabled:hover:bg-indigo-600 transition-all shadow-md cursor-pointer shrink-0"
-                  title="Send Message"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-black hover:bg-neutral-200 disabled:opacity-30 transition-all cursor-pointer shadow-xs"
+                  style={{ backgroundColor: '#ffffff', color: '#000000' }}
+                  title="Send message"
                 >
-                  <Send className="h-3.5 w-3.5" />
+                  <ArrowRight className="h-4 w-4 -rotate-90" style={{ color: '#000000' }} />
                 </button>
               </div>
-            </div>
-          </form>
+            </form>
+          </div>
         </div>
       </div>
 
@@ -659,8 +599,9 @@ export const StrategyPage: React.FC = () => {
                           </div>
                         </div>
                         {data.growth_recommendation && (
-                          <div className="p-2 rounded-lg bg-[#181824] border border-[#2a2a3e] text-[10px] text-indigo-200">
-                            💡 <strong>ML Recommendation:</strong> {data.growth_recommendation}
+                          <div className="flex items-start gap-1.5 p-2 rounded-lg bg-[#181824] border border-[#2a2a3e] text-[10px] text-indigo-200">
+                            <Lightbulb className="h-3.5 w-3.5 text-amber-400 shrink-0 mt-0.5" />
+                            <span><strong>ML Recommendation:</strong> {data.growth_recommendation}</span>
                           </div>
                         )}
                       </div>

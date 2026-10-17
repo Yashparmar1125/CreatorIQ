@@ -38,6 +38,18 @@ class Settings(BaseSettings):
     enable_youtube_collector: bool = True
     enable_serpapi_collector: bool = True
 
+    # Canonical Concept Pipeline Engine Thresholds (D-3 Lag & 3-Stage Gate)
+    lag_days: int = 3
+    search_max_results: int = 40
+    min_views: int = 500
+    min_subscribers: int = 100
+    min_duration_seconds: int = 60
+    min_description_chars: int = 50
+    semantic_score_threshold: float = 0.28
+    youtube_api_max_retries: int = 3
+    youtube_api_retry_backoff: float = 1.0
+    backfill_days: int = 30
+
     # Background collector interval (hours)
     collector_interval_hours: int = 4
 
@@ -47,7 +59,7 @@ class Settings(BaseSettings):
     openrouter_http_referer: str = ""
     openrouter_app_title: str = "CreatorIQ"
     llm_model: str = Field(
-        default="openai/gpt-4o-mini",
+        default="nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
         validation_alias=AliasChoices("MODEL_NAME", "LLM_MODEL"),
     )
     enable_trend_enrichment: bool = True

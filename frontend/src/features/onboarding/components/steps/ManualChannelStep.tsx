@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Youtube, Users, AtSign, Tv } from 'lucide-react';
+import { Youtube, Users, AtSign, Tv, Check } from 'lucide-react';
 import { OnboardingStepShell } from '../OnboardingStepShell';
 import { Input } from '../../../../components/ui/Input';
 import { cn } from '../../../../lib/utils';
@@ -16,11 +16,11 @@ interface ManualChannelStepProps {
 }
 
 const SUBSCRIBER_TIERS = [
-  { label: 'Just Starting (<1K)', value: 500, tier: 'small' },
-  { label: '1K - 10K', value: 5000, tier: 'small' },
-  { label: '10K - 100K', value: 50000, tier: 'medium' },
-  { label: '100K - 1M', value: 250000, tier: 'big' },
-  { label: '1M+', value: 1000000, tier: 'big' },
+  { label: '< 1K', sub: 'Starter', value: 500, tier: 'Small' },
+  { label: '1K – 10K', sub: 'Emerging', value: 5000, tier: 'Small' },
+  { label: '10K – 100K', sub: 'Growing', value: 50000, tier: 'Medium' },
+  { label: '100K – 1M', sub: 'Established', value: 250000, tier: 'Big' },
+  { label: '1M+', sub: 'Authority', value: 1000000, tier: 'Big' },
 ];
 
 export const ManualChannelStep: React.FC<ManualChannelStepProps> = ({
@@ -40,110 +40,133 @@ export const ManualChannelStep: React.FC<ManualChannelStepProps> = ({
 
   return (
     <OnboardingStepShell
-      title="Channel details"
-      description="Enter your channel information to calibrate AI trend relevance and view estimations."
+      badge="Step 1 of 4 • Channel"
+      title="Tell us about your channel"
+      description="Enter your channel details to calibrate baseline audience reach and channel tier weighting."
       onBack={onBack}
       onNext={onNext}
       nextDisabled={!isValid}
-      cardClassName="space-y-6 text-left"
+      cardClassName="space-y-4 text-left"
     >
-      <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {/* Channel Name */}
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-neutral-300">
-            Channel name <span className="text-red-400">*</span>
+          <label className="block text-xs font-semibold text-neutral-200">
+            Channel Name <span className="text-red-400">*</span>
           </label>
           <Input
             value={channelName}
             onChange={(e) => onChannelNameChange(e.target.value)}
             placeholder="e.g. Tech With Alex"
             icon={<Tv className="h-4 w-4 text-neutral-400" />}
+            className="h-10"
             autoFocus
           />
         </div>
 
         {/* Channel Handle */}
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-neutral-300">
-            Channel handle <span className="text-xs font-normal text-neutral-500">(optional)</span>
+          <label className="block text-xs font-semibold text-neutral-200">
+            YouTube Handle <span className="font-normal text-neutral-500">(optional)</span>
           </label>
           <Input
             value={channelHandle}
             onChange={(e) => {
-              const val = e.target.value.startsWith('@') ? e.target.value : `@${e.target.value}`;
-              onChannelHandleChange(e.target.value ? val : '');
+              const raw = e.target.value.trim();
+              const val = raw.startsWith('@') ? raw : `@${raw}`;
+              onChannelHandleChange(raw ? val : '');
             }}
             placeholder="@techwithalex"
             icon={<AtSign className="h-4 w-4 text-neutral-400" />}
+            className="h-10"
           />
         </div>
+      </div>
 
-        {/* Subscriber Tier Selection */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-semibold text-neutral-300">Subscriber audience</label>
-            <button
-              type="button"
-              onClick={() => setUseExactCount(!useExactCount)}
-              className="text-xs font-medium text-brand-400 hover:text-brand-300"
-            >
-              {useExactCount ? 'Choose from tiers' : 'Enter exact count'}
-            </button>
+      {/* Subscriber Tier Selection (5-Column Single Row) */}
+      <div className="space-y-2.5 pt-1">
+        <div className="flex items-center justify-between">
+          <label className="block text-xs font-semibold text-neutral-200">
+            Subscriber Audience Size
+          </label>
+          <button
+            type="button"
+            onClick={() => setUseExactCount(!useExactCount)}
+            className="text-xs font-medium text-brand-400 transition-colors hover:text-brand-300 cursor-pointer"
+          >
+            {useExactCount ? 'Choose from tiers' : 'Enter exact count'}
+          </button>
+        </div>
+
+        {!useExactCount ? (
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+            {SUBSCRIBER_TIERS.map((tier) => {
+              const isSelected = selectedTier?.value === tier.value;
+              return (
+                <button
+                  key={tier.label}
+                  type="button"
+                  onClick={() => onSubscriberCountChange(tier.value)}
+                  className={cn(
+                    'flex flex-col justify-between rounded-xl border p-3 text-left transition-all cursor-pointer',
+                    isSelected
+                      ? 'border-brand-500 bg-brand-950/40 text-white ring-1 ring-brand-500/40'
+                      : 'border-[#262626] bg-[#161616] text-neutral-300 hover:border-[#383838] hover:bg-[#1c1c1c]'
+                  )}
+                >
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="text-xs font-semibold text-white">{tier.label}</span>
+                    {isSelected && <Check className="h-3.5 w-3.5 shrink-0 text-brand-400" />}
+                  </div>
+                  <span className="mt-1.5 text-[10px] text-neutral-400">
+                    {tier.sub} · {tier.tier}
+                  </span>
+                </button>
+              );
+            })}
           </div>
-
-          {!useExactCount ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {SUBSCRIBER_TIERS.map((tier) => {
-                const isSelected = selectedTier?.value === tier.value;
-                return (
-                  <button
-                    key={tier.label}
-                    type="button"
-                    onClick={() => onSubscriberCountChange(tier.value)}
-                    className={cn(
-                      'rounded-xl border p-2.5 text-left text-xs font-medium transition-all cursor-pointer',
-                      isSelected
-                        ? 'border-brand-500 bg-brand-600/20 text-brand-300 ring-2 ring-brand-500/30 shadow-sm'
-                        : 'border-[#262626] bg-[#161616] text-neutral-300 hover:border-[#383838] hover:bg-[#1e1e1e]'
-                    )}
-                  >
-                    <div className={cn('font-semibold', isSelected ? 'text-white' : 'text-neutral-200')}>
-                      {tier.label}
-                    </div>
-                    <div className="text-[10px] text-neutral-400 capitalize mt-0.5">{tier.tier} tier</div>
-                  </button>
-                );
-              })}
-            </div>
-          ) : (
+        ) : (
+          <div className="max-w-xs">
             <Input
               type="number"
               value={subscriberCount || ''}
               onChange={(e) => onSubscriberCountChange(Math.max(0, parseInt(e.target.value, 10) || 0))}
               placeholder="e.g. 15400"
               icon={<Users className="h-4 w-4 text-neutral-400" />}
+              className="h-10"
             />
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
-      {/* Live Channel Preview Card */}
-      {channelName.trim() && (
-        <div className="flex items-center gap-3.5 rounded-xl border border-[#262626] bg-[#141414] p-3.5">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-red-600 to-red-700 text-white shadow-sm shadow-red-600/20">
-            <Youtube className="h-6 w-6" />
+      {/* Compact Live Channel Preview Card */}
+      <div className="flex items-center justify-between gap-4 rounded-xl border border-[#242424] bg-[#151515] px-4 py-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-red-600 to-red-700 text-white">
+            <Youtube className="h-4 w-4" />
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-white">{channelName}</p>
-            <p className="truncate text-xs text-neutral-400">
-              {channelHandle || `@${channelName.toLowerCase().replace(/\s+/g, '')}`} •{' '}
-              <span className="font-medium text-neutral-300">
-                {subscriberCount ? subscriberCount.toLocaleString() : '0'} subscribers
-              </span>
+          <div className="min-w-0">
+            <p className="truncate text-xs font-semibold text-white sm:text-sm">
+              {channelName.trim() || 'Your Channel Name'}
+            </p>
+            <p className="truncate text-[11px] text-neutral-400">
+              {channelHandle ||
+                (channelName.trim()
+                  ? `@${channelName.toLowerCase().replace(/\s+/g, '')}`
+                  : '@channelhandle')}{' '}
+              •{' '}
+              <span className="font-mono font-medium text-neutral-200">
+                {(subscriberCount || 0).toLocaleString()}
+              </span>{' '}
+              subscribers
             </p>
           </div>
         </div>
-      )}
+        <span className="hidden shrink-0 rounded border border-[#2a2a2a] bg-[#1c1c1c] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-neutral-400 sm:inline-block">
+          Preview
+        </span>
+      </div>
     </OnboardingStepShell>
   );
 };
+

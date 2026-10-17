@@ -291,6 +291,86 @@ class FeedService:
                 return True
         return False
 
+    async def attach_daily_signal_metrics(
+        self,
+        db: AsyncSession,
+        item: dict[str, Any],
+        *,
+        include_full_population: bool = False,
+    ) -> dict[str, Any]:
+        """Enriches a scored trend item with canonical ConceptDailySignal statistics & longitudinal history."""
+        from sqlalchemy import desc, select
+        from app.models.concept_models import ConceptDailySignal
+
+        cid = str(item.get("id") or "")
+        if not cid:
+            return item
+
+        sig_res = await db.execute(
+            select(ConceptDailySignal)
+            .where(
+                ConceptDailySignal.concept_id == cid,
+                ConceptDailySignal.population_size > 0,
+            )
+            .order_by(desc(ConceptDailySignal.video_date))
+            .limit(14)
+        )
+        signals = list(sig_res.scalars().all())
+        if not signals:
+            return item
+
+        latest = signals[0]
+        chronological = list(reversed(signals))
+
+        rr = round(float(latest.reach_ratio_median or 0.0), 4)
+        id_dens = round(float(latest.interaction_density_median or 0.0), 4)
+        sem_mean = round(float(latest.semantic_score_mean or 0.0), 4)
+        t_score = round(float(latest.trend_score_median or item.get("opportunity_score") or 50.0), 2)
+
+        item["reach_ratio_median"] = rr
+        item["interaction_density_median"] = id_dens
+        item["semantic_score_mean"] = sem_mean
+        item["trend_score_median"] = t_score
+        item["population_size"] = int(latest.population_size or 0)
+        item["small_channel_count"] = int(latest.small_channel_count or 0)
+        item["medium_channel_count"] = int(latest.medium_channel_count or 0)
+        item["big_channel_count"] = int(latest.big_channel_count or 0)
+        item["outlier_streak"] = int(latest.outlier_streak or 0)
+        item["top_outlier_video_id"] = latest.top_outlier_video_id
+        item["top_outlier_reach_ratio"] = latest.top_outlier_reach_ratio
+        item["top_outlier_channel_tier"] = latest.top_outlier_channel_tier
+        item["high_variance_flags"] = (latest.high_variance_flags or [])[:6]
+        item["filter_audit"] = latest.filter_audit or {}
+        item["timeseries_recent"] = [round(float(s.trend_score_median or 50.0), 2) for s in chronological]
+        item["signal_history"] = [
+            {
+                "video_date": s.video_date.isoformat(),
+                "trend_score_median": round(float(s.trend_score_median or 50.0), 2),
+                "reach_ratio_median": round(float(s.reach_ratio_median or 0.0), 4),
+                "interaction_density_median": round(float(s.interaction_density_median or 0.0), 4),
+                "population_size": int(s.population_size or 0),
+                "small_channel_count": int(s.small_channel_count or 0),
+                "medium_channel_count": int(s.medium_channel_count or 0),
+                "big_channel_count": int(s.big_channel_count or 0),
+                "outlier_streak": int(s.outlier_streak or 0),
+            }
+            for s in chronological
+        ]
+
+        if include_full_population:
+            pop = list(latest.population or [])
+            pop.sort(key=lambda v: float(v.get("trend_score") or 0.0), reverse=True)
+            item["population"] = pop[:12]
+        else:
+            pop = list(latest.population or [])
+            pop.sort(key=lambda v: float(v.get("trend_score") or 0.0), reverse=True)
+            item["population"] = pop[:4]
+
+        if latest.top_outlier_video_id and not item.get("video_url"):
+            item["video_url"] = f"https://www.youtube.com/watch?v={latest.top_outlier_video_id}"
+
+        return item
+
     async def _build_ranked_pool(
         self,
         db: AsyncSession,
@@ -298,7 +378,7 @@ class FeedService:
         *,
         strict: bool = True,
     ) -> list[dict[str, Any]]:
-        concepts = await self.concept_repo.list_active_concepts(db, max_age_days=7, limit=200)
+        concepts = await self.concept_repo.list_active_concepts(db, max_age_days=14, limit=200)
         user_niches = ctx.get("niches") or []
 
         # Outlier detection (μ + 2σ) across active pool
@@ -324,21 +404,26 @@ class FeedService:
                 continue
             item = self._score_concept(c, ctx, strict=strict, all_volumes=all_volumes)
             if item:
-                is_outlier = cid in outlier_ids
+                item = await self.attach_daily_signal_metrics(db, item, include_full_population=False)
+                is_outlier = cid in outlier_ids or int(item.get("outlier_streak") or 0) > 0
                 item["is_momentum_outlier"] = is_outlier
                 if is_outlier:
-                    item["opportunity_score"] = min(100.0, round(item["opportunity_score"] + 8.0, 2))
+                    item["opportunity_score"] = min(100.0, round(item["opportunity_score"] + 6.0, 2))
+                    item["tvs_score"] = item["opportunity_score"]
 
                 if is_vector_match:
-                    v_boost = vector_hits[cid] * 15.0
+                    v_boost = vector_hits[cid] * 12.0
                     item["opportunity_score"] = min(100.0, round(item["opportunity_score"] + v_boost, 2))
+                    item["tvs_score"] = item["opportunity_score"]
                     item["vector_similarity"] = round(vector_hits[cid], 3)
+                else:
+                    item["vector_similarity"] = round(float(item.get("semantic_score_mean") or item.get("niche_fit_score") or 0.78), 3)
                 scored.append(item)
 
         scored.sort(
             key=lambda x: (
-                x.get("is_youtube_video", False),
-                x["opportunity_score"] + (12.0 if x.get("is_youtube_video") else 0.0),
+                int(x.get("population_size") or 0) > 0,
+                x["opportunity_score"] + (6.0 if int(x.get("outlier_streak") or 0) > 0 else 0.0),
             ),
             reverse=True,
         )

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Save, Check, Plus, X } from 'lucide-react';
+import { Save, Check, Plus, X, Globe } from 'lucide-react';
 import { api } from '../../../lib/api';
 import { MaturityBadge, type ProfileMaturity } from '../../onboarding/components/MaturityBadge';
 import { PageHeader } from '../../../components/ui/PageHeader';
@@ -54,14 +54,14 @@ const PRESET_NICHES = [
 ];
 
 const COUNTRIES = [
-  { code: 'India', label: '🇮🇳 India' },
-  { code: 'United States', label: '🇺🇸 United States' },
-  { code: 'United Kingdom', label: '🇬🇧 United Kingdom' },
-  { code: 'Canada', label: '🇨🇦 Canada' },
-  { code: 'Australia', label: '🇦🇺 Australia' },
-  { code: 'Germany', label: '🇩🇪 Germany' },
-  { code: 'Japan', label: '🇯🇵 Japan' },
-  { code: 'Global', label: '🌐 Global' },
+  { code: 'India', label: 'India' },
+  { code: 'United States', label: 'United States' },
+  { code: 'United Kingdom', label: 'United Kingdom' },
+  { code: 'Canada', label: 'Canada' },
+  { code: 'Australia', label: 'Australia' },
+  { code: 'Germany', label: 'Germany' },
+  { code: 'Japan', label: 'Japan' },
+  { code: 'Global', label: 'Global' },
 ];
 
 const FORMAT_OPTIONS = [
@@ -169,7 +169,9 @@ export const SettingsPage: React.FC = () => {
 
       const updated = data.data as CreatorProfile;
       setProfile(updated);
-      setSuccess('Manual profile settings saved successfully! Your trends will update automatically.');
+      // Trigger trend feed re-scoring in background so new niches/country apply immediately
+      void api.post('/trends/refresh').catch(() => null);
+      setSuccess('Manual profile settings saved! Your personalized trend feed has been refreshed.');
     } catch (e: unknown) {
       const err = e as { response?: { data?: { error?: { message?: string }; detail?: { message?: string } } } };
       setError(
@@ -253,13 +255,13 @@ export const SettingsPage: React.FC = () => {
                       key={niche}
                       type="button"
                       onClick={() => toggleNiche(niche)}
-                      className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
+                      className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
                         isSelected
                           ? 'border-brand-500/50 bg-brand-950/40 text-brand-300 ring-1 ring-brand-500/30'
                           : 'border-[#262626] bg-[#161616] text-neutral-400 hover:bg-[#1e1e1e] hover:text-neutral-200'
                       }`}
                     >
-                      {isSelected ? '✓ ' : '+ '}
+                      {isSelected ? <Check className="h-3 w-3 text-brand-400" /> : <Plus className="h-3 w-3 text-neutral-500" />}
                       {niche}
                     </button>
                   );
@@ -325,7 +327,10 @@ export const SettingsPage: React.FC = () => {
                         : 'border-[#262626] bg-[#161616] text-neutral-400 hover:bg-[#1e1e1e] hover:text-neutral-200'
                     }`}
                   >
-                    <span>{c.label}</span>
+                    <span className="flex items-center gap-1.5">
+                      <Globe className="h-3.5 w-3.5 text-neutral-500" />
+                      <span>{c.label}</span>
+                    </span>
                     {selectedCountry === c.code && <Check className="h-3.5 w-3.5 text-brand-400" />}
                   </button>
                 ))}

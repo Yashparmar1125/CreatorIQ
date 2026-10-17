@@ -26,6 +26,7 @@ import {
   Bookmark,
   Check,
   Copy,
+  Flame,
 } from 'lucide-react';
 import {
   cleanTrendTitle,
@@ -40,6 +41,7 @@ const FORMAT_TABS = [
   { key: 'all' as const, label: 'All', Icon: Layers },
   { key: 'long_form' as const, label: 'Long-form', Icon: LayoutList },
   { key: 'shorts' as const, label: 'Shorts', Icon: Film },
+  { key: 'saved' as const, label: 'Saved', Icon: Bookmark },
 ];
 
 function formatSubs(n: number): string {
@@ -52,6 +54,7 @@ export const TrendsPage: React.FC = () => {
   const navigate = useNavigate();
   const {
     trends,
+    savedTrends,
     isLoading,
     isRefreshing,
     error,
@@ -111,9 +114,15 @@ export const TrendsPage: React.FC = () => {
   };
 
   const filteredTrends = useMemo(() => {
+    if (activeFormatFilter === 'saved') {
+      const fromFeed = trends.filter((t) => t.saved);
+      const seen = new Set(fromFeed.map((t) => t.id));
+      const extras = savedTrends.filter((t) => !seen.has(t.id));
+      return [...fromFeed, ...extras];
+    }
     if (activeFormatFilter === 'all') return trends;
     return trends.filter((t) => t.supported_formats?.includes(activeFormatFilter));
-  }, [trends, activeFormatFilter]);
+  }, [trends, savedTrends, activeFormatFilter]);
 
   return (
     <div className="space-y-6 animate-in text-[#ededed]">
@@ -355,6 +364,17 @@ export const TrendsPage: React.FC = () => {
                           {Math.round(trend.vector_similarity * 100)}% Vector Match
                         </Badge>
                       )}
+                      {(trend.outlier_streak && trend.outlier_streak > 0) ? (
+                        <Badge variant="warning" className="text-[10px]">
+                          <Flame className="h-3 w-3 text-amber-400" />
+                          {trend.outlier_streak}d Outlier Streak
+                        </Badge>
+                      ) : trend.is_momentum_outlier ? (
+                        <Badge variant="warning" className="text-[10px]">
+                          <Flame className="h-3 w-3 text-amber-400" />
+                          Breakout Spike
+                        </Badge>
+                      ) : null}
                     </div>
                     {trend.opportunity_score != null && (
                       <span className="shrink-0 rounded bg-[#1f1f1f] border border-[#2c2c2c] px-2 py-0.5 text-[10px] font-bold text-white">
@@ -442,8 +462,14 @@ export const TrendsPage: React.FC = () => {
                       <p className="font-medium text-neutral-200">{trend.velocity}</p>
                     </div>
                     <div>
-                      <p className="text-[11px] text-neutral-500">Reach</p>
-                      <p className="font-medium text-neutral-200">{trend.volume}</p>
+                      <p className="text-[11px] text-neutral-500">
+                        {trend.reach_ratio_median != null ? 'Reach Ratio' : 'Reach'}
+                      </p>
+                      <p className="font-medium text-neutral-200">
+                        {trend.reach_ratio_median != null
+                          ? `${Number(trend.reach_ratio_median).toFixed(2)}x (${trend.volume})`
+                          : trend.volume}
+                      </p>
                     </div>
                     <div>
                       <p className="text-[11px] text-neutral-500">Stability</p>

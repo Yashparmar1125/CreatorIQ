@@ -19,8 +19,8 @@ const variantClasses: Record<ButtonVariant, string> = {
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
-  sm: 'h-8 px-3 text-xs',
-  md: 'h-9 px-4 text-sm',
+  sm: 'h-8 px-3.5 text-xs',
+  md: 'h-9 px-4 text-xs sm:text-sm',
   lg: 'h-10 px-5 text-sm',
 };
 
@@ -30,7 +30,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       ref={ref}
       disabled={disabled}
       className={cn(
-        'inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-150 cursor-pointer',
+        'inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg font-medium transition-all duration-150 cursor-pointer',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400/30 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]',
         'disabled:pointer-events-none disabled:opacity-40',
         variantClasses[variant],

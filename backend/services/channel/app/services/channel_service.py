@@ -299,11 +299,25 @@ class ChannelService:
             from app.models.creator_profile_models import NicheSource
             profile.niche_source = NicheSource.onboarding
         if content_format is not None:
-            profile.content_format = content_format
+            from app.services.creator_context_pipeline import map_content_format
+            profile.content_format = map_content_format(content_format)
         if tone is not None:
             profile.tone = tone
         if target_country is not None:
+            from app.services.creator_context_pipeline import build_geo_weights
             profile.geo_target_country = target_country
+            weights, geo_src = build_geo_weights(target_country)
+            profile.audience_geo_weights = weights
+            profile.geo_source = geo_src
+
+        # Also sync to primary channel record if present
+        channel = await self.repo.get_primary_channel_by_user(db, user_id)
+        if channel:
+            if niches is not None:
+                channel.niches = niches
+            if content_format is not None:
+                from app.services.creator_context_pipeline import _content_format_enums
+                channel.content_formats = _content_format_enums(profile.content_format)
 
         await db.commit()
         await db.refresh(profile)

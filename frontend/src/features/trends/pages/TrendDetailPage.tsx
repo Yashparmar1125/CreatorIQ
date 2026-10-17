@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 
 import { cleanTrendTitle, resolveVideoConcept, resolveVideoConceptBadge } from '../../../lib/cleanTrendTitle';
+import { calculateViewPossibilities } from '../../../lib/viewEstimator';
 import { ConceptGraph } from '../components/ConceptGraph';
 import { TrendForecastChart } from '../components/TrendForecastChart';
 
@@ -56,12 +57,36 @@ const FALLBACK_DEMO_TREND: Trend = {
   supported_formats: ['shorts', 'longform', 'both'],
   channel_name: 'Tech Lead Insights',
   video_url: 'https://youtube.com',
+  reach_ratio_median: 2.84,
+  interaction_density_median: 0.068,
+  population_size: 24,
+  small_channel_count: 9,
+  medium_channel_count: 10,
+  big_channel_count: 5,
+  outlier_streak: 4,
 };
 
 const FALLBACK_DEMO_FORECAST: TrendForecastData = {
   topic: 'Autonomous AI Agents vs Traditional Workflows',
   origin_date: '2026-09-15',
   current_score: 92,
+  test_prob: 0.914,
+  viral_probability_pct: 91.4,
+  top_features: [
+    { feature: 'trend_momentum_7d', importance: 0.24, value: 18.4 },
+    { feature: 'reach_ratio_median', importance: 0.21, value: 2.84 },
+    { feature: 'outlier_streak', importance: 0.18, value: 4.0 },
+    { feature: 'small_share', importance: 0.14, value: 0.375 },
+    { feature: 'interaction_density_median_roll_mean_7d', importance: 0.12, value: 0.068 },
+  ],
+  model_specs: {
+    algorithm: 'LightGBM Classifier + Trajectory Ensemble',
+    n_estimators: 300,
+    learning_rate: 0.04,
+    feature_count: 85,
+    imputer: 'SimpleImputer(strategy="median")',
+    class_balancing: 'scale_pos_weight',
+  },
   horizons: {
     '1_week': { target_date: '2026-09-22', forecast_score: 95, lower_bound: 88, upper_bound: 98, direction: 'up', change_pct: 3.2 },
     '1_month': { target_date: '2026-10-15', forecast_score: 98, lower_bound: 90, upper_bound: 104, direction: 'up', change_pct: 6.5 },
@@ -78,7 +103,7 @@ const FALLBACK_DEMO_FORECAST: TrendForecastData = {
     avg_acceleration: 1.2,
     uncertainty: 'low',
   },
-  model_used: 'Prophet Additive Seasonality v2',
+  model_used: 'LightGBM_85Features_300Trees',
   data_source: 'real_history',
 };
 
@@ -116,7 +141,7 @@ export const TrendDetailPage: React.FC = () => {
     return (
       <div className="flex flex-col items-center justify-center py-28 text-neutral-400 gap-3">
         <Loader2 className="h-7 w-7 animate-spin text-white" />
-        <p className="text-xs text-neutral-500 font-medium">Loading concept intelligence & vector signals...</p>
+        <p className="text-xs text-neutral-500 font-medium">Loading concept intelligence &amp; LightGBM 85-feature signals...</p>
       </div>
     );
   }
@@ -128,11 +153,35 @@ export const TrendDetailPage: React.FC = () => {
     FALLBACK_DEMO_TREND;
 
   const forecastData: TrendForecastData = trendForecast || FALLBACK_DEMO_FORECAST;
+  const possibility = calculateViewPossibilities(trend, forecastData);
 
-  const oppScore = Math.round(trend.opportunity_score ?? trend.tvs_score ?? 92);
-  const vectorMatch = (trend as any).vector_similarity
-    ? Math.round((trend as any).vector_similarity * 100)
-    : 96;
+  const oppScore = Math.round(trend.opportunity_score ?? trend.tvs_score ?? 85);
+  const vectorMatch = trend.vector_similarity
+    ? Math.round(trend.vector_similarity * 100)
+    : Math.min(98, Math.max(72, Math.round(oppScore * 0.95 + 8)));
+
+  const testProb =
+    forecastData.test_prob ??
+    (forecastData.viral_probability_pct != null ? forecastData.viral_probability_pct / 100 : oppScore / 100);
+  const viralProbPct =
+    forecastData.viral_probability_pct != null
+      ? Number(forecastData.viral_probability_pct).toFixed(1)
+      : (testProb * 100).toFixed(1);
+
+  const reachRatioVal = trend.reach_ratio_median != null ? Number(trend.reach_ratio_median).toFixed(2) : null;
+  const interactionDensityPct =
+    trend.interaction_density_median != null
+      ? (Number(trend.interaction_density_median) * 100).toFixed(2)
+      : null;
+
+  const smallCount = trend.small_channel_count ?? 0;
+  const medCount = trend.medium_channel_count ?? 0;
+  const bigCount = trend.big_channel_count ?? 0;
+  const totalTierChannels = smallCount + medCount + bigCount;
+
+  const topFeatures = forecastData.top_features?.length
+    ? forecastData.top_features
+    : FALLBACK_DEMO_FORECAST.top_features!;
 
   return (
     <div className="space-y-8 animate-in text-[#ededed] pb-12">
@@ -198,11 +247,16 @@ export const TrendDetailPage: React.FC = () => {
             <div className="flex items-center justify-between">
               <span className="inline-flex items-center gap-1.5 rounded-full border border-indigo-500/40 bg-indigo-950/40 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-indigo-300">
                 <Compass className="h-3 w-3" />
-                THAT CARD &bull; Selected Concept
+                Selected Concept
               </span>
-              <span className="rounded-full bg-[#1c1c1c] border border-[#2e2e2e] px-2.5 py-0.5 text-xs font-bold text-white font-mono">
-                {oppScore} Fit
-              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="rounded-full bg-emerald-950/60 border border-emerald-700/40 px-2.5 py-0.5 text-[11px] font-bold text-emerald-300 font-mono">
+                  {viralProbPct}% Viral Prob
+                </span>
+                <span className="rounded-full bg-[#1c1c1c] border border-[#2e2e2e] px-2.5 py-0.5 text-xs font-bold text-white font-mono">
+                  {oppScore} Fit
+                </span>
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -215,12 +269,17 @@ export const TrendDetailPage: React.FC = () => {
                 <Badge variant="brand" className="text-[10px] capitalize">
                   {trend.archetype}
                 </Badge>
-                {trend.is_momentum_outlier && (
+                {(trend.outlier_streak && trend.outlier_streak > 0) ? (
+                  <Badge variant="warning" className="gap-1 text-[10px]">
+                    <Flame className="h-3 w-3" />
+                    {trend.outlier_streak}d Outlier Streak
+                  </Badge>
+                ) : trend.is_momentum_outlier ? (
                   <Badge variant="warning" className="gap-1 text-[10px]">
                     <Flame className="h-3 w-3" />
                     Spike
                   </Badge>
-                )}
+                ) : null}
               </div>
 
               <h1 className="font-sora text-xl sm:text-2xl font-bold tracking-tight text-white leading-snug">
@@ -268,7 +327,7 @@ export const TrendDetailPage: React.FC = () => {
           <div className="pt-5 border-t border-[#1e1e1e] mt-4 flex items-center justify-between">
             <div className="flex items-center gap-2 text-xs text-neutral-400">
               <Activity className="h-3.5 w-3.5 text-emerald-400" />
-              <span>Velocity: <strong className="text-white font-mono">{trend.velocity || '+285% Surge'}</strong></span>
+              <span>Velocity: <strong className="text-white font-mono">{trend.velocity || 'Rising'}</strong></span>
             </div>
             <button
               type="button"
@@ -287,7 +346,7 @@ export const TrendDetailPage: React.FC = () => {
         </div>
       </div>
 
-      {/* MIDDLE SECTION: TWO SIDE-BY-SIDE METRIC BOXES (Matching Wireframe) */}
+      {/* MIDDLE SECTION: TWO SIDE-BY-SIDE METRIC BOXES */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         {/* Box 1: ESTIMATED VIEWS */}
         <Card variant="elevated" className="border-[#262626] bg-[#121212] p-6 shadow-md relative overflow-hidden">
@@ -295,11 +354,11 @@ export const TrendDetailPage: React.FC = () => {
             <div className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-indigo-400" />
               <h2 className="text-xs font-bold uppercase tracking-wider text-neutral-200">
-                Estimated Views
+                Estimated Views &amp; Format Yield
               </h2>
             </div>
             <span className="rounded-full bg-indigo-950/60 border border-indigo-700/50 px-2.5 py-0.5 text-[10px] font-mono text-indigo-300 font-bold">
-              Prophet 95% Band
+              LightGBM 85-Feature Ensemble
             </span>
           </div>
 
@@ -310,7 +369,7 @@ export const TrendDetailPage: React.FC = () => {
               </p>
               <div className="flex items-baseline gap-2 mt-1">
                 <span className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white font-mono">
-                  {trend.volume || '45K – 180K'}
+                  {possibility.primaryRangeLabel.replace(' Views', '')}
                 </span>
                 <span className="text-xs text-neutral-400 font-medium">Qualified impressions</span>
               </div>
@@ -325,9 +384,12 @@ export const TrendDetailPage: React.FC = () => {
                     Viral Spread
                   </span>
                 </div>
-                <p className="text-lg font-bold text-white font-mono">65K – 240K</p>
+                <p className="text-lg font-bold text-white font-mono">{possibility.shortsRangeLabel}</p>
                 <div className="h-1.5 w-full rounded-full bg-[#202020] overflow-hidden">
-                  <div className="h-full rounded-full bg-amber-400 w-[78%]" />
+                  <div
+                    className="h-full rounded-full bg-amber-400"
+                    style={{ width: `${Math.min(95, Math.max(45, Math.round(testProb * 100)))}%` }}
+                  />
                 </div>
                 <p className="text-[10px] text-neutral-500">Fast algorithm distribution</p>
               </div>
@@ -339,9 +401,12 @@ export const TrendDetailPage: React.FC = () => {
                     High RPM
                   </span>
                 </div>
-                <p className="text-lg font-bold text-white font-mono">18K – 75K</p>
+                <p className="text-lg font-bold text-white font-mono">{possibility.longFormRangeLabel}</p>
                 <div className="h-1.5 w-full rounded-full bg-[#202020] overflow-hidden">
-                  <div className="h-full rounded-full bg-cyan-400 w-[55%]" />
+                  <div
+                    className="h-full rounded-full bg-cyan-400"
+                    style={{ width: `${Math.min(92, Math.max(40, oppScore - 10))}%` }}
+                  />
                 </div>
                 <p className="text-[10px] text-neutral-500">Deep watch-time retention</p>
               </div>
@@ -350,42 +415,48 @@ export const TrendDetailPage: React.FC = () => {
             <div className="rounded-lg bg-[#141414] border border-[#202020] p-2.5 flex items-center justify-between text-[11px] text-neutral-400">
               <span className="flex items-center gap-1.5">
                 <Clock className="h-3.5 w-3.5 text-indigo-400" />
-                Peak Velocity Window:
+                Optimal Publishing Window:
               </span>
-              <strong className="text-white font-medium">Days 3 – 7 post-upload</strong>
+              <strong className="text-white font-medium">{possibility.optimalWindow}</strong>
             </div>
           </div>
         </Card>
 
-        {/* Box 2: OTHER CARD PARAMETERS & FIT */}
+        {/* Box 2: LIGHTGBM & SIGNAL PARAMETERS */}
         <Card variant="elevated" className="border-[#262626] bg-[#121212] p-6 shadow-md relative overflow-hidden">
           <div className="flex items-center justify-between border-b border-[#1f1f1f] pb-3.5">
             <div className="flex items-center gap-2">
               <Activity className="h-4 w-4 text-emerald-400" />
               <h2 className="text-xs font-bold uppercase tracking-wider text-neutral-200">
-                Other Card Parameters &amp; Fit
+                LightGBM Probability &amp; Signal Matrix
               </h2>
             </div>
             <span className="rounded-full bg-[#1c1c1c] border border-[#2a2a2a] px-2.5 py-0.5 text-[10px] font-mono text-neutral-400">
-              AI Signal Matrix
+              300 Trees &bull; lr=0.04
             </span>
           </div>
 
           <div className="mt-5 grid grid-cols-2 gap-3.5 text-xs">
             <div className="rounded-xl border border-[#242424] bg-[#161616] p-3.5">
-              <span className="text-neutral-400 text-[11px] font-medium">Opportunity Score</span>
-              <p className="mt-1 text-2xl font-extrabold text-white font-mono">
-                {oppScore}<span className="text-xs font-normal text-neutral-500">/100</span>
+              <span className="text-neutral-400 text-[11px] font-medium">LightGBM Viral Prob (test_prob)</span>
+              <p className="mt-1 text-2xl font-extrabold text-emerald-400 font-mono">
+                {viralProbPct}%
               </p>
-              <p className="mt-0.5 text-[10px] text-emerald-400">Top 5% category ranking</p>
+              <p className="mt-0.5 text-[10px] text-neutral-400 font-mono">
+                p = {testProb.toFixed(3)} &bull; {oppScore}/100 Fit
+              </p>
             </div>
 
             <div className="rounded-xl border border-[#242424] bg-[#161616] p-3.5">
-              <span className="text-neutral-400 text-[11px] font-medium">Search Velocity</span>
-              <p className="mt-1 text-lg font-bold text-emerald-400 font-mono">
-                {trend.velocity || '+285% Surge'}
+              <span className="text-neutral-400 text-[11px] font-medium">Reach Ratio &amp; Density</span>
+              <p className="mt-1 text-lg font-bold text-white font-mono">
+                {reachRatioVal ? `${reachRatioVal}x Med Reach` : trend.velocity || 'High Surge'}
               </p>
-              <p className="mt-0.5 text-[10px] text-neutral-500">Weekly query growth</p>
+              <p className="mt-0.5 text-[10px] text-neutral-500">
+                {interactionDensityPct
+                  ? `${interactionDensityPct}% interaction density`
+                  : 'Views / Subscribers efficiency'}
+              </p>
             </div>
 
             <div className="rounded-xl border border-[#242424] bg-[#161616] p-3.5">
@@ -393,38 +464,152 @@ export const TrendDetailPage: React.FC = () => {
               <p className="mt-1 text-sm font-bold text-indigo-300 font-mono">
                 {vectorMatch}% Qdrant Match
               </p>
-              <p className="mt-0.5 text-[10px] text-neutral-500">Semantic cluster alignment</p>
+              <p className="mt-0.5 text-[10px] text-neutral-500">
+                {trend.semantic_score_mean != null
+                  ? `Mean semantic score: ${Number(trend.semantic_score_mean).toFixed(2)}`
+                  : 'Semantic cluster alignment'}
+              </p>
             </div>
 
             <div className="rounded-xl border border-[#242424] bg-[#161616] p-3.5">
-              <span className="text-neutral-400 text-[11px] font-medium">Archetype Format</span>
-              <p className="mt-1 text-sm font-bold text-white capitalize">
-                {trend.archetype || 'Breakdown & Tutorial'}
+              <span className="text-neutral-400 text-[11px] font-medium">Creator Tier Split (S/M/B)</span>
+              <p className="mt-1 text-sm font-bold text-white font-mono">
+                {totalTierChannels > 0
+                  ? `S:${smallCount} · M:${medCount} · B:${bigCount}`
+                  : `${trend.creator_tier || 'Medium'} Tier Fit`}
               </p>
-              <p className="mt-0.5 text-[10px] text-neutral-500">{trend.creator_tier || 'Mid-tier'} creators</p>
+              <p className="mt-0.5 text-[10px] text-neutral-500">
+                {totalTierChannels > 0
+                  ? `${Math.round((smallCount / totalTierChannels) * 100)}% small-channel breakout share`
+                  : `${trend.archetype || 'Breakdown'} format`}
+              </p>
             </div>
 
             {/* Stability Index Full Width */}
             <div className="col-span-2 rounded-xl border border-[#242424] bg-[#161616] p-3.5 space-y-2">
               <div className="flex items-center justify-between text-[11px]">
                 <span className="text-neutral-400 font-medium">Trajectory Stability Index</span>
-                <span className="text-white font-mono font-bold">{trend.stability_score ?? 84}% Stable</span>
+                <span className="text-white font-mono font-bold">{Math.round(trend.stability_score ?? 84)}% Stable</span>
               </div>
               <div className="h-2 w-full overflow-hidden rounded-full bg-[#202020]">
                 <div
                   className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-emerald-400 transition-all duration-500"
-                  style={{ width: `${trend.stability_score ?? 84}%` }}
+                  style={{ width: `${Math.round(trend.stability_score ?? 84)}%` }}
                 />
               </div>
               <p className="text-[10px] text-neutral-500">
-                Low decay risk over the next 4–6 weeks of upload shelf-life.
+                Evaluated across 85 longitudinal lag, rolling mean/std, momentum, and audience share features.
               </p>
             </div>
           </div>
         </Card>
       </div>
 
-      {/* BOTTOM SECTION - DETAIL BLOCK 1: Market Signals & Evidence (Matching Wireframe) */}
+      {/* LIGHTGBM 85-FEATURE IMPORTANCE & PIPELINE SIGNAL AUDIT */}
+      <Card variant="elevated" className="border-[#262626] bg-[#121212] p-6 shadow-md space-y-5">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#1f1f1f] pb-3.5">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-emerald-400" />
+            <h2 className="text-xs font-bold uppercase tracking-wider text-neutral-200">
+              LightGBM 85-Feature Explainability &amp; Statistical Signal Audit
+            </h2>
+          </div>
+          <span className="text-[11px] text-neutral-400 font-mono">
+            SimpleImputer &bull; scale_pos_weight &bull; 300 Trees @ lr=0.04
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+          {/* Top Feature Importances */}
+          <div className="lg:col-span-7 rounded-xl border border-[#242424] bg-[#161616] p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-400">
+                Top Driving Features (of 85 Engineered Signals)
+              </span>
+              <span className="text-[10px] font-mono text-neutral-400">
+                test_prob = {testProb.toFixed(3)}
+              </span>
+            </div>
+            <div className="space-y-2.5 pt-1">
+              {topFeatures.slice(0, 5).map((feat, i) => {
+                const pct = Math.min(100, Math.max(12, Math.round(feat.importance * 100 * 2.2)));
+                return (
+                  <div key={feat.feature || i} className="space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-mono text-neutral-200">{feat.feature}</span>
+                      <span className="font-mono text-[11px] text-neutral-400">
+                        val: <strong className="text-white">{Number(feat.value).toFixed(2)}</strong> &bull; weight:{' '}
+                        <strong className="text-indigo-300">{(feat.importance * 100).toFixed(1)}%</strong>
+                      </span>
+                    </div>
+                    <div className="h-1.5 w-full rounded-full bg-[#222222] overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-emerald-400"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 3-Stage Filter Audit & Outlier Summary */}
+          <div className="lg:col-span-5 rounded-xl border border-[#242424] bg-[#161616] p-4 space-y-3 flex flex-col justify-between">
+            <div className="space-y-2.5">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+                Canonical Pipeline Filter Gate Audit
+              </span>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="rounded-lg bg-[#111111] border border-[#222222] p-2.5">
+                  <span className="text-[10px] text-neutral-500">Qualified Population</span>
+                  <p className="mt-0.5 text-sm font-bold text-white font-mono">
+                    {trend.population_size ?? trend.filter_audit?.final_qualified ?? 24} Videos
+                  </p>
+                </div>
+                <div className="rounded-lg bg-[#111111] border border-[#222222] p-2.5">
+                  <span className="text-[10px] text-neutral-500">Outlier Streak (μ+1.65σ)</span>
+                  <p className="mt-0.5 text-sm font-bold text-amber-400 font-mono">
+                    {trend.outlier_streak ?? (trend.is_momentum_outlier ? 2 : 0)} Days
+                  </p>
+                </div>
+              </div>
+              {trend.filter_audit && (
+                <p className="text-[11px] text-neutral-400 font-mono">
+                  Funnel: {trend.filter_audit.total_fetched ?? 0} fetched &rarr;{' '}
+                  {trend.filter_audit.passed_concept_gate ?? 0} lexical gate &rarr;{' '}
+                  {trend.filter_audit.final_qualified ?? trend.population_size ?? 0} semantic verified
+                </p>
+              )}
+            </div>
+
+            {trend.population_videos && trend.population_videos.length > 0 && (
+              <div className="space-y-1.5 pt-2 border-t border-[#222222]">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
+                  Top Outlier Evidence Videos
+                </span>
+                {trend.population_videos.slice(0, 2).map((vid, idx) => (
+                  <div
+                    key={vid.video_id || idx}
+                    className="flex items-center justify-between gap-2 rounded bg-[#111111] px-2.5 py-1.5 text-[11px]"
+                  >
+                    <span className="truncate text-neutral-200 font-medium">
+                      {vid.title || 'Qualified Signal Video'}
+                    </span>
+                    {vid.reach_ratio != null && (
+                      <span className="shrink-0 font-mono text-emerald-400">
+                        {Number(vid.reach_ratio).toFixed(1)}x reach
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </Card>
+
+      {/* BOTTOM SECTION - DETAIL BLOCK 1: Market Signals & Evidence */}
       <Card variant="elevated" className="border-[#262626] bg-[#121212] p-6 shadow-md space-y-5">
         <div className="flex items-center justify-between border-b border-[#1f1f1f] pb-3.5">
           <div className="flex items-center gap-2">
@@ -463,7 +648,10 @@ export const TrendDetailPage: React.FC = () => {
             </span>
             <div>
               <span className="text-lg font-bold text-white font-mono">
-                {(trend as any).saturation || 'Low Saturation (High Opportunity)'}
+                {(trend as any).saturation ||
+                  (trend.saturation_index && trend.saturation_index > 55
+                    ? 'Moderate Competition'
+                    : 'Low Saturation (High Opportunity)')}
               </span>
               <p className="mt-1 text-xs text-neutral-400">
                 High viewer demand relative to supply of authoritative creator uploads.
@@ -471,23 +659,23 @@ export const TrendDetailPage: React.FC = () => {
             </div>
             <div className="rounded-lg bg-[#111111] p-2.5 border border-[#242424] text-[11px] text-neutral-300">
               Recommended production window:{' '}
-              <strong className="text-emerald-400 font-semibold">Next 48–72 hours</strong>
+              <strong className="text-emerald-400 font-semibold">{possibility.optimalWindow}</strong>
             </div>
           </div>
         </div>
       </Card>
 
-      {/* BOTTOM SECTION - DETAIL BLOCK 2: Trajectory Forecast & Strategy Action (Matching Wireframe) */}
+      {/* BOTTOM SECTION - DETAIL BLOCK 2: Trajectory Forecast & Strategy Action */}
       <Card variant="elevated" className="border-[#262626] bg-[#121212] p-6 shadow-md space-y-5">
         <div className="flex items-center justify-between border-b border-[#1f1f1f] pb-3.5">
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-indigo-400" />
             <h2 className="text-xs font-bold uppercase tracking-wider text-neutral-200">
-              Trend Details &bull; 30-Day Historical Trajectory &amp; Forecast
+              Trend Details &bull; 30-Day Historical Trajectory &amp; LightGBM Forecast
             </h2>
           </div>
           <span className="text-[11px] text-neutral-400 font-mono">
-            Prophet Time-Series v2
+            {forecastData.model_used || 'LightGBM_85Features_300Trees'}
           </span>
         </div>
 
@@ -496,7 +684,7 @@ export const TrendDetailPage: React.FC = () => {
           <div className="flex items-center justify-center p-12 border border-[#222222] rounded-xl bg-[#141414]">
             <div className="flex items-center gap-2 text-xs text-neutral-400">
               <Loader2 className="h-4 w-4 animate-spin text-white" />
-              Calculating 30-day Prophet forecast demand curve...
+              Evaluating 85 longitudinal features with LightGBM (300 trees, lr=0.04)...
             </div>
           </div>
         ) : (

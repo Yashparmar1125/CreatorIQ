@@ -1,6 +1,22 @@
 import { create } from 'zustand';
 import { api } from '../lib/api';
 
+export interface PopulationVideo {
+  video_id?: string;
+  title?: string;
+  channel_title?: string;
+  subscriber_count?: number;
+  view_count?: number;
+  like_count?: number;
+  comment_count?: number;
+  reach_ratio?: number;
+  interaction_density?: number;
+  semantic_score?: number;
+  is_outlier?: boolean;
+  published_at?: string;
+  url?: string;
+}
+
 export interface Trend {
   id: string;
   topic: string;
@@ -23,6 +39,7 @@ export interface Trend {
   key_indicator?: string;
   niche_fit_score?: number;
   geo_relevance?: number;
+  vector_similarity?: number;
   headline?: string;
   content_angle?: string;
   video_concept?: string;
@@ -38,6 +55,22 @@ export interface Trend {
   description?: string;
   creator_tier?: 'small' | 'medium' | 'big';
   is_momentum_outlier?: boolean;
+  // Teammate's canonical daily signal pipeline metrics
+  reach_ratio_median?: number;
+  interaction_density_median?: number;
+  population_size?: number;
+  small_channel_count?: number;
+  medium_channel_count?: number;
+  big_channel_count?: number;
+  outlier_streak?: number;
+  semantic_score_mean?: number;
+  population_videos?: PopulationVideo[];
+  filter_audit?: {
+    total_fetched?: number;
+    passed_concept_gate?: number;
+    passed_semantic_gate?: number;
+    final_qualified?: number;
+  };
 }
 
 export interface HorizonForecast {
@@ -56,10 +89,27 @@ export interface TrajectoryPoint {
   yhat_upper: number;
 }
 
+export interface LightGBMFeatureImportance {
+  feature: string;
+  importance: number;
+  value: number;
+}
+
 export interface TrendForecastData {
   topic: string;
   origin_date: string;
   current_score: number;
+  test_prob?: number;
+  viral_probability_pct?: number;
+  top_features?: LightGBMFeatureImportance[];
+  model_specs?: {
+    algorithm: string;
+    n_estimators: number;
+    learning_rate: number;
+    feature_count: number;
+    imputer: string;
+    class_balancing: string;
+  };
   horizons: {
     '1_week'?: HorizonForecast;
     '1_month'?: HorizonForecast;
@@ -109,9 +159,13 @@ export interface FeedHistoryEntry {
   is_current: boolean;
 }
 
-function applyFeedPayload(payload: Record<string, unknown>) {
+function applyFeedPayload(payload: Record<string, unknown>, savedIds?: Set<string>) {
+  const rawTrends = ((payload.trends as Trend[]) ?? []).map((t) => ({
+    ...t,
+    saved: savedIds ? savedIds.has(t.id) || Boolean(t.saved) : Boolean(t.saved),
+  }));
   return {
-    trends: (payload.trends as Trend[]) ?? [],
+    trends: rawTrends,
     channelContext: (payload.channel as ChannelContext) ?? null,
     geoContext: (payload.geo as GeoContext) ?? null,
     credits: (payload.credits as CreditsInfo) ?? null,
@@ -136,6 +190,7 @@ function extractError(err: unknown): string {
 
 interface TrendsState {
   trends: Trend[];
+  savedTrends: Trend[];
   isLoading: boolean;
   isRefreshing: boolean;
   isHistoryLoading: boolean;
@@ -151,7 +206,7 @@ interface TrendsState {
   isHistorical: boolean;
   isCurrentFeed: boolean;
   feedHistory: FeedHistoryEntry[];
-  activeFormatFilter: 'all' | 'long_form' | 'shorts';
+  activeFormatFilter: 'all' | 'long_form' | 'shorts' | 'saved';
   trendDetail: Trend | null;
   isDetailLoading: boolean;
   detailError: string | null;
@@ -159,6 +214,7 @@ interface TrendsState {
   isForecastLoading: boolean;
   forecastError: string | null;
   fetchTrends: (query?: string) => Promise<void>;
+  fetchSavedTrends: () => Promise<void>;
   refreshFeed: () => Promise<void>;
   fetchFeedHistory: () => Promise<void>;
   loadHistoricalFeed: (feedId: string) => Promise<void>;
@@ -167,11 +223,12 @@ interface TrendsState {
   fetchTrendForecast: (trendId: string) => Promise<void>;
   clearTrendDetail: () => void;
   toggleSaveTrend: (id: string) => Promise<void>;
-  setFormatFilter: (filter: 'all' | 'long_form' | 'shorts') => void;
+  setFormatFilter: (filter: 'all' | 'long_form' | 'shorts' | 'saved') => void;
 }
 
 export const useTrendsStore = create<TrendsState>((set, get) => ({
   trends: [],
+  savedTrends: [],
   isLoading: false,
   isRefreshing: false,
   isHistoryLoading: false,
@@ -195,7 +252,26 @@ export const useTrendsStore = create<TrendsState>((set, get) => ({
   isForecastLoading: false,
   forecastError: null,
 
-  setFormatFilter: (filter) => set({ activeFormatFilter: filter }),
+  setFormatFilter: (filter) => {
+    set({ activeFormatFilter: filter });
+    if (filter === 'saved') {
+      void get().fetchSavedTrends();
+    }
+  },
+
+  fetchSavedTrends: async () => {
+    try {
+      const { data } = await api.get('/trends/saved');
+      const savedList = ((data.data?.trends as Trend[]) ?? []).map((t) => ({ ...t, saved: true }));
+      const savedSet = new Set(savedList.map((t) => t.id));
+      set({
+        savedTrends: savedList,
+        trends: get().trends.map((t) => ({ ...t, saved: savedSet.has(t.id) || Boolean(t.saved) })),
+      });
+    } catch {
+      // ignore if unauthenticated or offline
+    }
+  },
 
   fetchTrends: async (query?: string) => {
     if (query) {
@@ -216,9 +292,22 @@ export const useTrendsStore = create<TrendsState>((set, get) => ({
     }
     try {
       const url = query ? `/trends?q=${encodeURIComponent(query.trim())}` : '/trends';
-      const { data } = await api.get(url);
-      const payload = data.data as Record<string, unknown>;
-      set({ ...applyFeedPayload(payload), emptyReason: (payload.empty_reason as string) ?? null, isLoading: false });
+      const [feedRes, savedRes] = await Promise.all([
+        api.get(url),
+        api.get('/trends/saved').catch(() => null),
+      ]);
+      const savedList = ((savedRes?.data?.data?.trends as Trend[]) ?? []).map((t) => ({
+        ...t,
+        saved: true,
+      }));
+      const savedIds = new Set(savedList.map((t) => t.id));
+      const payload = feedRes.data.data as Record<string, unknown>;
+      set({
+        ...applyFeedPayload(payload, savedIds),
+        savedTrends: savedList,
+        emptyReason: (payload.empty_reason as string) ?? null,
+        isLoading: false,
+      });
     } catch (err) {
       set({ error: extractError(err), isLoading: false });
     }
@@ -229,7 +318,8 @@ export const useTrendsStore = create<TrendsState>((set, get) => ({
     try {
       const { data } = await api.post('/trends/refresh');
       const payload = data.data as Record<string, unknown>;
-      set({ ...applyFeedPayload(payload), isRefreshing: false, isHistorical: false, isCurrentFeed: true });
+      const savedIds = new Set(get().savedTrends.map((t) => t.id));
+      set({ ...applyFeedPayload(payload, savedIds), isRefreshing: false, isHistorical: false, isCurrentFeed: true });
       get().fetchFeedHistory();
     } catch (err) {
       set({ error: extractError(err), isRefreshing: false });
@@ -251,7 +341,8 @@ export const useTrendsStore = create<TrendsState>((set, get) => ({
     try {
       const { data } = await api.get(`/trends/history/${feedId}`);
       const payload = data.data as Record<string, unknown>;
-      set({ ...applyFeedPayload(payload), isLoading: false });
+      const savedIds = new Set(get().savedTrends.map((t) => t.id));
+      set({ ...applyFeedPayload(payload, savedIds), isLoading: false });
     } catch (err) {
       set({ error: extractError(err), isLoading: false });
     }
@@ -265,7 +356,9 @@ export const useTrendsStore = create<TrendsState>((set, get) => ({
     set({ isDetailLoading: true, detailError: null, trendDetail: null });
     try {
       const { data } = await api.get(`/trends/${trendId}`);
-      set({ trendDetail: data.data as Trend, isDetailLoading: false });
+      const detail = data.data as Trend;
+      const isSaved = get().savedTrends.some((s) => s.id === trendId) || Boolean(detail.saved);
+      set({ trendDetail: { ...detail, saved: isSaved }, isDetailLoading: false });
     } catch (err) {
       set({ detailError: extractError(err), isDetailLoading: false });
     }
@@ -292,19 +385,26 @@ export const useTrendsStore = create<TrendsState>((set, get) => ({
     }),
 
   toggleSaveTrend: async (trendId: string) => {
-    const trend = get().trends.find((t) => t.id === trendId) ?? get().trendDetail;
+    const trend =
+      get().trends.find((t) => t.id === trendId) ??
+      get().savedTrends.find((t) => t.id === trendId) ??
+      get().trendDetail;
     if (!trend) return;
 
     const isSaving = !trend.saved;
+    const updatedTrend = { ...trend, saved: isSaving };
 
     set({
       trends: get().trends.map((t) => (t.id === trendId ? { ...t, saved: isSaving } : t)),
+      savedTrends: isSaving
+        ? [updatedTrend, ...get().savedTrends.filter((t) => t.id !== trendId)]
+        : get().savedTrends.filter((t) => t.id !== trendId),
       trendDetail: get().trendDetail?.id === trendId ? { ...get().trendDetail!, saved: isSaving } : get().trendDetail,
     });
 
     try {
       if (isSaving) {
-        await api.post(`/trends/${trendId}/save`, { trend_data: trend });
+        await api.post(`/trends/${trendId}/save`, { trend_data: updatedTrend });
       } else {
         await api.delete(`/trends/${trendId}/save`);
       }
@@ -312,6 +412,9 @@ export const useTrendsStore = create<TrendsState>((set, get) => ({
       console.error('Failed to toggle save:', err);
       set({
         trends: get().trends.map((t) => (t.id === trendId ? { ...t, saved: !isSaving } : t)),
+        savedTrends: !isSaving
+          ? [trend, ...get().savedTrends.filter((t) => t.id !== trendId)]
+          : get().savedTrends.filter((t) => t.id !== trendId),
         trendDetail:
           get().trendDetail?.id === trendId ? { ...get().trendDetail!, saved: !isSaving } : get().trendDetail,
       });

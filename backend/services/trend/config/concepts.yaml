@@ -1,0 +1,398 @@
+category: "Multi-Niche"
+concepts:
+  # ==========================================
+  # FITNESS NICHE (10000000-...)
+  # ==========================================
+  - id: "10000000-0000-0000-0000-000000000001"
+    name: "Diet & Nutrition Strategies"
+    category: "Fitness"
+    description: "Nutrition, meal plans, calorie surplus/deficit, and dieting strategies for body recomposition"
+    active: true
+    include_terms:
+      - "fitness diet"
+      - "gym nutrition"
+      - "meal prep fitness"
+      - "calorie deficit workout"
+    exclude_terms:
+      - "supplement review"
+      - "whey protein review"
+      - "pre workout review"
+
+  - id: "10000000-0000-0000-0000-000000000002"
+    name: "Muscle Hypertrophy Training"
+    category: "Fitness"
+    description: "Hypertrophy, science-based resistance training, weight lifting splits, and muscle building workouts"
+    active: true
+    include_terms:
+      - "muscle training"
+      - "hypertrophy workout"
+      - "weight lifting routine"
+      - "muscle growth exercises"
+    exclude_terms:
+      - "calisthenics bodyweight"
+      - "posing routine stage"
+      - "gym humor meme"
+
+  - id: "10000000-0000-0000-0000-000000000003"
+    name: "Calisthenics & Bodyweight Mastery"
+    category: "Fitness"
+    description: "Bodyweight training, gymnastics strength, muscle-ups, handstands, and pull-up progressions"
+    active: true
+    include_terms:
+      - "calisthenics"
+      - "bodyweight workout"
+      - "handstand pushups"
+      - "muscle up tutorial"
+    exclude_terms:
+      - "heavy barbell bench"
+      - "deadlift max attempt"
+      - "dumbbell curl hypertrophy"
+
+  - id: "10000000-0000-0000-0000-000000000004"
+    name: "Gym Entertainment & Challenges"
+    category: "Fitness"
+    description: "Gym humor, fitness challenges, PR reactions, and fitness creator entertainment"
+    active: true
+    include_terms:
+      - "gym entertainment"
+      - "gym humor"
+      - "fitness challenge"
+      - "gym meme workout"
+    exclude_terms:
+      - "form tutorial guide"
+      - "bench press technique"
+      - "exercise form analysis"
+
+  - id: "10000000-0000-0000-0000-000000000005"
+    name: "Time-Efficient Gym Routines"
+    category: "Fitness"
+    description: "Workout efficiency, busy schedule gym routines, rest interval optimization, and minimalist 30-min workouts"
+    active: true
+    include_terms:
+      - "gym time management"
+      - "efficient workout routine"
+      - "quick gym session"
+      - "30 minute workout"
+    exclude_terms:
+      - "2 hour workout vlog"
+      - "full day of eating"
+      - "gym equipment review"
+
+  - id: "10000000-0000-0000-0000-000000000006"
+    name: "Protein Intake Optimization"
+    category: "Fitness"
+    description: "Whey protein, daily protein targets, leucine thresholds, protein timing, and muscle recovery nutrition"
+    active: true
+    include_terms:
+      - "protein intake strategies"
+      - "daily protein requirement"
+      - "whey protein timing"
+      - "high protein meals"
+    exclude_terms:
+      - "pre workout supplement review"
+      - "fat loss cardio routine"
+      - "gym equipment review"
+
+  - id: "10000000-0000-0000-0000-000000000007"
+    name: "Classic Bodybuilding & Aesthetics"
+    category: "Fitness"
+    description: "Competitive bodybuilding, classic physique aesthetics, posing routines, muscle symmetry, and prep guides"
+    active: true
+    include_terms:
+      - "bodybuilding"
+      - "classic physique workout"
+      - "bodybuilding motivation"
+      - "stage prep fitness"
+    exclude_terms:
+      - "powerlifting meet max"
+      - "strongman log press"
+      - "gym humor meme"
+
+  - id: "10000000-0000-0000-0000-000000000008"
+    name: "Home Gym & Gear Reviews"
+    category: "Fitness"
+    description: "Gym equipment reviews, home gym builds, supplement breakdowns, and lifting gear comparisons"
+    active: true
+    include_terms:
+      - "gym review"
+      - "gym equipment review"
+      - "supplement review fitness"
+      - "lifting shoes review"
+    exclude_terms:
+      - "bench press form guide"
+      - "squat technique tutorial"
+      - "full workout vlog"
+
+  - id: "10000000-0000-0000-0000-000000000009"
+    name: "Biomechanics & Exercise Form"
+    category: "Fitness"
+    description: "Exercise form tutorials, bench press technique, squat biomechanics, and injury prevention"
+    active: true
+    include_terms:
+      - "how to do exercises"
+      - "bench press form tutorial"
+      - "squat exercise technique"
+      - "deadlift form guide"
+    exclude_terms:
+      - "gym meme funny"
+      - "lifting shoes review"
+      - "gym equipment tour"
+
+  - id: "10000000-0000-0000-0000-000000000010"
+    name: "Fitness Mindset & Transformation"
+    category: "Fitness"
+    description: "Fitness mindset, discipline, physical transformation guides, and long-term workout consistency"
+    active: true
+    include_terms:
+      - "how to improve yourself fitness"
+      - "fitness transformation mindset"
+      - "workout discipline guide"
+      - "self improvement gym"
+    exclude_terms:
+      - "financial independence passive income"
+      - "stock market investing"
+      - "coding programming tutorial"
+
+  # ==========================================
+  # TECH & AI NICHE (20000000-...)
+  # ==========================================
+  - id: "20000000-0000-0000-0000-000000000001"
+    name: "AI Coding Assistants & Agent Workflows"
+    category: "Tech"
+    description: "AI software engineering agents, autonomous coding workflows, Cursor/Claude/Gemini developer tools, and MCP servers"
+    active: true
+    include_terms:
+      - "ai coding agent"
+      - "ai developer workflow"
+      - "cursor ai tutorial"
+      - "llm coding assistant"
+    exclude_terms:
+      - "crypto trading bot"
+      - "nft minting"
+      - "gaming montage"
+
+  - id: "20000000-0000-0000-0000-000000000002"
+    name: "Local LLMs & Open-Source AI Hardware"
+    category: "Tech"
+    description: "Running open-weight LLMs locally, Ollama/vLLM benchmarks, GPU hardware builds, and private AI setups"
+    active: true
+    include_terms:
+      - "local llm guide"
+      - "run open source ai locally"
+      - "ollama benchmark"
+      - "home ai server build"
+    exclude_terms:
+      - "gaming pc fortnite"
+      - "smartphone camera test"
+
+  - id: "20000000-0000-0000-0000-000000000003"
+    name: "Next-Gen Consumer Hardware & Everyday Tech"
+    category: "Tech"
+    description: "Deep-dive smartphone, laptop, wearable, and desk setup reviews focused on real-world productivity"
+    active: true
+    include_terms:
+      - "tech review 2026"
+      - "flagship smartphone comparison"
+      - "productivity desk setup"
+      - "laptop review developer"
+    exclude_terms:
+      - "toy unboxing"
+      - "prank video"
+
+  - id: "20000000-0000-0000-0000-000000000004"
+    name: "Full-Stack System Design & Cloud Architecture"
+    category: "Tech"
+    description: "Scalable backend architecture, Kubernetes/Docker production patterns, vector databases, and distributed systems"
+    active: true
+    include_terms:
+      - "system design interview"
+      - "scalable backend architecture"
+      - "vector database production"
+      - "microservices tutorial"
+    exclude_terms:
+      - "no code dropshipping"
+      - "wordpress blog beginner"
+
+  # ==========================================
+  # FINANCE NICHE (30000000-...)
+  # ==========================================
+  - id: "30000000-0000-0000-0000-000000000001"
+    name: "Index Funds & Long-Term Wealth Building"
+    category: "Finance"
+    description: "Passive index fund investing, ETF portfolio allocation, compounding strategies, and retirement planning"
+    active: true
+    include_terms:
+      - "index fund investing"
+      - "etf portfolio strategy"
+      - "financial independence retire early"
+      - "long term stock investing"
+    exclude_terms:
+      - "meme coin pump"
+      - "forex signal group"
+      - "get rich quick"
+
+  - id: "30000000-0000-0000-0000-000000000002"
+    name: "Creator Economy & Solo AI Businesses"
+    category: "Finance"
+    description: "Monetizing digital products, one-person SaaS/agency models, YouTube creator business economics, and high-leverage income"
+    active: true
+    include_terms:
+      - "one person business"
+      - "creator economy monetization"
+      - "micro saas revenue"
+      - "digital product business"
+    exclude_terms:
+      - "survey app money"
+      - "mlm network marketing"
+
+  - id: "30000000-0000-0000-0000-000000000003"
+    name: "Personal Finance & Zero-Based Budgeting"
+    category: "Finance"
+    description: "Practical money management, high-yield savings, debt payoff systems, credit optimization, and cost-of-living breakdowns"
+    active: true
+    include_terms:
+      - "personal finance tips"
+      - "monthly budget breakdown"
+      - "how to save money fast"
+      - "credit card optimization"
+    exclude_terms:
+      - "luxury yacht tour"
+      - "casino gambling"
+
+  # ==========================================
+  # GAMING NICHE (40000000-...)
+  # ==========================================
+  - id: "40000000-0000-0000-0000-000000000001"
+    name: "Competitive Esports Meta & Aim Mechanics"
+    category: "Gaming"
+    description: "Tactical shooter meta analysis, pro esports breakdowns, aim training routines, and ranked climbing guides"
+    active: true
+    include_terms:
+      - "valorant pro analysis"
+      - "fps aim training guide"
+      - "esports meta breakdown"
+      - "ranked climbing guide gaming"
+    exclude_terms:
+      - "casino slots"
+      - "mobile ad game"
+
+  - id: "40000000-0000-0000-0000-000000000002"
+    name: "Open-World RPG Lore & Challenge Runs"
+    category: "Gaming"
+    description: "Hardcore gaming challenge runs, RPG lore video essays, boss design breakdowns, and speedrun world records"
+    active: true
+    include_terms:
+      - "gaming challenge run"
+      - "rpg lore explained"
+      - "speedrun world record history"
+      - "game design video essay"
+    exclude_terms:
+      - "unboxing controller"
+      - "tech stock news"
+
+  # ==========================================
+  # EDUCATION NICHE (50000000-...)
+  # ==========================================
+  - id: "50000000-0000-0000-0000-000000000001"
+    name: "Evidence-Based Study Systems & Deep Work"
+    category: "Education"
+    description: "Active recall, spaced repetition, cognitive learning science, exam preparation strategies, and deep focus systems"
+    active: true
+    include_terms:
+      - "active recall study method"
+      - "spaced repetition guide"
+      - "how to study effectively"
+      - "deep work productivity student"
+    exclude_terms:
+      - "college party vlog"
+      - "prank in classroom"
+
+  - id: "50000000-0000-0000-0000-000000000002"
+    name: "Visual Science & Engineering Explainers"
+    category: "Education"
+    description: "Interactive visual explanations of physics, mathematics, machine learning math, and engineering breakthroughs"
+    active: true
+    include_terms:
+      - "visual math explanation"
+      - "physics explained simply"
+      - "how engineering works"
+      - "neural network math visual"
+    exclude_terms:
+      - "astrologyhoroscope"
+      - "conspiracy theory"
+
+  # ==========================================
+  # ENTERTAINMENT NICHE (60000000-...)
+  # ==========================================
+  - id: "60000000-0000-0000-0000-000000000001"
+    name: "Cinematic Storytelling & Internet Culture Essays"
+    category: "Entertainment"
+    description: "High-retention documentary storytelling, internet phenomenon investigations, and pop culture video essays"
+    active: true
+    include_terms:
+      - "internet history documentary"
+      - "video essay storytelling"
+      - "pop culture breakdown"
+      - "rise and fall documentary"
+    exclude_terms:
+      - "raw unedited stream"
+      - "10 hour white noise"
+
+  - id: "60000000-0000-0000-0000-000000000002"
+    name: "High-Concept Creator Challenges"
+    category: "Entertainment"
+    description: "Fast-paced creator challenges, 24-hour survival experiments, and high-production collaborative entertainment"
+    active: true
+    include_terms:
+      - "creator challenge video"
+      - "survived 24 hours challenge"
+      - "extreme social experiment"
+      - "high production challenge"
+    exclude_terms:
+      - "asmr sleeping"
+      - "lecture recording"
+
+  # ==========================================
+  # COOKING & LIFESTYLE NICHE (70000000-... / 80000000-...)
+  # ==========================================
+  - id: "70000000-0000-0000-0000-000000000001"
+    name: "High-Protein Meal Prep & 15-Minute Recipes"
+    category: "Cooking"
+    description: "Macro-friendly weekly meal prep, budget high-protein recipes, air fryer hacks, and weeknight cooking"
+    active: true
+    include_terms:
+      - "high protein meal prep"
+      - "15 minute healthy recipe"
+      - "budget meal prep week"
+      - "macro friendly cooking"
+    exclude_terms:
+      - "mukbang extreme eating"
+      - "restaurant franchise news"
+
+  - id: "80000000-0000-0000-0000-000000000001"
+    name: "Budget Solo Travel & Cinematic Vlogs"
+    category: "Travel"
+    description: "Solo travel itineraries, hidden gem destinations, travel hacking on a budget, and cinematic country guides"
+    active: true
+    include_terms:
+      - "budget solo travel guide"
+      - "cinematic travel vlog"
+      - "hidden gems travel itinerary"
+      - "digital nomad city guide"
+    exclude_terms:
+      - "hotel commercial ad"
+      - "flight simulator game"
+
+  - id: "80000000-0000-0000-0000-000000000002"
+    name: "Dermatologist Skincare & Science-Backed Beauty"
+    category: "Beauty"
+    description: "Ingredient-focused skincare routines, retinoid/sunscreen science, minimalist grooming, and dermatologist breakdowns"
+    active: true
+    include_terms:
+      - "dermatologist skincare routine"
+      - "science backed skincare ingredients"
+      - "retinol barrier repair guide"
+      - "minimalist skincare routine"
+    exclude_terms:
+      - "Halloween SFX gore makeup"
+      - "sponsored haul unbox"

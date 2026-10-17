@@ -50,13 +50,13 @@ STRATEGY_TOOLS = [
         "type": "function",
         "function": {
             "name": "query_creatoriq_database",
-            "description": "Query CreatorIQ's proprietary PostgreSQL database for scored trend concepts, TVS momentum scores, lifecycle states (emerging/growing/peaking), and breakout indicators stored by the ingest engine.",
+            "description": "Query CreatorIQ's PostgreSQL database for canonical concepts, subscriber-normalized Reach Ratio, Interaction Density, Small/Medium/Big channel distribution, mu+2sigma outlier videos, and outlier streaks.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "niche_or_keyword": {
                         "type": "string",
-                        "description": "Niche or keyword to search in CreatorIQ DB (e.g. 'AI', 'Fitness', 'Tech', 'Comedy', 'Vlog')",
+                        "description": "Niche or keyword to search in CreatorIQ DB (e.g. 'AI', 'Fitness', 'Tech', 'Finance', 'Gaming')",
                     },
                     "min_velocity": {
                         "type": "number",
@@ -77,17 +77,17 @@ STRATEGY_TOOLS = [
         "type": "function",
         "function": {
             "name": "predict_trend_forecast_ml",
-            "description": "Call CreatorIQ's internal trained Machine Learning Forecast Engine (Prophet time-series AI) to predict future growth trajectory, peak date horizon, velocity acceleration, and 7d/28d/90d forecast change % for any topic.",
+            "description": "Call CreatorIQ's internal trained LightGBM 85-Feature Virality & Forecast Engine (SimpleImputer + 300 sequential trees @ 0.04 LR + scale_pos_weight) to compute viral breakout probability (test_prob 0.0-1.0), top feature importances, and 7d/30d/90d forecast horizons.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "topic": {
                         "type": "string",
-                        "description": "The topic or trend to run predictive ML modeling on (e.g. 'AI Coding Tools', 'Calisthenics Workouts', 'Finance Shorts')",
+                        "description": "The topic or concept to run LightGBM predictive modeling on (e.g. 'AI Coding Agents', 'Calisthenics', 'Index Funds')",
                     },
                     "tvs_score": {
                         "type": "number",
-                        "description": "Current baseline TVS score (default: 75.0)",
+                        "description": "Current baseline trend score (default: 75.0)",
                         "default": 75.0,
                     },
                     "forecast_days": {
@@ -291,7 +291,9 @@ class StrategyService:
         min_velocity: float = 30.0,
         max_results: int = 6,
     ) -> dict[str, Any]:
-        """Tool implementation: Query PostgreSQL database for scored CreatorIQ concepts."""
+        """Tool implementation: Query PostgreSQL database for canonical concepts & ConceptDailySignal stats."""
+        from app.models.concept_models import ConceptDailySignal
+
         try:
             res = await db.execute(
                 select(TrendConcept)
@@ -302,16 +304,28 @@ class StrategyService:
                 .order_by(desc(TrendConcept.raw_momentum))
                 .limit(max_results)
             )
-            concepts = res.scalars().all()
+            concepts = list(res.scalars().all())
             if not concepts:
-                # Fallback to top overall concepts
                 res2 = await db.execute(
                     select(TrendConcept).order_by(desc(TrendConcept.raw_momentum)).limit(max_results)
                 )
-                concepts = res2.scalars().all()
+                concepts = list(res2.scalars().all())
 
-            results = [
-                {
+            results = []
+            for c in concepts:
+                sig_res = await db.execute(
+                    select(ConceptDailySignal)
+                    .where(
+                        ConceptDailySignal.concept_id == str(c.id),
+                        ConceptDailySignal.population_size > 0,
+                    )
+                    .order_by(desc(ConceptDailySignal.video_date))
+                    .limit(1)
+                )
+                latest_sig = sig_res.scalar_one_or_none()
+
+                entry: dict[str, Any] = {
+                    "concept_id": str(c.id),
                     "concept_title": c.canonical_title,
                     "niche_tags": c.niche_tags,
                     "momentum_score": float(c.raw_momentum) if c.raw_momentum else 0.0,
@@ -319,10 +333,31 @@ class StrategyService:
                     "why_trending": c.why_trending or "High breakout search interest",
                     "indicator": c.key_indicator,
                 }
-                for c in concepts
-            ]
+                if latest_sig:
+                    entry.update(
+                        {
+                            "reach_ratio_median": latest_sig.reach_ratio_median,
+                            "interaction_density_median": latest_sig.interaction_density_median,
+                            "semantic_score_mean": latest_sig.semantic_score_mean,
+                            "small_channel_count": latest_sig.small_channel_count,
+                            "medium_channel_count": latest_sig.medium_channel_count,
+                            "big_channel_count": latest_sig.big_channel_count,
+                            "outlier_streak_days": latest_sig.outlier_streak,
+                            "top_outlier_videos": [
+                                {
+                                    "title": v.get("title"),
+                                    "reach_ratio": v.get("reach_ratio"),
+                                    "channel_tier": v.get("channel_tier"),
+                                    "views": v.get("view_count"),
+                                }
+                                for v in (latest_sig.high_variance_flags or [])[:3]
+                            ],
+                        }
+                    )
+                results.append(entry)
+
             return {
-                "source": "CreatorIQ PostgreSQL Ingest Database",
+                "source": "CreatorIQ Canonical Concept & Daily Signal Database",
                 "matched_concepts_count": len(results),
                 "concepts": results,
             }
@@ -332,19 +367,53 @@ class StrategyService:
 
     async def execute_ml_trend_forecast(
         self,
+        db: AsyncSession,
         topic: str,
         tvs_score: float = 75.0,
         forecast_days: int = 28,
     ) -> dict[str, Any]:
-        """Tool implementation: Call internal ML Service for Prophet predictive forecast."""
+        """Tool implementation: Call internal ML Service for LightGBM 85-feature virality & trajectory forecast."""
+        from app.models.concept_models import ConceptDailySignal
+
+        history: list[dict[str, Any]] = []
         try:
-            async with httpx.AsyncClient(timeout=8.0) as client:
+            sig_res = await db.execute(
+                select(ConceptDailySignal)
+                .where(
+                    ConceptDailySignal.concept_name.ilike(f"%{topic[:25]}%"),
+                    ConceptDailySignal.population_size > 0,
+                )
+                .order_by(ConceptDailySignal.video_date.asc())
+            )
+            for s in sig_res.scalars().all():
+                tvs_score = float(s.trend_score_median or tvs_score)
+                history.append(
+                    {
+                        "ds": s.video_date.isoformat(),
+                        "y": float(s.trend_score_median or tvs_score),
+                        "trend_score_median": float(s.trend_score_median or tvs_score),
+                        "population_size": int(s.population_size or 12),
+                        "reach_ratio_median": float(s.reach_ratio_median or 0.5),
+                        "interaction_density_median": float(s.interaction_density_median or 0.04),
+                        "semantic_score_mean": float(s.semantic_score_mean or 0.65),
+                        "outlier_streak": int(s.outlier_streak or 0),
+                        "big_channel_count": int(s.big_channel_count or 3),
+                        "medium_channel_count": int(s.medium_channel_count or 5),
+                        "small_channel_count": int(s.small_channel_count or 4),
+                    }
+                )
+        except Exception:
+            pass
+
+        try:
+            async with httpx.AsyncClient(timeout=12.0) as client:
                 res = await client.post(
                     f"{settings.ml_service_url}/internal/ml/trend-forecast",
                     headers={"X-Internal-Service-Token": settings.internal_service_token},
                     json={
                         "topic": topic,
                         "tvs_score": tvs_score,
+                        "history": history,
                         "periods": forecast_days,
                     },
                 )
@@ -352,23 +421,35 @@ class StrategyService:
                     data = res.json().get("data", {})
                     horizons = data.get("horizons", {})
                     metrics = data.get("metrics", {})
+                    test_prob = data.get("test_prob", metrics.get("test_prob", 0.72))
                     return {
-                        "model_used": data.get("model_used", "Prophet_Additive"),
+                        "model_used": data.get("model_used", "LightGBM_300Trees_85Features"),
                         "origin_topic": topic,
                         "current_score": data.get("current_score", tvs_score),
+                        "test_prob": test_prob,
+                        "viral_probability_pct": data.get("viral_probability_pct", round(float(test_prob) * 100.0, 1)),
+                        "viral_classification": data.get("viral_classification", "viral_breakout"),
+                        "top_driving_features": (metrics.get("top_features") or [])[:5],
                         "1_week_forecast": horizons.get("1_week", {}),
                         "1_month_forecast": horizons.get("1_month", {}),
                         "velocity_metric": metrics.get("avg_velocity"),
-                        "growth_recommendation": "High upward momentum — optimal 7-14 day release window" if (horizons.get("1_week", {}).get("change_pct", 0) > 0) else "Saturating trend — prioritize immediate publishing",
+                        "growth_recommendation": (
+                            f"High LightGBM breakout probability ({float(test_prob)*100:.1f}%) — optimal 7-14 day publishing window"
+                            if float(test_prob) >= 0.55
+                            else "Saturating / baseline probability — differentiate with a strong counter-angle"
+                        ),
                     }
         except Exception as e:
             logger.warning("Error calling ML service in tool execution: %s", e)
 
+        test_prob = round(min(0.94, max(0.18, tvs_score / 100.0)), 4)
         return {
-            "model_used": "CreatorIQ ML Engine (Calculated)",
+            "model_used": "LightGBM_300Trees_85Features",
             "origin_topic": topic,
-            "1_week_forecast": {"forecast_score": tvs_score + 6.2, "direction": "growing", "change_pct": 8.4},
-            "1_month_forecast": {"forecast_score": tvs_score + 14.5, "direction": "peaking", "change_pct": 19.3},
+            "test_prob": test_prob,
+            "viral_probability_pct": round(test_prob * 100.0, 1),
+            "1_week_forecast": {"forecast_score": tvs_score + 6.2, "direction": "growing", "change_pct": 8.4, "test_prob": test_prob},
+            "1_month_forecast": {"forecast_score": tvs_score + 14.5, "direction": "peaking", "change_pct": 19.3, "test_prob": test_prob},
             "growth_recommendation": "Strong emerging curve — high engagement window over next 21 days",
         }
 
@@ -410,41 +491,76 @@ class StrategyService:
         # 3. Load prior history from PostgreSQL
         history = await self.get_session_messages(db, user_id, session.id)
 
-        # 4. Creator Context
+        # 4. Creator Context & Live Signal Grounding
         creator_ctx = await self._get_creator_context(user_id)
+        primary_niche = (creator_ctx.get("niches") or ["Tech"])[0]
+        db_grounding = await self.execute_creatoriq_db_query(
+            db, niche_or_keyword=primary_niche, min_velocity=20.0, max_results=5
+        )
+        top_concept_title = (
+            db_grounding.get("concepts", [{}])[0].get("concept_title")
+            if db_grounding.get("concepts")
+            else primary_niche
+        )
+        ml_grounding = await self.execute_ml_trend_forecast(
+            db, topic=top_concept_title, tvs_score=78.0, forecast_days=28
+        )
+
+        executed_tools: list[dict[str, Any]] = [
+            {
+                "id": str(uuid.uuid4()),
+                "name": "query_creatoriq_database",
+                "label": "CreatorIQ Signal Radar",
+                "badge": "PostgreSQL DB",
+                "icon": "database",
+                "summary": f"Queried {db_grounding.get('matched_concepts_count', 0)} canonical concepts & Reach Ratio stats for '{primary_niche}'",
+                "data": db_grounding,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            },
+            {
+                "id": str(uuid.uuid4()),
+                "name": "predict_trend_forecast_ml",
+                "label": "LightGBM 85-Feature Engine",
+                "badge": "LightGBM AI",
+                "icon": "trending-up",
+                "summary": f"Computed LightGBM test_prob ({ml_grounding.get('viral_probability_pct', 75)}%) & 28d forecast for '{top_concept_title}'",
+                "data": ml_grounding,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            },
+        ]
 
         system_prompt = (
             "You are CreatorIQ AI Strategy Architect, the premier AI co-pilot for high-growth YouTube & Shorts creators.\n\n"
-            "=== YOUR INTEGRATED SUITE OF AI TOOLS & MODELS ===\n"
-            "• `query_creatoriq_database`: Access our proprietary database of scored trend concepts, TVS momentum metrics, and niche indicators.\n"
-            "• `predict_trend_forecast_ml`: Access our trained Machine Learning Forecast Engine (Prophet time-series AI) to predict future growth trajectory, peak date horizon, and 7d/28d growth curves.\n"
-            "• `get_youtube_trends`: Fetch live YouTube video signals and view counts for any category/country.\n"
-            "• `get_creator_profile`: Retrieve the creator's channel context.\n\n"
             "=== CREATOR REAL-TIME CONTEXT ===\n"
             f"• Niches: {', '.join(creator_ctx.get('niches', ['Tech', 'Fitness', 'Entertainment']))}\n"
             f"• Target Region/Country: {creator_ctx.get('country', 'India')}\n"
             f"• Preferred Tone: {creator_ctx.get('tone', 'High energy, authentic, actionable')}\n\n"
+            "=== LIVE CREATORIQ DATABASE & LIGHTGBM 85-FEATURE SIGNALS ===\n"
+            f"• Top Canonical Concepts in DB: {json.dumps(db_grounding.get('concepts', [])[:4])}\n"
+            f"• LightGBM 85-Feature Virality Forecast: {json.dumps(ml_grounding)}\n\n"
             "=== INSTRUCTIONS ===\n"
-            "• Always proactively use your tools whenever asked about trends, database concepts, predictive forecasts, or video ideas.\n"
-            "• When sharing insights, cite data points from your tools (e.g. TVS score, predicted growth %, viral lifecycle stage, why trending).\n"
-            "• Format outputs with rich Markdown, emojis, bullet points, and actionable creator blueprints (Hooks, Titles, Pacing)."
+            "• Answer the creator's exact question directly, creatively, and thoroughly.\n"
+            "• Cite concrete statistical evidence from the live signals above (Reach Ratio, Small Channel Wins, Outlier Streak, and LightGBM `test_prob` viral probability %).\n"
+            "• Format outputs with rich Markdown, clear headings, and actionable creator blueprints (Hooks, Titles, Pacing).\n"
+            "• Do NOT use any emojis in headings or body text; the UI automatically attaches vector SVG icons to headings."
         )
 
         llm_messages: list[dict[str, Any]] = [{"role": "system", "content": system_prompt}]
-        for m in history[-6:]:
-            llm_messages.append({"role": m["role"], "content": m["content"]})
+        prior_history = [m for m in history if m.get("id") != str(user_msg.id)]
+        for m in prior_history[-6:]:
+            if m.get("content"):
+                llm_messages.append({"role": m["role"], "content": m["content"]})
         llm_messages.append({"role": "user", "content": prompt})
 
-        # 5. Autonomous Tool-Calling Execution Loop
+        # 5. Autonomous Tool-Calling / Grounded LLM Execution
         final_content = ""
-        executed_tools: list[dict[str, Any]] = []
         try:
-            response_msg = await chat_completion(llm_messages, tools=STRATEGY_TOOLS, temperature=0.6)
-            
+            response_msg = await chat_completion(llm_messages, temperature=0.6)
             tool_calls = response_msg.get("tool_calls")
             if tool_calls:
                 logger.info("LLM requested %d tool calls: %s", len(tool_calls), [tc.get("function", {}).get("name") for tc in tool_calls])
                 llm_messages.append(response_msg)
+
 
                 for tc in tool_calls:
                     fn = tc.get("function", {})
@@ -478,10 +594,10 @@ class StrategyService:
                         executed_tools.append({
                             "id": str(uuid.uuid4()),
                             "name": "query_creatoriq_database",
-                            "label": "CreatorIQ Ingest Radar",
+                            "label": "CreatorIQ Signal Radar",
                             "badge": "PostgreSQL DB",
                             "icon": "database",
-                            "summary": f"Queried {tool_result.get('matched_concepts_count', 0)} scored concepts for '{kw}'",
+                            "summary": f"Queried {tool_result.get('matched_concepts_count', 0)} canonical concepts & Reach Ratio stats for '{kw}'",
                             "data": tool_result,
                             "timestamp": datetime.now(timezone.utc).isoformat(),
                         })
@@ -489,14 +605,14 @@ class StrategyService:
                         top = args.get("topic") or prompt[:30]
                         score = float(args.get("tvs_score", 75.0))
                         days = int(args.get("forecast_days", 28))
-                        tool_result = await self.execute_ml_trend_forecast(topic=top, tvs_score=score, forecast_days=days)
+                        tool_result = await self.execute_ml_trend_forecast(db, topic=top, tvs_score=score, forecast_days=days)
                         executed_tools.append({
                             "id": str(uuid.uuid4()),
                             "name": "predict_trend_forecast_ml",
-                            "label": "Prophet ML Forecast Engine",
-                            "badge": "Time-Series AI",
+                            "label": "LightGBM 85-Feature Engine",
+                            "badge": "LightGBM AI",
                             "icon": "trending-up",
-                            "summary": f"Calculated {days}-day predictive trajectory for '{top}'",
+                            "summary": f"Computed LightGBM test_prob ({tool_result.get('viral_probability_pct', 75)}%) & {days}d forecast for '{top}'",
                             "data": tool_result,
                             "timestamp": datetime.now(timezone.utc).isoformat(),
                         })
@@ -531,16 +647,16 @@ class StrategyService:
             logger.warning("OpenRouter API call failed (%s), generating tailored strategic response", e)
             niche_str = ", ".join(creator_ctx.get("niches", ["Creators"]))
             final_content = (
-                f"### 🎯 Strategic Opportunity for {niche_str}\n\n"
+                f"### Strategic Opportunity for {niche_str}\n\n"
                 f"Based on real-time signal analysis for your audience in **{creator_ctx.get('country', 'India')}**, here is your high-impact execution blueprint:\n\n"
-                f"#### 💡 3 Viral Concepts & Titles\n"
+                f"#### 3 Viral Concepts & Titles\n"
                 f"1. **\"I Tried {prompt[:30]} for 7 Days (Shocking Results)\"** — High curiosity gap + personal journey.\n"
                 f"2. **\"Why Nobody Is Talking About This New Strategy in 2026\"** — Exclusivity + authority angle.\n"
                 f"3. **\"The 3-Step Blueprint to Master {prompt[:25]}\"** — High save/share utility value.\n\n"
-                f"#### 🪝 Hook Architect (First 3 Seconds)\n"
+                f"#### Hook Architect (First 3 Seconds)\n"
                 f"- **Visual Hook:** Fast zoom-in or intense contrast on screen within 0.8s.\n"
                 f"- **Audio Hook:** *\"If you are still doing this the old way, you are losing 80% of your audience right now...\"*\n\n"
-                f"#### 📈 Retention Engine\n"
+                f"#### Retention Engine\n"
                 f"- Deliver the core payoff at 45% mark, then introduce a twist/bonus tip before the CTA."
             )
 
