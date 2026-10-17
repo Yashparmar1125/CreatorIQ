@@ -1,8 +1,11 @@
 import asyncio
+import logging
 import math
 import time
 import uuid
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 import httpx
 from fastapi import HTTPException, status
