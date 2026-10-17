@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useLocation, useSearchParams } from 'react-router';
+import { useLocation, useNavigate, useSearchParams } from 'react-router';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { useStrategyStore, type ChatMessage } from '../../../stores/useStrategyStore';
+import { useStrategyStore, type ChatMessage, type AgentStep, type AgentCard } from '../../../stores/useStrategyStore';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { Button } from '../../../components/ui/Button';
 import {
@@ -11,27 +11,35 @@ import {
   Zap,
   Copy,
   Check,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   ArrowRight,
   Database,
-  BarChart3,
   Flame,
   Code2,
   Globe,
   ExternalLink,
   X,
   Layers,
-  UserCheck,
   Lightbulb,
   Target,
   TrendingUp,
+  SlidersHorizontal,
 } from 'lucide-react';
 
 const SUGGESTIONS = [
   {
     icon: Sparkles,
-    title: '5 Viral Short Ideas',
-    desc: 'Generate high-CTR ideas matched with current Indian trends',
-    prompt: 'Give me 5 viral short video ideas tailored to my channel niche with high novelty.',
+    title: 'Top 3 Breakout Topics',
+    desc: 'Query verified momentum trends with high reach multipliers',
+    prompt: 'What are the top 3 breakout video topics in tech right now with high reach multipliers?',
+  },
+  {
+    icon: Flame,
+    title: 'Small Channel Outlier Radar',
+    desc: 'Find creators under 25K subs getting 5x–20x baseline views',
+    prompt: 'Show me recent small creator outlier videos that got over 5x their baseline views.',
   },
   {
     icon: Zap,
@@ -40,19 +48,170 @@ const SUGGESTIONS = [
     prompt: 'Design 3 irresistible first 3-second hook variations (Visual + Audio script) for my next video.',
   },
   {
-    icon: BarChart3,
-    title: 'ML Prophet Trend Forecast',
-    desc: 'Run 28-day predictive trajectory modeling on rising topics',
-    prompt: 'Run our ML trend forecast model to predict the 28-day growth curve and peak window for AI Coding Tools.',
-  },
-  {
-    icon: Database,
-    title: 'CreatorIQ DB Ingest Radar',
-    desc: 'Query proprietary scored concepts and momentum signals',
-    prompt: 'Query our CreatorIQ database for top scored breakout concepts in Tech and Entertainment.',
+    icon: Globe,
+    title: 'Live Web & Industry News',
+    desc: 'Search breaking news and viral controversies across the web',
+    prompt: 'Search the live web for breaking announcements and trending creator controversies this week.',
   },
 ];
 
+/* ── Inline Research Steps Accordion ─────────────────────────────────────── */
+const ResearchStepsAccordion: React.FC<{ steps: AgentStep[] }> = ({ steps }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  if (!steps || steps.length === 0) return null;
+
+  const runningStep = steps.find((s) => s.status === 'running');
+  const doneCount = steps.filter((s) => s.status === 'done').length;
+
+  return (
+    <div className="my-2 rounded-2xl border border-[#23232c] bg-[#121217] overflow-hidden text-xs">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between px-3.5 py-2 hover:bg-[#181820] transition-colors cursor-pointer text-left"
+      >
+        <div className="flex items-center gap-2 text-neutral-300">
+          {runningStep ? (
+            <div className="flex items-center gap-2 text-indigo-400">
+              <Sparkles className="h-3.5 w-3.5 animate-spin" />
+              <span className="font-medium">{runningStep.summary}</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-emerald-400 font-medium">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              <span>Researched {doneCount} live data {doneCount === 1 ? 'source' : 'sources'}</span>
+            </div>
+          )}
+        </div>
+        <div className="flex items-center gap-2 text-neutral-500">
+          <span className="text-[11px] font-mono">{steps.length} {steps.length === 1 ? 'step' : 'steps'}</span>
+          {isOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+        </div>
+      </button>
+
+      {isOpen && (
+        <div className="px-3.5 pb-3 pt-1 border-t border-[#1d1d24] space-y-2">
+          {steps.map((st, i) => (
+            <div key={i} className="flex items-start gap-2.5 text-[11px] text-neutral-400 pt-1">
+              <div className="mt-0.5 shrink-0">
+                {st.status === 'running' ? (
+                  <div className="h-3 w-3 rounded-full border border-indigo-400 border-t-transparent animate-spin" />
+                ) : (
+                  <Check className="h-3 w-3 text-emerald-400" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-semibold text-neutral-200">{st.label}</span>
+                  {st.duration_ms !== undefined && st.duration_ms > 0 && (
+                    <span className="text-[10px] font-mono text-neutral-500">{st.duration_ms}ms</span>
+                  )}
+                </div>
+                <p className="text-neutral-400 truncate">{st.summary}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* ── Interactive Cards List (Trends + Outlier Videos) ────────────────────── */
+const InteractiveCardsList: React.FC<{ cards: AgentCard[] }> = ({ cards }) => {
+  const navigate = useNavigate();
+  if (!cards || cards.length === 0) return null;
+
+  return (
+    <div className="my-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {cards.map((c, i) => {
+        if (c.card_type === 'trend') {
+          const t = c.payload;
+          return (
+            <div
+              key={i}
+              className="rounded-2xl border border-[#2b2b38] bg-[#13131b] p-3.5 flex flex-col justify-between space-y-3 hover:border-indigo-500/50 transition-all shadow-md"
+            >
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="rounded-full bg-indigo-500/20 border border-indigo-500/30 px-2 py-0.5 text-[10px] font-medium text-indigo-300">
+                    Trend Opportunity
+                  </span>
+                  {t.opportunity_score && (
+                    <span className="rounded-full bg-emerald-500/20 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-bold text-emerald-400">
+                      {Math.round(t.opportunity_score)} / 100
+                    </span>
+                  )}
+                </div>
+                <h4 className="text-xs font-bold text-white line-clamp-1">{t.topic}</h4>
+                {t.why_trending && (
+                  <p className="text-[11px] text-neutral-400 line-clamp-2 leading-relaxed">{t.why_trending}</p>
+                )}
+              </div>
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#1f1f28]">
+                {t.id && (
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/app/trends/${t.id}`)}
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-400 hover:text-indigo-300 cursor-pointer"
+                  >
+                    <span>View Detail</span>
+                    <ArrowRight className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        }
+
+        if (c.card_type === 'video') {
+          const v = c.payload;
+          return (
+            <div
+              key={i}
+              className="rounded-2xl border border-[#2b2b38] bg-[#13131b] p-3.5 flex flex-col justify-between space-y-3 hover:border-amber-500/50 transition-all shadow-md"
+            >
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="rounded-full bg-amber-500/20 border border-amber-500/30 px-2 py-0.5 text-[10px] font-medium text-amber-300">
+                    Outlier Video Proof
+                  </span>
+                  {v.reach_multiplier && (
+                    <span className="rounded-full bg-rose-500/20 border border-rose-500/30 px-2 py-0.5 text-[10px] font-bold text-rose-300">
+                      {v.reach_multiplier} Outlier
+                    </span>
+                  )}
+                </div>
+                <h4 className="text-xs font-bold text-white line-clamp-2">{v.title}</h4>
+                <div className="flex items-center gap-2 text-[10px] text-neutral-400 font-mono">
+                  <span>{v.channel}</span>
+                  {v.views !== undefined && <span>• {Number(v.views).toLocaleString()} views</span>}
+                </div>
+              </div>
+              {v.url && (
+                <div className="flex items-center justify-end pt-2 border-t border-[#1f1f28]">
+                  <a
+                    href={v.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-400 hover:text-amber-300"
+                  >
+                    <span>Watch on YouTube</span>
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
+              )}
+            </div>
+          );
+        }
+
+        return null;
+      })}
+    </div>
+  );
+};
+
+/* ── Main StrategyPage Component ─────────────────────────────────────────── */
 export const StrategyPage: React.FC = () => {
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -62,6 +221,8 @@ export const StrategyPage: React.FC = () => {
     isSending,
     isLoadingMessages,
     error,
+    activeConnectors,
+    toggleConnector,
     sendMessage,
     selectSession,
     fetchSessions,
@@ -71,6 +232,7 @@ export const StrategyPage: React.FC = () => {
   const [inputPrompt, setInputPrompt] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [sourcesDrawerMessage, setSourcesDrawerMessage] = useState<ChatMessage | null>(null);
+  const [showConnectorsMenu, setShowConnectorsMenu] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const initialTriggered = useRef(false);
@@ -161,7 +323,7 @@ export const StrategyPage: React.FC = () => {
     <div className="relative flex h-full w-full overflow-hidden bg-[#0a0a0a] animate-in">
       {/* Main Chat Workspace */}
       <div className="relative flex flex-1 flex-col h-full min-w-0">
-        {/* Subtle Floating Top-Right New Chat Action (Gemini / ChatGPT style) */}
+        {/* Subtle Floating Top-Right New Chat Action */}
         {messages.length > 0 && (
           <div className="pointer-events-none absolute top-3 right-4 z-10 flex items-center gap-2">
             <Button
@@ -176,7 +338,7 @@ export const StrategyPage: React.FC = () => {
           </div>
         )}
 
-        {/* Full-Width Scrollable Stream (Scrollbar hidden — pure ChatGPT / Gemini canvas) */}
+        {/* Full-Width Scrollable Stream */}
         <div className="flex-1 w-full overflow-y-auto no-scrollbar px-4 sm:px-6 pt-6 pb-8">
           <div className="mx-auto w-full max-w-3xl space-y-8">
             {messages.length === 0 && !isLoadingMessages && (
@@ -186,14 +348,14 @@ export const StrategyPage: React.FC = () => {
                     <Sparkles className="h-5 w-5" />
                   </div>
                   <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white font-sora">
-                    Hello, {user?.full_name?.split(' ')[0] || 'Creator'}
+                    CreatorIQ Copilot{user?.full_name ? `, ${user.full_name.split(' ')[0]}` : ''}
                   </h2>
                   <p className="text-sm text-neutral-400 leading-relaxed">
-                    How can I help you architect your next viral video today?
+                    Autonomous YouTube strategist powered by live concept radar, outlier detection, and multi-key LLM reasoning.
                   </p>
                 </div>
 
-                {/* Gemini / ChatGPT Suggestion Cards */}
+                {/* Suggestion Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-2xl">
                   {SUGGESTIONS.map((s, idx) => (
                     <button
@@ -218,6 +380,8 @@ export const StrategyPage: React.FC = () => {
 
             {messages.map((m) => {
               const isUser = m.role === 'user';
+              const steps = m.metadata?.steps || [];
+              const cards = m.metadata?.cards || [];
               const msgTools = m.metadata?.tools_used || [];
               const cleanContent = m.content.replace(
                 /[\p{Extended_Pictographic}\u{1F300}-\u{1FAFF}\uFE0F\u20E3]/gu,
@@ -236,133 +400,144 @@ export const StrategyPage: React.FC = () => {
 
               return (
                 <div key={m.id} className="flex items-start gap-4">
-                  {/* Gemini / ChatGPT Circular Sparkle Avatar */}
+                  {/* Avatar */}
                   <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[#2a2a35] bg-[#14141c] text-indigo-400">
                     <Sparkles className="h-3.5 w-3.5" />
                   </div>
 
-                  {/* Open-Canvas Assistant Response (No Box Border!) */}
+                  {/* Assistant Response Canvas */}
                   <div className="min-w-0 flex-1 space-y-3">
-                    <div className="prose prose-invert max-w-none space-y-3">
-                      <ReactMarkdown
-                        remarkPlugins={[remarkGfm]}
-                        components={{
-                          h1: ({ children }) => (
-                            <h1 className="text-lg font-bold text-white pb-1 mb-2 mt-2 font-sora flex items-center gap-2">
-                              <Sparkles className="h-4 w-4 text-indigo-400 shrink-0" />
-                              <span>{children}</span>
-                            </h1>
-                          ),
-                          h2: ({ children }) => (
-                            <h2 className="text-base font-semibold text-white pb-1 mb-2 mt-5 font-sora flex items-center gap-2">
-                              <Target className="h-4 w-4 text-indigo-400 shrink-0" />
-                              <span>{children}</span>
-                            </h2>
-                          ),
-                          h3: ({ children }) => (
-                            <h3 className="text-sm font-semibold text-neutral-100 mt-4 mb-1.5 flex items-center gap-2">
-                              <Lightbulb className="h-3.5 w-3.5 text-indigo-400 shrink-0" />
-                              <span>{children}</span>
-                            </h3>
-                          ),
-                          h4: ({ children }) => (
-                            <h4 className="text-xs font-semibold uppercase tracking-wider text-neutral-300 mt-3 mb-1 flex items-center gap-1.5">
-                              <TrendingUp className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
-                              <span>{children}</span>
-                            </h4>
-                          ),
-                          p: ({ children }) => (
-                            <p className="text-[#e3e3e3] leading-7 my-2 text-[14px]">
-                              {children}
-                            </p>
-                          ),
-                          ul: ({ children }) => (
-                            <ul className="space-y-1.5 my-2.5 pl-5 list-disc text-[#dcdce0] marker:text-neutral-500">
-                              {children}
-                            </ul>
-                          ),
-                          ol: ({ children }) => (
-                            <ol className="space-y-2 my-2.5 pl-5 list-decimal text-[#dcdce0] marker:text-neutral-400">
-                              {children}
-                            </ol>
-                          ),
-                          li: ({ children }) => (
-                            <li className="text-[14px] leading-7">{children}</li>
-                          ),
-                          blockquote: ({ children }) => (
-                            <blockquote className="border-l-2 border-indigo-500/70 bg-[#141418] px-4 py-2.5 my-3 rounded-r-xl text-neutral-300 text-[13.5px]">
-                              {children}
-                            </blockquote>
-                          ),
-                          table: ({ children }) => (
-                            <div className="overflow-x-auto my-4 rounded-xl border border-[#262626]">
-                              <table className="min-w-full divide-y divide-[#262626] text-left text-xs">
-                                {children}
-                              </table>
-                            </div>
-                          ),
-                          thead: ({ children }) => (
-                            <thead className="bg-[#161616] text-neutral-200 font-semibold">{children}</thead>
-                          ),
-                          th: ({ children }) => (
-                            <th className="px-3.5 py-2.5 border-b border-[#262626]">{children}</th>
-                          ),
-                          td: ({ children }) => (
-                            <td className="px-3.5 py-2.5 border-t border-[#1e1e1e] text-neutral-300">{children}</td>
-                          ),
-                          code: ({ children, className }) => {
-                            const isBlock = className || (typeof children === 'string' && children.includes('\n'));
-                            if (isBlock) {
-                              return (
-                                <div className="my-3 rounded-xl border border-[#262626] bg-[#111113] overflow-hidden">
-                                  <div className="flex items-center justify-between px-3.5 py-1.5 bg-[#18181b] border-b border-[#242429] text-[11px] text-neutral-400 font-mono">
-                                    <span className="flex items-center gap-1.5">
-                                      <Code2 className="h-3 w-3 text-indigo-400" />
-                                      Blueprint
-                                    </span>
-                                  </div>
-                                  <pre className="p-3.5 text-xs text-neutral-200 font-mono overflow-x-auto">
-                                    <code>{children}</code>
-                                  </pre>
-                                </div>
-                              );
-                            }
-                            return (
-                              <code className="rounded-md bg-[#1c1c22] px-1.5 py-0.5 font-mono text-xs text-indigo-300">
-                                {children}
-                              </code>
-                            );
-                          },
-                          hr: () => <hr className="border-t border-[#1f1f1f] my-5" />,
-                          strong: ({ children }) => (
-                            <strong className="text-white font-semibold">{children}</strong>
-                          ),
-                        }}
-                      >
-                        {cleanContent}
-                      </ReactMarkdown>
-                    </div>
+                    {/* Collapsible Research Steps Timeline */}
+                    {steps.length > 0 && <ResearchStepsAccordion steps={steps} />}
 
-                    {/* Subtle ChatGPT / Gemini Action Bar Under Response */}
+                    {/* Interactive Cards (e.g. Trends & Outlier Videos) */}
+                    {cards.length > 0 && <InteractiveCardsList cards={cards} />}
+
+                    {/* Markdown Content */}
+                    {cleanContent && (
+                      <div className="prose prose-invert max-w-none space-y-3">
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                          components={{
+                            h1: ({ children }) => (
+                              <h1 className="text-lg font-bold text-white pb-1 mb-2 mt-2 font-sora flex items-center gap-2">
+                                <Sparkles className="h-4 w-4 text-indigo-400 shrink-0" />
+                                <span>{children}</span>
+                              </h1>
+                            ),
+                            h2: ({ children }) => (
+                              <h2 className="text-base font-semibold text-white pb-1 mb-2 mt-5 font-sora flex items-center gap-2">
+                                <Target className="h-4 w-4 text-indigo-400 shrink-0" />
+                                <span>{children}</span>
+                              </h2>
+                            ),
+                            h3: ({ children }) => (
+                              <h3 className="text-sm font-semibold text-neutral-100 mt-4 mb-1.5 flex items-center gap-2">
+                                <Lightbulb className="h-3.5 w-3.5 text-indigo-400 shrink-0" />
+                                <span>{children}</span>
+                              </h3>
+                            ),
+                            h4: ({ children }) => (
+                              <h4 className="text-xs font-semibold uppercase tracking-wider text-neutral-300 mt-3 mb-1 flex items-center gap-1.5">
+                                <TrendingUp className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                                <span>{children}</span>
+                              </h4>
+                            ),
+                            p: ({ children }) => (
+                              <p className="text-[#e3e3e3] leading-7 my-2 text-[14px]">
+                                {children}
+                              </p>
+                            ),
+                            ul: ({ children }) => (
+                              <ul className="space-y-1.5 my-2.5 pl-5 list-disc text-[#dcdce0] marker:text-neutral-500">
+                                {children}
+                              </ul>
+                            ),
+                            ol: ({ children }) => (
+                              <ol className="space-y-2 my-2.5 pl-5 list-decimal text-[#dcdce0] marker:text-neutral-400">
+                                {children}
+                              </ol>
+                            ),
+                            li: ({ children }) => (
+                              <li className="text-[14px] leading-7">{children}</li>
+                            ),
+                            blockquote: ({ children }) => (
+                              <blockquote className="border-l-2 border-indigo-500/70 bg-[#141418] px-4 py-2.5 my-3 rounded-r-xl text-neutral-300 text-[13.5px]">
+                                {children}
+                              </blockquote>
+                            ),
+                            table: ({ children }) => (
+                              <div className="overflow-x-auto my-4 rounded-xl border border-[#262626]">
+                                <table className="min-w-full divide-y divide-[#262626] text-left text-xs">
+                                  {children}
+                                </table>
+                              </div>
+                            ),
+                            thead: ({ children }) => (
+                              <thead className="bg-[#161616] text-neutral-200 font-semibold">{children}</thead>
+                            ),
+                            th: ({ children }) => (
+                              <th className="px-3.5 py-2.5 border-b border-[#262626]">{children}</th>
+                            ),
+                            td: ({ children }) => (
+                              <td className="px-3.5 py-2.5 border-t border-[#1e1e1e] text-neutral-300">{children}</td>
+                            ),
+                            code: ({ children, className }) => {
+                              const isBlock = className || (typeof children === 'string' && children.includes('\n'));
+                              if (isBlock) {
+                                return (
+                                  <div className="my-3 rounded-xl border border-[#262626] bg-[#111113] overflow-hidden">
+                                    <div className="flex items-center justify-between px-3.5 py-1.5 bg-[#18181b] border-b border-[#242429] text-[11px] text-neutral-400 font-mono">
+                                      <span className="flex items-center gap-1.5">
+                                        <Code2 className="h-3 w-3 text-indigo-400" />
+                                        Blueprint
+                                      </span>
+                                    </div>
+                                    <pre className="p-3.5 text-xs text-neutral-200 font-mono overflow-x-auto">
+                                      <code>{children}</code>
+                                    </pre>
+                                  </div>
+                                );
+                              }
+                              return (
+                                <code className="rounded-md bg-[#1c1c22] px-1.5 py-0.5 font-mono text-xs text-indigo-300">
+                                  {children}
+                                </code>
+                              );
+                            },
+                            hr: () => <hr className="border-t border-[#1f1f1f] my-5" />,
+                            strong: ({ children }) => (
+                              <strong className="text-white font-semibold">{children}</strong>
+                            ),
+                          }}
+                        >
+                          {cleanContent}
+                        </ReactMarkdown>
+                      </div>
+                    )}
+
+                    {/* Action Bar Under Response */}
                     <div className="flex items-center gap-2 pt-1 not-prose">
-                      <button
-                        type="button"
-                        onClick={() => handleCopy(m.id, cleanContent)}
-                        className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium text-neutral-500 hover:bg-[#181818] hover:text-neutral-200 transition-colors cursor-pointer"
-                        title="Copy response"
-                      >
-                        {copiedId === m.id ? (
-                          <>
-                            <Check className="h-3.5 w-3.5 text-emerald-400" />
-                            <span className="text-emerald-400">Copied</span>
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="h-3.5 w-3.5" />
-                            <span>Copy</span>
-                          </>
-                        )}
-                      </button>
+                      {cleanContent && (
+                        <button
+                          type="button"
+                          onClick={() => handleCopy(m.id, cleanContent)}
+                          className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium text-neutral-500 hover:bg-[#181818] hover:text-neutral-200 transition-colors cursor-pointer"
+                          title="Copy response"
+                        >
+                          {copiedId === m.id ? (
+                            <>
+                              <Check className="h-3.5 w-3.5 text-emerald-400" />
+                              <span className="text-emerald-400">Copied</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="h-3.5 w-3.5" />
+                              <span>Copy</span>
+                            </>
+                          )}
+                        </button>
+                      )}
 
                       {msgTools.length > 0 && (
                         <button
@@ -386,7 +561,7 @@ export const StrategyPage: React.FC = () => {
                   <Sparkles className="h-3.5 w-3.5 animate-spin" />
                 </div>
                 <div className="flex items-center gap-2 py-1.5">
-                  <span className="text-sm text-neutral-400 animate-pulse">Thinking...</span>
+                  <span className="text-sm text-neutral-400 animate-pulse">Running live market research...</span>
                 </div>
               </div>
             )}
@@ -408,9 +583,98 @@ export const StrategyPage: React.FC = () => {
           </div>
         </div>
 
-        {/* ChatGPT / Gemini Bottom Capsule Composer (Never overlaps text, zero scrollbar clutter) */}
+        {/* Bottom Capsule Composer */}
         <div className="shrink-0 w-full bg-[#0a0a0a] px-4 pb-4 pt-1">
-          <div className="mx-auto w-full max-w-3xl">
+          <div className="mx-auto w-full max-w-3xl relative">
+            {/* Connectors Popover */}
+            {showConnectorsMenu && (
+              <div className="absolute bottom-full mb-3 left-2 z-30 w-80 rounded-2xl border border-[#2e2e3a] bg-[#14141c] p-3.5 shadow-2xl space-y-3 animate-in fade-in zoom-in-95 duration-150">
+                <div className="flex items-center justify-between pb-1.5 border-b border-[#22222e]">
+                  <span className="text-xs font-bold text-white font-sora">Intelligence Connectors</span>
+                  <span className="text-[10px] font-mono text-neutral-400">Real-Time</span>
+                </div>
+
+                {/* YouTube Channel Status */}
+                <div className="rounded-xl border border-[#22222d] bg-[#0d0d12] p-2.5 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-neutral-200 flex items-center gap-1.5">
+                      <Flame className="h-3.5 w-3.5 text-rose-400" />
+                      YouTube Channel
+                    </span>
+                    <span className="text-[10px] rounded-full bg-emerald-500/20 text-emerald-400 px-2 py-0.5 font-mono font-medium">
+                      Connected
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-neutral-400">
+                    Channel: <strong className="text-white">Tech In Shorts</strong> (Optional connector)
+                  </p>
+                </div>
+
+                {/* Toggles */}
+                <div className="space-y-1 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => toggleConnector('trends')}
+                    className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-[#1c1c28] transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2 text-neutral-300">
+                      <Database className="h-3.5 w-3.5 text-emerald-400" />
+                      <span>CreatorIQ Concept Radar</span>
+                    </div>
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                        activeConnectors.includes('trends')
+                          ? 'bg-emerald-500/20 text-emerald-400'
+                          : 'bg-neutral-800 text-neutral-500'
+                      }`}
+                    >
+                      {activeConnectors.includes('trends') ? 'ON' : 'OFF'}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => toggleConnector('web')}
+                    className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-[#1c1c28] transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2 text-neutral-300">
+                      <Globe className="h-3.5 w-3.5 text-cyan-400" />
+                      <span>Tavily Live Web Search</span>
+                    </div>
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                        activeConnectors.includes('web')
+                          ? 'bg-cyan-500/20 text-cyan-400'
+                          : 'bg-neutral-800 text-neutral-500'
+                      }`}
+                    >
+                      {activeConnectors.includes('web') ? 'ON' : 'OFF'}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => toggleConnector('youtube')}
+                    className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-[#1c1c28] transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2 text-neutral-300">
+                      <Flame className="h-3.5 w-3.5 text-amber-400" />
+                      <span>Live YouTube Outliers</span>
+                    </div>
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                        activeConnectors.includes('youtube')
+                          ? 'bg-amber-500/20 text-amber-400'
+                          : 'bg-neutral-800 text-neutral-500'
+                      }`}
+                    >
+                      {activeConnectors.includes('youtube') ? 'ON' : 'OFF'}
+                    </span>
+                  </button>
+                </div>
+              </div>
+            )}
+
             <form
               onSubmit={handleSend}
               className="relative rounded-3xl border border-[#2e2e2e] bg-[#1b1b1b] px-4 pt-3 pb-2.5 shadow-[0_8px_30px_rgba(0,0,0,0.6)] focus-within:border-[#404040] transition-all"
@@ -425,9 +689,19 @@ export const StrategyPage: React.FC = () => {
                 className="w-full resize-none bg-transparent px-1 py-0.5 text-sm text-white placeholder-neutral-500 focus:outline-none no-scrollbar font-normal leading-relaxed max-h-36 min-h-[28px]"
               />
 
-              {/* Integrated Bottom Action Row inside Capsule (ChatGPT / Gemini style) */}
+              {/* Bottom Action Row inside Capsule */}
               <div className="mt-2 flex items-center justify-between gap-2">
                 <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+                  {/* Connectors '+' Pill Button */}
+                  <button
+                    type="button"
+                    onClick={() => setShowConnectorsMenu(!showConnectorsMenu)}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-indigo-500/40 bg-indigo-950/30 px-2.5 py-1 text-[11px] font-medium text-indigo-300 hover:bg-indigo-900/40 hover:text-white transition-colors cursor-pointer shrink-0"
+                  >
+                    <SlidersHorizontal className="h-3 w-3 text-indigo-400" />
+                    <span>Connectors ({activeConnectors.length})</span>
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => setInputPrompt('Query CreatorIQ Database for top trending concepts in my niche')}
@@ -438,23 +712,15 @@ export const StrategyPage: React.FC = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setInputPrompt('Run ML trend forecast for 28-day growth curve on ')}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-[#2e2e2e] bg-[#242424] px-2.5 py-1 text-[11px] font-medium text-neutral-300 hover:bg-[#2e2e2e] hover:text-white transition-colors cursor-pointer shrink-0"
-                  >
-                    <BarChart3 className="h-3 w-3 text-indigo-400" />
-                    <span>ML Forecast</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setInputPrompt('Show me top 3 trending videos in my niche in India right now')}
+                    onClick={() => setInputPrompt('Show me recent small creator outlier videos with 5x baseline views')}
                     className="inline-flex items-center gap-1.5 rounded-full border border-[#2e2e2e] bg-[#242424] px-2.5 py-1 text-[11px] font-medium text-neutral-300 hover:bg-[#2e2e2e] hover:text-white transition-colors cursor-pointer shrink-0"
                   >
                     <Flame className="h-3 w-3 text-amber-400" />
-                    <span>YouTube Signals</span>
+                    <span>Outliers</span>
                   </button>
                   <button
                     type="button"
-                    onClick={() => setInputPrompt('Design 3 irresistible first 3-second hook variations (Visual + Audio script) for ')}
+                    onClick={() => setInputPrompt('Design 3 high-retention 3-second hook variations for ')}
                     className="inline-flex items-center gap-1.5 rounded-full border border-[#2e2e2e] bg-[#242424] px-2.5 py-1 text-[11px] font-medium text-neutral-300 hover:bg-[#2e2e2e] hover:text-white transition-colors cursor-pointer shrink-0"
                   >
                     <Zap className="h-3 w-3 text-purple-400" />
@@ -477,10 +743,9 @@ export const StrategyPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Right Slide-Over Sources & Telemetry Drawer (ChatGPT / Gemini / Perplexity Style) */}
+      {/* Right Slide-Over Sources & Telemetry Drawer */}
       {sourcesDrawerMessage && (
         <aside className="w-80 sm:w-96 shrink-0 h-full border-l border-[#24242e] bg-[#0e0e12] flex flex-col z-20 shadow-2xl animate-in slide-in-from-right duration-200">
-          {/* Drawer Header */}
           <div className="flex items-center justify-between p-4 border-b border-[#20202a] bg-[#121217]">
             <div className="flex items-center gap-2">
               <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-600/20 text-indigo-400 border border-indigo-500/30">
@@ -488,7 +753,9 @@ export const StrategyPage: React.FC = () => {
               </div>
               <div>
                 <h3 className="text-xs font-bold text-white">Sources &amp; Telemetry</h3>
-                <p className="text-[10px] text-neutral-400 font-mono">Grounding Data &amp; Models</p>
+                <p className="text-[10px] text-neutral-400 font-mono">
+                  {sourcesDrawerMessage.metadata?.model || 'Free Multi-Model Router'}
+                </p>
               </div>
             </div>
             <button
@@ -501,7 +768,6 @@ export const StrategyPage: React.FC = () => {
             </button>
           </div>
 
-          {/* Drawer Scrollable Content */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar text-xs">
             <div className="flex items-center justify-between text-[11px] text-neutral-400 font-mono pb-2 border-b border-[#1c1c24]">
               <span>Signals Used:</span>
@@ -513,134 +779,22 @@ export const StrategyPage: React.FC = () => {
                 No external tool calls recorded for this message.
               </div>
             ) : (
-              toolsUsed.map((tool: any, idx: number) => {
-                const data = tool.data || {};
-                const name = tool.name;
-
-                return (
-                  <div
-                    key={idx}
-                    className="rounded-xl border border-[#22222c] bg-[#14141a] p-3.5 space-y-2.5 shadow-sm"
-                  >
-                    {/* Tool Card Header */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        {name === 'get_youtube_trends' && <Flame className="h-4 w-4 text-amber-400" />}
-                        {name === 'predict_trend_forecast_ml' && <BarChart3 className="h-4 w-4 text-indigo-400" />}
-                        {name === 'query_creatoriq_database' && <Database className="h-4 w-4 text-emerald-400" />}
-                        {name === 'get_creator_profile' && <UserCheck className="h-4 w-4 text-purple-400" />}
-                        <span className="font-bold text-white text-xs">{tool.label}</span>
-                      </div>
+              toolsUsed.map((tool: any, idx: number) => (
+                <div
+                  key={idx}
+                  className="rounded-xl border border-[#22222c] bg-[#14141a] p-3.5 space-y-2 shadow-sm"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-white text-xs">{tool.label || tool.tool}</span>
+                    {tool.duration_ms && (
                       <span className="rounded bg-[#1c1c26] border border-[#2c2c3a] px-1.5 py-0.5 text-[9px] font-mono text-neutral-300">
-                        {tool.badge}
+                        {tool.duration_ms}ms
                       </span>
-                    </div>
-
-                    <p className="text-[11px] text-neutral-400 leading-snug">{tool.summary}</p>
-
-                    {/* 1. YouTube Signals Breakdown */}
-                    {name === 'get_youtube_trends' && data.trending_videos_and_signals && (
-                      <div className="space-y-2 pt-1 border-t border-[#1f1f28]">
-                        <span className="text-[10px] font-mono uppercase text-neutral-500">Live Video Signals:</span>
-                        {data.trending_videos_and_signals.map((v: any, vIdx: number) => (
-                          <div
-                            key={vIdx}
-                            className="p-2 rounded-lg bg-[#0e0e12] border border-[#1e1e26] space-y-1 text-[11px]"
-                          >
-                            <div className="flex items-start justify-between gap-1.5">
-                              <span className="font-semibold text-neutral-200 line-clamp-1">
-                                {v.video_title || v.title}
-                              </span>
-                              {v.video_id && (
-                                <a
-                                  href={`https://youtube.com/watch?v=${v.video_id}`}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="text-neutral-500 hover:text-red-400 shrink-0"
-                                  title="Open on YouTube"
-                                >
-                                  <ExternalLink className="h-3 w-3" />
-                                </a>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-2 text-[10px] text-neutral-400 font-mono">
-                              {v.channel_name && <span>{v.channel_name}</span>}
-                              {v.views && <span>&bull; {Number(v.views).toLocaleString()} views</span>}
-                              {v.velocity_score && (
-                                <span className="text-amber-400 font-bold">&bull; Vel: {v.velocity_score}</span>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* 2. Prophet ML Forecast Breakdown */}
-                    {name === 'predict_trend_forecast_ml' && (
-                      <div className="space-y-2 pt-1 border-t border-[#1f1f28] text-[11px]">
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="p-2 rounded-lg bg-[#0e0e12] border border-[#1e1e26]">
-                            <span className="text-[9px] font-mono uppercase text-neutral-500 block">1-Week Target</span>
-                            <span className="font-bold text-emerald-400 text-xs">
-                              {data['1_week_forecast']?.forecast_score || '78.6'}
-                            </span>
-                            <span className="text-[9px] text-neutral-400 block">
-                              {data['1_week_forecast']?.direction || '+4.8% growth'}
-                            </span>
-                          </div>
-                          <div className="p-2 rounded-lg bg-[#0e0e12] border border-[#1e1e26]">
-                            <span className="text-[9px] font-mono uppercase text-neutral-500 block">28-Day Target</span>
-                            <span className="font-bold text-indigo-400 text-xs">
-                              {data['1_month_forecast']?.forecast_score || '70.0'}
-                            </span>
-                            <span className="text-[9px] text-neutral-400 block">
-                              {data['1_month_forecast']?.direction || 'Peak Window'}
-                            </span>
-                          </div>
-                        </div>
-                        {data.growth_recommendation && (
-                          <div className="flex items-start gap-1.5 p-2 rounded-lg bg-[#181824] border border-[#2a2a3e] text-[10px] text-indigo-200">
-                            <Lightbulb className="h-3.5 w-3.5 text-amber-400 shrink-0 mt-0.5" />
-                            <span><strong>ML Recommendation:</strong> {data.growth_recommendation}</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* 3. CreatorIQ DB Concepts Breakdown */}
-                    {name === 'query_creatoriq_database' && data.concepts && (
-                      <div className="space-y-1.5 pt-1 border-t border-[#1f1f28]">
-                        <span className="text-[10px] font-mono uppercase text-neutral-500">Scored Concepts:</span>
-                        {data.concepts.slice(0, 3).map((c: any, cIdx: number) => (
-                          <div
-                            key={cIdx}
-                            className="p-2 rounded-lg bg-[#0e0e12] border border-[#1e1e26] space-y-0.5 text-[11px]"
-                          >
-                            <div className="flex items-center justify-between">
-                              <span className="font-semibold text-neutral-200 truncate">{c.concept_title}</span>
-                              <span className="text-[10px] font-mono font-bold text-emerald-400 shrink-0 ml-1">
-                                {c.momentum_score ? `${Number(c.momentum_score).toFixed(1)} TVS` : 'Scored'}
-                              </span>
-                            </div>
-                            <div className="text-[10px] text-neutral-400">
-                              {c.why_trending || c.indicator}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* 4. Creator Profile Breakdown */}
-                    {name === 'get_creator_profile' && (
-                      <div className="p-2 rounded-lg bg-[#0e0e12] border border-[#1e1e26] text-[10px] space-y-1 font-mono text-neutral-300">
-                        <div>Niches: {data.niches?.join(', ') || 'Tech, Entertainment'}</div>
-                        <div>Target Region: {data.country || 'India'}</div>
-                        <div>Tone: {data.tone || 'High energy, authentic'}</div>
-                      </div>
                     )}
                   </div>
-                );
-              })
+                  <p className="text-[11px] text-neutral-400 leading-snug">{tool.summary}</p>
+                </div>
+              ))
             )}
           </div>
         </aside>
