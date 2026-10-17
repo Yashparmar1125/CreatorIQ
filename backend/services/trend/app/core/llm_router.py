@@ -83,21 +83,23 @@ class LLMRouter:
 
         # 1. Try Groq (Primary for tool calling and reasoning)
         if prefer_provider in ("groq", "any") and self.groq_keys:
-            for _ in range(len(self.groq_keys)):
-                key = self._get_active_groq_key()
-                if not key:
-                    break
-                try:
-                    res = await self._call_groq(key, messages, tools=tools, temperature=temperature)
-                    res["provider"] = "groq"
-                    res["model"] = "llama-3.3-70b-versatile"
-                    return res
-                except Exception as exc:
-                    errors.append(f"Groq error: {exc}")
-                    logger.warning("Groq call failed with key ending in %s: %s", key[-6:], exc)
-                    self._mark_cooldown(key, 45.0)
+            groq_models = ["openai/gpt-oss-20b", "qwen/qwen3.8-27b"]
+            for model_name in groq_models:
+                for _ in range(len(self.groq_keys)):
+                    key = self._get_active_groq_key()
+                    if not key:
+                        break
+                    try:
+                        res = await self._call_groq(key, messages, tools=tools, temperature=temperature, model=model_name)
+                        res["provider"] = "groq"
+                        res["model"] = model_name
+                        return res
+                    except Exception as exc:
+                        errors.append(f"Groq {model_name} error: {exc}")
+                        logger.warning("Groq call failed with key ending in %s on model %s: %s", key[-6:], model_name, exc)
+                        self._mark_cooldown(key, 30.0)
 
-        # 2. Try Gemini 2.0 Flash (if no tools or as fallback)
+        # 2. Try Gemini 3.8 Flash (if no tools or as fallback)
         if self.gemini_keys:
             for _ in range(len(self.gemini_keys)):
                 key = self._get_active_gemini_key()
@@ -106,12 +108,12 @@ class LLMRouter:
                 try:
                     res = await self._call_gemini(key, messages, tools=tools, temperature=temperature)
                     res["provider"] = "gemini"
-                    res["model"] = "gemini-2.0-flash"
+                    res["model"] = "gemini-3.8-flash"
                     return res
                 except Exception as exc:
                     errors.append(f"Gemini error: {exc}")
                     logger.warning("Gemini call failed with key ending in %s: %s", key[-6:], exc)
-                    self._mark_cooldown(key, 45.0)
+                    self._mark_cooldown(key, 30.0)
 
         # 3. Try OpenRouter fallback
         if self.openrouter_keys:
@@ -133,6 +135,7 @@ class LLMRouter:
         *,
         tools: list[dict[str, Any]] | None = None,
         temperature: float = 0.6,
+        model: str = "openai/gpt-oss-20b",
     ) -> dict[str, Any]:
         url = "https://api.groq.com/openai/v1/chat/completions"
         headers = {
@@ -141,7 +144,7 @@ class LLMRouter:
             "Content-Type": "application/json",
         }
         body: dict[str, Any] = {
-            "model": "llama-3.3-70b-versatile",
+            "model": model,
             "messages": messages,
             "temperature": temperature,
         }
@@ -170,7 +173,7 @@ class LLMRouter:
         tools: list[dict[str, Any]] | None = None,
         temperature: float = 0.6,
     ) -> dict[str, Any]:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key={api_key}"
         headers = {
             "Content-Type": "application/json",
             "User-Agent": "CreatorIQ/1.0",

@@ -157,7 +157,7 @@ class CopilotAgent:
         # 6. Autonomous Multi-Turn Agent Loop (Max 4 rounds)
         final_text = ""
         last_provider = "groq"
-        last_model = "openai/gpt-oss-120b"
+        last_model = "openai/gpt-oss-20b"
 
         for round_idx in range(4):
             t0 = time.perf_counter()
@@ -172,7 +172,7 @@ class CopilotAgent:
             tool_calls = response.get("tool_calls")
             content = (response.get("content") or "").strip()
             last_provider = response.get("provider", "groq")
-            last_model = response.get("model", "openai/gpt-oss-120b")
+            last_model = response.get("model", "openai/gpt-oss-20b")
 
             if content and (not tool_calls or len(executed_tools_metadata) >= 2):
                 final_text = content
