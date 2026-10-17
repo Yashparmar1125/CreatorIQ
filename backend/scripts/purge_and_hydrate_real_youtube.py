@@ -16,6 +16,7 @@ services_dir = backend_dir / "services"
 trend_dir = services_dir / "trend"
 
 sys.path.insert(0, str(trend_dir))
+sys.path.insert(0, "/app")
 
 from sqlalchemy import delete, select, text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
