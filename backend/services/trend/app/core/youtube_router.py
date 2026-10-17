@@ -50,27 +50,21 @@ class YouTubeKeyRouter:
 
     def _refresh_keys(self) -> None:
         raw_keys: list[str] = []
-        # Check explicit pool settings
-        if getattr(settings, "youtube_api_keys", ""):
-            raw_keys.extend([k.strip() for k in settings.youtube_api_keys.split(",") if k.strip()])
-        # Check individual keys
-        for attr in ["youtube_api_key_2", "youtube_api_key_3", "youtube_api_key"]:
-            val = getattr(settings, attr, "")
-            if val and val.strip() and val.strip() not in raw_keys:
-                raw_keys.append(val.strip())
+        # 1. Comma-separated list in env / settings (YOUTUBE_API_KEYS)
+        pool_env = os.environ.get("YOUTUBE_API_KEYS") or getattr(settings, "youtube_api_keys", "")
+        if pool_env:
+            raw_keys.extend([k.strip() for k in pool_env.split(",") if k.strip()])
 
-        # Hardcoded fallback list of provided user keys if env not populated yet
-        default_pool = [
-            "AIzaSyCv7CFlKxD4QKwVrFSaEs5noYdI9jdVRJM",
-            "AIzaSyBg9QvhZfJwvI8-aqeWevtm8guElEopEcE",
-            "AIzaSyCmvke7zO57ymTAQWXZK9Fj_BFQEGNZAeU",
-        ]
-        for k in default_pool:
-            if k not in raw_keys:
-                raw_keys.append(k)
+        # 2. Individual numbered keys in env / settings
+        for i in range(1, 10):
+            env_names = [f"YOUTUBE_API_KEY_{i}"] if i > 1 else ["YOUTUBE_API_KEY", "YOUTUBE_API_KEY_1"]
+            for name in env_names:
+                val = os.environ.get(name) or getattr(settings, name.lower(), "")
+                if val and val.strip() and val.strip() not in raw_keys:
+                    raw_keys.append(val.strip())
 
         self._keys = raw_keys
-        logger.info("YouTubeKeyRouter initialized with %d API keys in pool.", len(self._keys))
+        logger.info("YouTubeKeyRouter initialized with %d API keys from environment.", len(self._keys))
 
     def _get_today_key(self) -> str:
         # YouTube quotas reset at midnight Pacific Time
