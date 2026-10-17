@@ -47,13 +47,13 @@ async def main() -> None:
         logger.info("--- Step 1: Purging all synthetic 'yt_%%' records from DB ---")
         
         del_cds = await session.execute(
-            text("DELETE FROM concept_daily_signals WHERE top_outlier_video_id LIKE 'yt_%' OR population::text LIKE '%yt_%';")
+            text("DELETE FROM concept_daily_signals WHERE top_outlier_video_id LIKE 'yt\\_%' ESCAPE '\\' OR population::text LIKE '%\"video_id\": \"yt\\_%' ESCAPE '\\';")
         )
         del_cs = await session.execute(
-            text("DELETE FROM concept_signals WHERE payload::text LIKE '%yt_%';")
+            text("DELETE FROM concept_signals WHERE payload::text LIKE '%\"video_id\": \"yt\\_%' ESCAPE '\\';")
         )
         del_tfs = await session.execute(
-            text("DELETE FROM trend_feed_snapshots WHERE items::text LIKE '%yt_%';")
+            text("DELETE FROM trend_feed_snapshots WHERE items::text LIKE '%\"video_id\": \"yt\\_%' ESCAPE '\\';")
         )
         await session.commit()
 
