@@ -482,31 +482,145 @@ class TrendService:
         n = await self.collector.run_all_clusters(db)
         return {"data": {"ingested_signals": n}, "meta": {"request_id": "trend-engine"}}
 
+    def _enhance_creator_detail(self, item: dict[str, Any], ctx: dict[str, Any]) -> dict[str, Any]:
+        out = dict(item)
+        opp = float(out.get("opportunity_score") or out.get("tvs_score") or 70.0)
+        streak = int(out.get("outlier_streak") or 0)
+        rr = float(out.get("reach_ratio_median") or 0.0)
+        small_cnt = int(out.get("small_channel_count") or 0)
+        sat = float(out.get("saturation_index") or 40.0)
+        lifecycle = str(out.get("lifecycle") or "growing")
+        topic = out.get("topic") or "Trending Concept"
+
+        # 1. Actionable Creator Verdict
+        if opp >= 80 or streak >= 2 or (rr >= 1.4 and small_cnt >= 2):
+            verdict = "make_now"
+            verdict_badge = "Make It Now"
+            verdict_reason = f"High breakout velocity with a {max(1, streak)}-day outlier streak. Small and mid creators are seeing outsized algorithmic reach."
+            window = "Next 2–4 Days"
+        elif opp >= 60 or lifecycle in ("emerging", "growing"):
+            verdict = "test_short"
+            verdict_badge = "Test with a Short"
+            verdict_reason = "Rising audience curiosity in this topic. Test with a 30–45s Short to gauge your specific audience interest before full long-form production."
+            window = "Next 3–6 Days"
+        else:
+            verdict = "monitor"
+            verdict_badge = "Monitor / Skip"
+            verdict_reason = "Audience demand is stabilizing or dominated by legacy uploads. Only produce if you have a strong contrarian angle."
+            window = "Next 7–14 Days"
+
+        out["verdict"] = verdict
+        out["verdict_badge"] = verdict_badge
+        out["verdict_reason"] = verdict_reason
+        out["publish_window_days"] = window
+
+        # 2. Market Competition Level
+        if small_cnt >= 4 or sat < 35:
+            out["competition_level"] = "Low Competition (High Opportunity)"
+        elif sat <= 65:
+            out["competition_level"] = "Moderate Competition"
+        else:
+            out["competition_level"] = "Established / High Saturation"
+
+        # 3. Demand Direction
+        if streak >= 2 or float(out.get("velocity_delta") or 0) > 0:
+            out["demand_direction"] = "Accelerating"
+        elif lifecycle == "peaking":
+            out["demand_direction"] = "Peak Plateau"
+        elif lifecycle == "declining":
+            out["demand_direction"] = "Declining"
+        else:
+            out["demand_direction"] = "Steady Growth"
+
+        # 4. Peer View Range based on subscriber tier
+        subs = int(ctx.get("subscriber_count") or 0)
+        if subs < 1_000:
+            p_min, p_max = "1.5K", "8K"
+        elif subs < 10_000:
+            p_min, p_max = "5K", "25K"
+        elif subs < 50_000:
+            p_min, p_max = "20K", "75K"
+        elif subs < 250_000:
+            p_min, p_max = "60K", "220K"
+        else:
+            p_min, p_max = "150K", "500K+"
+        out["peer_view_range"] = f"{p_min} – {p_max} Views"
+
+        # 5. Clean Proof Videos List
+        raw_pop = out.get("population") or []
+        proof_list = []
+        for v in raw_pop:
+            if not isinstance(v, dict):
+                continue
+            vid_id = v.get("video_id") or ""
+            if not vid_id:
+                continue
+            v_views = int(v.get("view_count") or 0)
+            v_subs = int(v.get("subscriber_count") or 0)
+            v_rr = float(v.get("reach_ratio") or 0.0)
+            mult = f"{v_rr:.1f}x" if v_rr > 0 else (f"{round(v_views / max(1, v_subs), 1)}x" if v_subs > 0 else "High")
+            proof_list.append({
+                "video_id": vid_id,
+                "title": v.get("title") or "Winning Video",
+                "channel_title": v.get("channel_title") or "Creator",
+                "thumbnail_url": v.get("thumbnail_url") or f"https://i.ytimg.com/vi/{vid_id}/hqdefault.jpg",
+                "view_count": v_views,
+                "subscriber_count": v_subs,
+                "reach_ratio": v_rr,
+                "reach_multiplier": mult,
+                "channel_tier": v.get("channel_tier") or ("small" if v_subs < 25000 else "medium"),
+                "video_url": f"https://www.youtube.com/watch?v={vid_id}",
+                "interaction_density": float(v.get("interaction_density") or 0.0),
+            })
+        proof_list.sort(key=lambda x: x["reach_ratio"], reverse=True)
+        out["proof_videos"] = proof_list
+
+        # 6. High-CTR Titles & Hook Blueprint
+        clean_topic = topic.strip()
+        for prefix in ["Next-Gen ", "Everyday ", "Best ", "Top "]:
+            if clean_topic.startswith(prefix) and len(clean_topic) > len(prefix) + 5:
+                clean_topic = clean_topic[len(prefix):]
+
+        out["curated_titles"] = [
+            f"The Truth About {clean_topic} Nobody Is Telling You",
+            f"Why {clean_topic} Is Taking Over in 2026",
+            f"I Tested {clean_topic} for 7 Days (Shocking Results)",
+        ]
+
+        out["hook_blueprint"] = {
+            "visual_hook": "Rapid zoom-in on the primary subject within the first 0.8 seconds to stop the scroll.",
+            "audio_hook": f"If you're still ignoring {clean_topic}, you're falling behind what's actually working right now.",
+            "retention_twist": "Reveal the core breakdown at the 45% mark, then introduce an unexpected takeaway before the CTA."
+        }
+
+        return out
+
     # ─────────────────────────────────────────────────────────────────────────
     # Trend Detail
     # ─────────────────────────────────────────────────────────────────────────
     async def trend_detail(self, db: AsyncSession, user: UserContext, trend_id: uuid.UUID) -> dict:
         saved = await self.repo.is_saved(db, user.user_id, trend_id)
+        ctx = await self.feed.get_creator_context(user.user_id)
 
         enriched = await self.feed.feed_repo.find_enriched_item(db, user.user_id, trend_id)
         if enriched:
             enriched["saved"] = saved
             enriched = await self.feed.attach_daily_signal_metrics(db, enriched, include_full_population=True)
             if settings.enable_trend_enrichment:
-                ctx = await self.feed.get_creator_context(user.user_id)
                 enriched = await self.feed.enrichment.enrich_detail(enriched, ctx)
-            return {"data": enriched, "meta": {"request_id": "trend-engine"}}
+            enhanced = self._enhance_creator_detail(enriched, ctx)
+            return {"data": enhanced, "meta": {"request_id": "trend-engine"}}
 
         concept = await self.feed.concept_repo.get_by_id(db, trend_id)
         if concept:
-            ctx = await self.feed.get_creator_context(user.user_id)
             item = self.feed._score_concept(concept, ctx, strict=False)
             if item:
                 item["saved"] = saved
                 item = await self.feed.attach_daily_signal_metrics(db, item, include_full_population=True)
                 if settings.enable_trend_enrichment:
                     item = await self.feed.enrichment.enrich_detail(item, ctx)
-                return {"data": item, "meta": {"request_id": "trend-engine"}}
+                enhanced = self._enhance_creator_detail(item, ctx)
+                return {"data": enhanced, "meta": {"request_id": "trend-engine"}}
 
         t = await self.repo.get_trend(db, trend_id)
         if not t:
@@ -514,8 +628,9 @@ class TrendService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail={"code": "NOT_FOUND", "message": "Trend not found — it may still be syncing.", "details": {}},
             )
-        saved = await self.repo.is_saved(db, user.user_id, trend_id)
-        return {"data": self._serialize_trend(t, saved=saved), "meta": {"request_id": "local-dev"}}
+        serialized = self._serialize_trend(t, saved=saved)
+        enhanced = self._enhance_creator_detail(serialized, ctx)
+        return {"data": enhanced, "meta": {"request_id": "local-dev"}}
 
     async def get_trend_forecast(self, db: AsyncSession, trend_id: uuid.UUID) -> dict:
         """Fetches LightGBM 85-feature virality probability (test_prob) & trajectory forecast from ML service."""

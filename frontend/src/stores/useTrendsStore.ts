@@ -71,6 +71,32 @@ export interface Trend {
     passed_semantic_gate?: number;
     final_qualified?: number;
   };
+  verdict?: 'make_now' | 'test_short' | 'monitor';
+  verdict_badge?: string;
+  verdict_reason?: string;
+  publish_window_days?: string;
+  competition_level?: string;
+  demand_direction?: string;
+  peer_view_range?: string;
+  proof_videos?: {
+    video_id: string;
+    title: string;
+    channel_title: string;
+    thumbnail_url: string;
+    view_count: number;
+    subscriber_count: number;
+    reach_ratio: number;
+    reach_multiplier: string;
+    channel_tier: string;
+    video_url: string;
+    interaction_density?: number;
+  }[];
+  curated_titles?: string[];
+  hook_blueprint?: {
+    visual_hook: string;
+    audio_hook: string;
+    retention_twist: string;
+  };
 }
 
 export interface HorizonForecast {
