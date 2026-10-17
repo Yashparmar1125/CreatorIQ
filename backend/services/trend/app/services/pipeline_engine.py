@@ -1077,7 +1077,7 @@ class PipelineEngine:
             for offset in range(backfill_days - 1, -1, -1):
                 exec_date = today - timedelta(days=offset)
                 target_video_date = exec_date - timedelta(days=settings.lag_days)
-                if target_video_date in existing_dates and offset > 0:
+                if target_video_date in existing_dates:
                     continue
 
                 # Only call live YouTube API on today's run (offset == 0) to conserve quota;

@@ -39,6 +39,13 @@ async def lifespan(app: FastAPI):
     except Exception:
         logger.exception("Failed to initialize trend database tables")
 
+    try:
+        from app.services.vector_service import VectorService
+        VectorService.get_encoder()
+        logger.info("SentenceTransformer encoder pre-warmed successfully.")
+    except Exception:
+        logger.warning("Encoder pre-warm skipped.")
+
     scheduler.add_job(
         _run_scheduled_collection,
         "interval",

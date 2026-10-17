@@ -88,7 +88,7 @@ class VectorService:
         if self._client is not None:
             return self._client
         try:
-            self._client = QdrantClient(url=settings.qdrant_url, timeout=2.5)
+            self._client = QdrantClient(url=settings.qdrant_url, timeout=2.5, check_compatibility=False)
             return self._client
         except Exception as e:
             logger.warning(f"Could not connect to Qdrant at {settings.qdrant_url}: {e}")
@@ -174,12 +174,21 @@ class VectorService:
 
             query_vector = generate_semantic_vector(query_text, niche_tags)
 
-            results = client.search(
-                collection_name=COLLECTION_NAME,
-                query_vector=query_vector,
-                limit=limit,
-                with_payload=True,
-            )
+            if hasattr(client, "search"):
+                results = client.search(
+                    collection_name=COLLECTION_NAME,
+                    query_vector=query_vector,
+                    limit=limit,
+                    with_payload=True,
+                )
+            else:
+                qp = client.query_points(
+                    collection_name=COLLECTION_NAME,
+                    query=query_vector,
+                    limit=limit,
+                    with_payload=True,
+                )
+                results = qp.points
 
             return [
                 {

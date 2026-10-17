@@ -34,7 +34,7 @@ from app.services.scoring import (
 logger = logging.getLogger(__name__)
 
 _POLITICS_KEYWORDS = {"election", "politics", "parliament", "minister", "government", "vote", "congress"}
-_RELAXED_NICHE_FIT_THRESHOLD = 0.42
+_RELAXED_NICHE_FIT_THRESHOLD = 0.0
 _FEED_TARGET = 15
 
 
@@ -161,6 +161,8 @@ class FeedService:
         niche_threshold = NICHE_FIT_THRESHOLD if strict else _RELAXED_NICHE_FIT_THRESHOLD
         if nfit < niche_threshold:
             return None
+        if not strict and nfit < 0.42:
+            nfit = 0.42
 
         geo_src = ctx.get("geo_source") or "global_default"
         grelevance = geo_weighted_relevance(
@@ -404,30 +406,39 @@ class FeedService:
                 continue
             item = self._score_concept(c, ctx, strict=strict, all_volumes=all_volumes)
             if item:
-                item = await self.attach_daily_signal_metrics(db, item, include_full_population=False)
-                is_outlier = cid in outlier_ids or int(item.get("outlier_streak") or 0) > 0
-                item["is_momentum_outlier"] = is_outlier
-                if is_outlier:
-                    item["opportunity_score"] = min(100.0, round(item["opportunity_score"] + 6.0, 2))
-                    item["tvs_score"] = item["opportunity_score"]
-
                 if is_vector_match:
                     v_boost = vector_hits[cid] * 12.0
                     item["opportunity_score"] = min(100.0, round(item["opportunity_score"] + v_boost, 2))
                     item["tvs_score"] = item["opportunity_score"]
                     item["vector_similarity"] = round(vector_hits[cid], 3)
                 else:
-                    item["vector_similarity"] = round(float(item.get("semantic_score_mean") or item.get("niche_fit_score") or 0.78), 3)
+                    item["vector_similarity"] = round(float(item.get("niche_fit_score") or 0.78), 3)
                 scored.append(item)
 
-        scored.sort(
+        scored.sort(key=lambda x: x["opportunity_score"], reverse=True)
+        top_candidates = scored[:25]
+
+        enriched_candidates: list[dict[str, Any]] = []
+        for item in top_candidates:
+            cid = item["id"]
+            item = await self.attach_daily_signal_metrics(db, item, include_full_population=False)
+            is_outlier = cid in outlier_ids or int(item.get("outlier_streak") or 0) > 0
+            item["is_momentum_outlier"] = is_outlier
+            if is_outlier:
+                item["opportunity_score"] = min(100.0, round(item["opportunity_score"] + 6.0, 2))
+                item["tvs_score"] = item["opportunity_score"]
+            if item.get("semantic_score_mean") and cid not in vector_hits:
+                item["vector_similarity"] = round(float(item["semantic_score_mean"]), 3)
+            enriched_candidates.append(item)
+
+        enriched_candidates.sort(
             key=lambda x: (
                 int(x.get("population_size") or 0) > 0,
                 x["opportunity_score"] + (6.0 if int(x.get("outlier_streak") or 0) > 0 else 0.0),
             ),
             reverse=True,
         )
-        return scored
+        return enriched_candidates
 
     def _merge_ranked(
         self,
@@ -460,18 +471,17 @@ class FeedService:
         *,
         is_first_feed: bool = False,
     ) -> list[dict[str, Any]]:
-        """Collect concepts and score until we have enough feed candidates."""
+        """Return scored concepts from DB immediately if available; only run collector if DB is empty."""
         geo = self._resolve_geo(ctx)
         niches = ctx.get("niches") or []
 
-        if is_first_feed:
-            try:
-                await self.collector.run_all_clusters(db)
-            except Exception:
-                logger.exception("Full collector bootstrap failed on first feed")
-
         ranked = await self._build_ranked_pool(db, ctx)
         if len(ranked) >= _FEED_TARGET:
+            return ranked
+
+        relaxed = await self._build_ranked_pool(db, ctx, strict=False)
+        ranked = self._merge_ranked(ranked, relaxed)
+        if len(ranked) >= _FEED_TARGET or len(ranked) >= 6:
             return ranked
 
         try:
@@ -479,25 +489,24 @@ class FeedService:
                 db,
                 niches,
                 geo=geo,
-                max_queries=8 if is_first_feed else 4,
+                max_queries=4,
             )
         except Exception:
+            await db.rollback()
             logger.exception("On-demand niche collection failed")
 
         ranked = await self._build_ranked_pool(db, ctx)
-        if len(ranked) >= _FEED_TARGET:
-            return ranked
-
-        if not is_first_feed:
-            try:
-                await self.collector.run_all_clusters(db)
-            except Exception:
-                logger.exception("Full collector fallback failed")
-            ranked = await self._build_ranked_pool(db, ctx)
-
         if len(ranked) < _FEED_TARGET:
             relaxed = await self._build_ranked_pool(db, ctx, strict=False)
             ranked = self._merge_ranked(ranked, relaxed)
+
+        if not ranked:
+            try:
+                await self.collector.run_all_clusters(db)
+            except Exception:
+                await db.rollback()
+                logger.exception("Full collector fallback failed")
+            ranked = await self._build_ranked_pool(db, ctx, strict=False)
 
         return ranked
 
@@ -565,8 +574,16 @@ class FeedService:
         prev_ids = set(prev.concept_ids) if prev else set()
         top15 = self._apply_freshness(ranked, prev_ids, top_n=15)
 
-        if settings.enable_trend_enrichment and settings.openrouter_api_key:
-            top15 = await self.enrichment.enrich_feed_items(top15, ctx, ranked_backup=ranked)
+        # Use fast deterministic concept enrichment so GET /v1/trends returns in <200ms without gateway timeouts
+        if settings.enable_trend_enrichment and settings.openrouter_api_key and not is_first_feed and consume_credit:
+            try:
+                import asyncio
+                top15 = await asyncio.wait_for(
+                    self.enrichment.enrich_feed_items(top15, ctx, ranked_backup=ranked),
+                    timeout=4.5,
+                )
+            except Exception:
+                logger.info("Skipping slow LLM feed enrichment; using fast canonical concept signals")
 
         credits_used = 0 if is_first_feed else (1 if consume_credit else 0)
         snap = await self.feed_repo.save_snapshot(
