@@ -35,6 +35,81 @@ import { cleanTrendTitle, resolveVideoConcept } from '../../../lib/cleanTrendTit
 import { ConceptGraph } from '../components/ConceptGraph';
 import { TrendForecastChart } from '../components/TrendForecastChart';
 
+const ProofVideoCard: React.FC<{ vid: any }> = ({ vid }) => {
+  const [imgFailed, setImgFailed] = useState(false);
+  const isSynthetic = !vid.video_id || vid.video_id.startsWith('yt_');
+  const showFallback = imgFailed || isSynthetic;
+
+  return (
+    <a
+      href={vid.video_url || `https://www.youtube.com/watch?v=${vid.video_id}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="group flex flex-col justify-between rounded-xl border border-[#242424] bg-[#161616] p-3 hover:border-indigo-500/40 transition-all hover:bg-[#191919]"
+    >
+      <div className="space-y-2.5">
+        {/* Thumbnail Container */}
+        <div className="relative aspect-video w-full rounded-lg overflow-hidden bg-neutral-900 border border-[#222]">
+          {!showFallback ? (
+            <img
+              src={vid.thumbnail_url}
+              alt={vid.title}
+              className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+              onError={() => setImgFailed(true)}
+            />
+          ) : (
+            <div className="h-full w-full bg-gradient-to-br from-indigo-950/70 via-[#181824] to-[#111116] p-3 flex flex-col justify-between relative">
+              <div className="flex items-center justify-between">
+                <span className="text-[9px] font-bold uppercase tracking-wider text-indigo-400 bg-indigo-950/80 px-1.5 py-0.5 rounded border border-indigo-800/40 font-mono">
+                  YouTube Winner
+                </span>
+                <span className="text-[10px] text-neutral-400 font-mono">
+                  {vid.view_count ? `${(vid.view_count / 1000).toFixed(0)}K views` : 'Outlier'}
+                </span>
+              </div>
+              <p className="text-[11px] font-semibold text-white/90 line-clamp-2 leading-tight">
+                {vid.title}
+              </p>
+            </div>
+          )}
+
+          <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors flex items-center justify-center pointer-events-none">
+            <div className="h-8 w-8 rounded-full bg-red-600/90 shadow-lg flex items-center justify-center opacity-85 group-hover:opacity-100 group-hover:scale-110 transition-all">
+              <Play className="h-3.5 w-3.5 text-white fill-white ml-0.5" />
+            </div>
+          </div>
+
+          {/* Multiplier Badge */}
+          <span className="absolute bottom-1.5 right-1.5 rounded bg-emerald-950/90 border border-emerald-600/50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-300 font-mono">
+            {vid.reach_multiplier} Reach
+          </span>
+        </div>
+
+        <h3 className="text-xs font-semibold text-white line-clamp-2 leading-snug group-hover:text-indigo-300 transition-colors">
+          {vid.title}
+        </h3>
+      </div>
+
+      <div className="pt-3 border-t border-[#222222] mt-2.5 flex items-center justify-between text-[11px] text-neutral-400">
+        <div className="truncate max-w-[140px]">
+          <span className="font-medium text-neutral-300">{vid.channel_title}</span>
+          {vid.subscriber_count > 0 && (
+            <span className="text-[10px] text-neutral-500 block">
+              {(vid.subscriber_count / 1000).toFixed(1)}K subs
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-1 text-indigo-400 shrink-0">
+          <span className="font-mono font-semibold text-white">
+            {(vid.view_count / 1000).toFixed(0)}K views
+          </span>
+          <ExternalLink className="h-3 w-3 ml-0.5" />
+        </div>
+      </div>
+    </a>
+  );
+};
+
 export const TrendDetailPage: React.FC = () => {
   const { trendId } = useParams<{ trendId: string }>();
   const navigate = useNavigate();
@@ -105,7 +180,11 @@ export const TrendDetailPage: React.FC = () => {
   const verdictBadge = trend.verdict_badge || (verdict === 'make_now' ? 'Make It Now' : verdict === 'test_short' ? 'Test with a Short' : 'Monitor Trend');
 
   const reachRatioVal = trend.reach_ratio_median != null ? Number(trend.reach_ratio_median).toFixed(1) : null;
-  const proofVideos = trend.proof_videos || [];
+  const proofVideos = (trend.proof_videos || []).filter((v) => {
+    if (v.reach_ratio != null && Number(v.reach_ratio) < 1.1) return false;
+    if (typeof v.reach_multiplier === 'string' && (v.reach_multiplier.startsWith('0.') || v.reach_multiplier === '0x')) return false;
+    return true;
+  });
   const titles = trend.curated_titles || trend.title_ideas || [
     `The Truth About ${cleanTitle} in 2026`,
     `Why Everyone Is Talking About ${cleanTitle}`,
@@ -344,58 +423,8 @@ export const TrendDetailPage: React.FC = () => {
 
         {proofVideos.length > 0 ? (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {proofVideos.slice(0, 6).map((vid) => (
-              <a
-                key={vid.video_id}
-                href={vid.video_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group flex flex-col justify-between rounded-xl border border-[#242424] bg-[#161616] p-3 hover:border-indigo-500/40 transition-all hover:bg-[#191919]"
-              >
-                <div className="space-y-2.5">
-                  {/* Thumbnail Container */}
-                  <div className="relative aspect-video w-full rounded-lg overflow-hidden bg-neutral-900 border border-[#222]">
-                    <img
-                      src={vid.thumbnail_url}
-                      alt={vid.title}
-                      className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      onError={(e) => {
-                        (e.target as HTMLElement).style.display = 'none';
-                      }}
-                    />
-                    <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors flex items-center justify-center">
-                      <div className="h-8 w-8 rounded-full bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Play className="h-4 w-4 text-white fill-white ml-0.5" />
-                      </div>
-                    </div>
-                    {/* Multiplier Badge */}
-                    <span className="absolute bottom-1.5 right-1.5 rounded bg-emerald-950/90 border border-emerald-600/50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-300 font-mono">
-                      {vid.reach_multiplier} Reach
-                    </span>
-                  </div>
-
-                  <h3 className="text-xs font-semibold text-white line-clamp-2 leading-snug group-hover:text-indigo-300 transition-colors">
-                    {vid.title}
-                  </h3>
-                </div>
-
-                <div className="pt-3 border-t border-[#222222] mt-2.5 flex items-center justify-between text-[11px] text-neutral-400">
-                  <div className="truncate max-w-[140px]">
-                    <span className="font-medium text-neutral-300">{vid.channel_title}</span>
-                    {vid.subscriber_count > 0 && (
-                      <span className="text-[10px] text-neutral-500 block">
-                        {(vid.subscriber_count / 1000).toFixed(1)}K subs
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1 text-indigo-400 shrink-0">
-                    <span className="font-mono font-semibold text-white">
-                      {(vid.view_count / 1000).toFixed(0)}K views
-                    </span>
-                    <ExternalLink className="h-3 w-3 ml-0.5" />
-                  </div>
-                </div>
-              </a>
+            {proofVideos.slice(0, 6).map((vid, idx) => (
+              <ProofVideoCard key={vid.video_id || idx} vid={vid} />
             ))}
           </div>
         ) : (

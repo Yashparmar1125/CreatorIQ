@@ -5,6 +5,9 @@ import remarkGfm from 'remark-gfm';
 import { useStrategyStore, type ChatMessage, type AgentStep, type AgentCard } from '../../../stores/useStrategyStore';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { Button } from '../../../components/ui/Button';
+import { TopicStrategyCard, type TopicStrategyItem } from '../components/TopicStrategyCard';
+import { ScriptStudioModal } from '../components/ScriptStudioModal';
+import { parseStrategyTopics } from '../utils/parseStrategyTopics';
 import {
   Sparkles,
   Plus,
@@ -211,6 +214,152 @@ const InteractiveCardsList: React.FC<{ cards: AgentCard[] }> = ({ cards }) => {
   );
 };
 
+/* ── Strategy Message Content with Claude-style Interactive Cards ──────── */
+const StrategyMessageContent: React.FC<{
+  content: string;
+  onOpenStudio: (t: TopicStrategyItem) => void;
+  onAskCopilot: (prompt: string) => void;
+}> = ({ content, onOpenStudio, onAskCopilot }) => {
+  const parsed = parseStrategyTopics(content);
+
+  const markdownComponents = {
+    h1: ({ children }: any) => (
+      <h1 className="text-lg font-bold text-white pb-1 mb-2 mt-2 font-sora flex items-center gap-2">
+        <Sparkles className="h-4 w-4 text-indigo-400 shrink-0" />
+        <span>{children}</span>
+      </h1>
+    ),
+    h2: ({ children }: any) => (
+      <h2 className="text-base font-semibold text-white pb-1 mb-2 mt-5 font-sora flex items-center gap-2">
+        <Target className="h-4 w-4 text-indigo-400 shrink-0" />
+        <span>{children}</span>
+      </h2>
+    ),
+    h3: ({ children }: any) => (
+      <h3 className="text-sm font-semibold text-neutral-100 mt-4 mb-1.5 flex items-center gap-2">
+        <Lightbulb className="h-3.5 w-3.5 text-indigo-400 shrink-0" />
+        <span>{children}</span>
+      </h3>
+    ),
+    h4: ({ children }: any) => (
+      <h4 className="text-xs font-semibold uppercase tracking-wider text-neutral-300 mt-3 mb-1 flex items-center gap-1.5">
+        <TrendingUp className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+        <span>{children}</span>
+      </h4>
+    ),
+    p: ({ children }: any) => (
+      <p className="text-[#e3e3e3] leading-7 my-2 text-[14px]">
+        {children}
+      </p>
+    ),
+    ul: ({ children }: any) => (
+      <ul className="space-y-1.5 my-2.5 pl-5 list-disc text-[#dcdce0] marker:text-neutral-500">
+        {children}
+      </ul>
+    ),
+    ol: ({ children }: any) => (
+      <ol className="space-y-2 my-2.5 pl-5 list-decimal text-[#dcdce0] marker:text-neutral-400">
+        {children}
+      </ol>
+    ),
+    li: ({ children }: any) => (
+      <li className="text-[14px] leading-7">{children}</li>
+    ),
+    blockquote: ({ children }: any) => (
+      <blockquote className="border-l-2 border-indigo-500/70 bg-[#141418] px-4 py-2.5 my-3 rounded-r-xl text-neutral-300 text-[13.5px]">
+        {children}
+      </blockquote>
+    ),
+    table: ({ children }: any) => (
+      <div className="overflow-x-auto my-4 rounded-xl border border-[#262626]">
+        <table className="min-w-full divide-y divide-[#262626] text-left text-xs">
+          {children}
+        </table>
+      </div>
+    ),
+    thead: ({ children }: any) => (
+      <thead className="bg-[#161616] text-neutral-200 font-semibold">{children}</thead>
+    ),
+    th: ({ children }: any) => (
+      <th className="px-3.5 py-2.5 border-b border-[#262626]">{children}</th>
+    ),
+    td: ({ children }: any) => (
+      <td className="px-3.5 py-2.5 border-t border-[#1e1e1e] text-neutral-300">{children}</td>
+    ),
+    code: ({ children, className }: any) => {
+      const isBlock = className || (typeof children === 'string' && children.includes('\n'));
+      if (isBlock) {
+        return (
+          <div className="my-3 rounded-xl border border-[#262626] bg-[#111113] overflow-hidden">
+            <div className="flex items-center justify-between px-3.5 py-1.5 bg-[#18181b] border-b border-[#242429] text-[11px] text-neutral-400 font-mono">
+              <span className="flex items-center gap-1.5">
+                <Code2 className="h-3 w-3 text-indigo-400" />
+                Blueprint
+              </span>
+            </div>
+            <pre className="p-3.5 text-xs text-neutral-200 font-mono overflow-x-auto">
+              <code>{children}</code>
+            </pre>
+          </div>
+        );
+      }
+      return (
+        <code className="rounded-md bg-[#1c1c22] px-1.5 py-0.5 font-mono text-xs text-indigo-300">
+          {children}
+        </code>
+      );
+    },
+    hr: () => <hr className="border-t border-[#1f1f1f] my-5" />,
+    strong: ({ children }: any) => (
+      <strong className="text-white font-semibold">{children}</strong>
+    ),
+  };
+
+  if (!parsed.hasTopics) {
+    return (
+      <div className="prose prose-invert max-w-none space-y-3">
+        <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+          {content}
+        </ReactMarkdown>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Intro section if present */}
+      {parsed.introText && (
+        <div className="prose prose-invert max-w-none">
+          <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+            {parsed.introText}
+          </ReactMarkdown>
+        </div>
+      )}
+
+      {/* Interactive Claude/ChatGPT-style Topic Cards */}
+      <div className="space-y-4 my-2 not-prose">
+        {parsed.topics.map((t) => (
+          <TopicStrategyCard
+            key={t.id}
+            topic={t}
+            onOpenStudio={onOpenStudio}
+            onAskCopilot={onAskCopilot}
+          />
+        ))}
+      </div>
+
+      {/* Outro section if present */}
+      {parsed.outroText && (
+        <div className="prose prose-invert max-w-none">
+          <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+            {parsed.outroText}
+          </ReactMarkdown>
+        </div>
+      )}
+    </div>
+  );
+};
+
 /* ── Main StrategyPage Component ─────────────────────────────────────────── */
 export const StrategyPage: React.FC = () => {
   const location = useLocation();
@@ -233,6 +382,7 @@ export const StrategyPage: React.FC = () => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [sourcesDrawerMessage, setSourcesDrawerMessage] = useState<ChatMessage | null>(null);
   const [showConnectorsMenu, setShowConnectorsMenu] = useState(false);
+  const [studioTopic, setStudioTopic] = useState<TopicStrategyItem | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const initialTriggered = useRef(false);
@@ -413,107 +563,16 @@ export const StrategyPage: React.FC = () => {
                     {/* Interactive Cards (e.g. Trends & Outlier Videos) */}
                     {cards.length > 0 && <InteractiveCardsList cards={cards} />}
 
-                    {/* Markdown Content */}
+                    {/* Markdown Content & Claude-style Interactive Topic Cards */}
                     {cleanContent && (
-                      <div className="prose prose-invert max-w-none space-y-3">
-                        <ReactMarkdown
-                          remarkPlugins={[remarkGfm]}
-                          components={{
-                            h1: ({ children }) => (
-                              <h1 className="text-lg font-bold text-white pb-1 mb-2 mt-2 font-sora flex items-center gap-2">
-                                <Sparkles className="h-4 w-4 text-indigo-400 shrink-0" />
-                                <span>{children}</span>
-                              </h1>
-                            ),
-                            h2: ({ children }) => (
-                              <h2 className="text-base font-semibold text-white pb-1 mb-2 mt-5 font-sora flex items-center gap-2">
-                                <Target className="h-4 w-4 text-indigo-400 shrink-0" />
-                                <span>{children}</span>
-                              </h2>
-                            ),
-                            h3: ({ children }) => (
-                              <h3 className="text-sm font-semibold text-neutral-100 mt-4 mb-1.5 flex items-center gap-2">
-                                <Lightbulb className="h-3.5 w-3.5 text-indigo-400 shrink-0" />
-                                <span>{children}</span>
-                              </h3>
-                            ),
-                            h4: ({ children }) => (
-                              <h4 className="text-xs font-semibold uppercase tracking-wider text-neutral-300 mt-3 mb-1 flex items-center gap-1.5">
-                                <TrendingUp className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
-                                <span>{children}</span>
-                              </h4>
-                            ),
-                            p: ({ children }) => (
-                              <p className="text-[#e3e3e3] leading-7 my-2 text-[14px]">
-                                {children}
-                              </p>
-                            ),
-                            ul: ({ children }) => (
-                              <ul className="space-y-1.5 my-2.5 pl-5 list-disc text-[#dcdce0] marker:text-neutral-500">
-                                {children}
-                              </ul>
-                            ),
-                            ol: ({ children }) => (
-                              <ol className="space-y-2 my-2.5 pl-5 list-decimal text-[#dcdce0] marker:text-neutral-400">
-                                {children}
-                              </ol>
-                            ),
-                            li: ({ children }) => (
-                              <li className="text-[14px] leading-7">{children}</li>
-                            ),
-                            blockquote: ({ children }) => (
-                              <blockquote className="border-l-2 border-indigo-500/70 bg-[#141418] px-4 py-2.5 my-3 rounded-r-xl text-neutral-300 text-[13.5px]">
-                                {children}
-                              </blockquote>
-                            ),
-                            table: ({ children }) => (
-                              <div className="overflow-x-auto my-4 rounded-xl border border-[#262626]">
-                                <table className="min-w-full divide-y divide-[#262626] text-left text-xs">
-                                  {children}
-                                </table>
-                              </div>
-                            ),
-                            thead: ({ children }) => (
-                              <thead className="bg-[#161616] text-neutral-200 font-semibold">{children}</thead>
-                            ),
-                            th: ({ children }) => (
-                              <th className="px-3.5 py-2.5 border-b border-[#262626]">{children}</th>
-                            ),
-                            td: ({ children }) => (
-                              <td className="px-3.5 py-2.5 border-t border-[#1e1e1e] text-neutral-300">{children}</td>
-                            ),
-                            code: ({ children, className }) => {
-                              const isBlock = className || (typeof children === 'string' && children.includes('\n'));
-                              if (isBlock) {
-                                return (
-                                  <div className="my-3 rounded-xl border border-[#262626] bg-[#111113] overflow-hidden">
-                                    <div className="flex items-center justify-between px-3.5 py-1.5 bg-[#18181b] border-b border-[#242429] text-[11px] text-neutral-400 font-mono">
-                                      <span className="flex items-center gap-1.5">
-                                        <Code2 className="h-3 w-3 text-indigo-400" />
-                                        Blueprint
-                                      </span>
-                                    </div>
-                                    <pre className="p-3.5 text-xs text-neutral-200 font-mono overflow-x-auto">
-                                      <code>{children}</code>
-                                    </pre>
-                                  </div>
-                                );
-                              }
-                              return (
-                                <code className="rounded-md bg-[#1c1c22] px-1.5 py-0.5 font-mono text-xs text-indigo-300">
-                                  {children}
-                                </code>
-                              );
-                            },
-                            hr: () => <hr className="border-t border-[#1f1f1f] my-5" />,
-                            strong: ({ children }) => (
-                              <strong className="text-white font-semibold">{children}</strong>
-                            ),
-                          }}
-                        >
-                          {cleanContent}
-                        </ReactMarkdown>
-                      </div>
+                      <StrategyMessageContent
+                        content={cleanContent}
+                        onOpenStudio={(t) => setStudioTopic(t)}
+                        onAskCopilot={(prompt) => {
+                          setInputPrompt(prompt);
+                          sendMessage(prompt);
+                        }}
+                      />
                     )}
 
                     {/* Action Bar Under Response */}
@@ -799,6 +858,13 @@ export const StrategyPage: React.FC = () => {
           </div>
         </aside>
       )}
+
+      {/* Script Studio & Teleprompter Modal */}
+      <ScriptStudioModal
+        topic={studioTopic}
+        isOpen={!!studioTopic}
+        onClose={() => setStudioTopic(null)}
+      />
     </div>
   );
 };

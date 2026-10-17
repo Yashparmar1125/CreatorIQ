@@ -129,7 +129,10 @@ class CopilotAgent:
             "1. ALWAYS cite concrete evidence from real data: mention Reach Multipliers (e.g. '14x baseline'), small channel wins, and optimal windows.\n"
             "2. Never make up fake data or generic templates. If you don't have fresh proof, call the search tools to gather real videos.\n"
             "3. If the creator shares a new preference (e.g. 'I only make Shorts' or 'my audience hates theory'), call the `remember` tool to store it.\n"
-            "4. Format answers in structured, clean Markdown with bullet points, high-CTR titles, and clear verdicts.\n"
+            "4. Format answers in structured, clean Markdown with bullet points, high-CTR titles, and clear verdicts. When recommending video topics or content concepts, structure each distinct concept starting with '### Priority N: [Topic Title]' (e.g. ### Priority 1: AI Tools) with:\n"
+            "   - **Statistical Evidence:** Virality Probability % (e.g. 92%), Current Momentum Score (e.g. 92/100), Reach Multiplier (e.g. 12.0x baseline), Optimal Window (e.g. Next 3–5 Days)\n"
+            "   - **Target Audience & Demand:** Core pain point and emotional trigger\n"
+            "   - **Educational / Shorts Blueprint:** Title Idea 1, Title Idea 2, Visual Hook [0-3s], Opening Audio Hook / Dialogue, Retention Pacing [0-3s, 3-15s, 15-45s, 45-60s]\n"
             "5. EFFICIENCY: Call at most 1 to 2 targeted tools. As soon as you gather data from search_trends, search_web, or YouTube, STOP calling tools and synthesize your strategic recommendations.\n"
         )
 
