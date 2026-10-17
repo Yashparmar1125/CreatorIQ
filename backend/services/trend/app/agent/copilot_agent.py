@@ -129,7 +129,8 @@ class CopilotAgent:
             "1. ALWAYS cite concrete evidence from real data: mention Reach Multipliers (e.g. '14x baseline'), small channel wins, and optimal windows.\n"
             "2. Never make up fake data or generic templates. If you don't have fresh proof, call the search tools to gather real videos.\n"
             "3. If the creator shares a new preference (e.g. 'I only make Shorts' or 'my audience hates theory'), call the `remember` tool to store it.\n"
-            "4. Format answers in structured, clean Markdown without unnecessary emojis in titles.\n"
+            "4. Format answers in structured, clean Markdown with bullet points, high-CTR titles, and clear verdicts.\n"
+            "5. EFFICIENCY: Call at most 1 to 2 targeted tools. As soon as you gather data from search_trends, search_web, or YouTube, STOP calling tools and synthesize your strategic recommendations.\n"
         )
 
         # 5. Load Session History (Rolling 10 turns)
@@ -150,10 +151,12 @@ class CopilotAgent:
         active_tools = list(AGENT_TOOLS)
         executed_tools_metadata = []
 
-        # 6. Autonomous Multi-Turn Agent Loop (Max 8 rounds)
-        for round_idx in range(8):
+        # 6. Autonomous Multi-Turn Agent Loop (Max 6 rounds)
+        for round_idx in range(6):
             t0 = time.perf_counter()
-            response = await llm_router.chat(messages, tools=active_tools, temperature=0.6)
+            # Force final synthesis after 2 tool rounds to keep responses rapid and high-yield
+            pass_tools = active_tools if len(executed_tools_metadata) < 3 and round_idx < 3 else None
+            response = await llm_router.chat(messages, tools=pass_tools, temperature=0.6)
             tool_calls = response.get("tool_calls")
 
             if not tool_calls:
