@@ -9,11 +9,13 @@ from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.openrouter import chat_completion
+from app.core.llm_router import llm_router
 from app.integrations.youtube_data_client import YouTubeDataClient
 from app.models.chat_models import ChatMessage, ChatSession
 from app.models.concept_models import TrendConcept
 from app.models.trend_models import Trend
+from app.agent.copilot_agent import CopilotAgent, CONVERSATIONAL_GREETINGS
+from app.agent.tool_registry import AGENT_TOOLS
 
 logger = logging.getLogger(__name__)
 
@@ -117,6 +119,26 @@ STRATEGY_TOOLS = [
 class StrategyService:
     def __init__(self) -> None:
         self._yt_client = YouTubeDataClient()
+        self.copilot = CopilotAgent()
+
+    async def chat_stream(
+        self,
+        db: AsyncSession,
+        user_id: uuid.UUID,
+        session_id: uuid.UUID | None,
+        prompt: str,
+        *,
+        active_connectors: list[str] | None = None,
+    ):
+        creator_ctx = await self._get_creator_context(user_id)
+        return self.copilot.run_chat_stream(
+            db,
+            user_id=user_id,
+            session_id=session_id,
+            prompt=prompt,
+            creator_context=creator_ctx,
+            active_connectors=active_connectors,
+        )
 
     async def list_sessions(self, db: AsyncSession, user_id: uuid.UUID) -> list[dict[str, Any]]:
         """Fetch all chat sessions for a user directly from PostgreSQL."""
@@ -554,13 +576,16 @@ class StrategyService:
 
         # 5. Autonomous Tool-Calling / Grounded LLM Execution
         final_content = ""
+        provider_used = "groq"
+        model_used = "openai/gpt-oss-120b"
         try:
-            response_msg = await chat_completion(llm_messages, temperature=0.6)
+            response_msg = await llm_router.chat(llm_messages, tools=AGENT_TOOLS, temperature=0.6)
+            provider_used = response_msg.get("provider", "groq")
+            model_used = response_msg.get("model", "openai/gpt-oss-120b")
             tool_calls = response_msg.get("tool_calls")
             if tool_calls:
                 logger.info("LLM requested %d tool calls: %s", len(tool_calls), [tc.get("function", {}).get("name") for tc in tool_calls])
                 llm_messages.append(response_msg)
-
 
                 for tc in tool_calls:
                     fn = tc.get("function", {})
@@ -570,66 +595,23 @@ class StrategyService:
                     except Exception:
                         args = {}
 
-                    tool_result: Any = {}
-                    if fn_name == "get_youtube_trends":
-                        cat = args.get("category") or prompt[:30]
-                        reg = args.get("region") or creator_ctx.get("country", "IN")
-                        num = args.get("max_results", 5)
-                        tool_result = await self.execute_youtube_trends(db, category=cat, region=reg, max_results=num)
-                        executed_tools.append({
-                            "id": str(uuid.uuid4()),
-                            "name": "get_youtube_trends",
-                            "label": "YouTube Live Signals",
-                            "badge": "YouTube API",
-                            "icon": "youtube",
-                            "summary": f"Fetched {len(tool_result.get('trending_videos_and_signals', []))} rising videos in {reg} for '{cat}'",
-                            "data": tool_result,
-                            "timestamp": datetime.now(timezone.utc).isoformat(),
-                        })
-                    elif fn_name == "query_creatoriq_database":
-                        kw = args.get("niche_or_keyword") or prompt[:30]
-                        vel = float(args.get("min_velocity", 30.0))
-                        max_r = int(args.get("max_results", 6))
-                        tool_result = await self.execute_creatoriq_db_query(db, niche_or_keyword=kw, min_velocity=vel, max_results=max_r)
-                        executed_tools.append({
-                            "id": str(uuid.uuid4()),
-                            "name": "query_creatoriq_database",
-                            "label": "CreatorIQ Signal Radar",
-                            "badge": "PostgreSQL DB",
-                            "icon": "database",
-                            "summary": f"Queried {tool_result.get('matched_concepts_count', 0)} canonical concepts & Reach Ratio stats for '{kw}'",
-                            "data": tool_result,
-                            "timestamp": datetime.now(timezone.utc).isoformat(),
-                        })
-                    elif fn_name == "predict_trend_forecast_ml":
-                        top = args.get("topic") or prompt[:30]
-                        score = float(args.get("tvs_score", 75.0))
-                        days = int(args.get("forecast_days", 28))
-                        tool_result = await self.execute_ml_trend_forecast(db, topic=top, tvs_score=score, forecast_days=days)
-                        executed_tools.append({
-                            "id": str(uuid.uuid4()),
-                            "name": "predict_trend_forecast_ml",
-                            "label": "LightGBM 85-Feature Engine",
-                            "badge": "LightGBM AI",
-                            "icon": "trending-up",
-                            "summary": f"Computed LightGBM test_prob ({tool_result.get('viral_probability_pct', 75)}%) & {days}d forecast for '{top}'",
-                            "data": tool_result,
-                            "timestamp": datetime.now(timezone.utc).isoformat(),
-                        })
-                    elif fn_name == "get_creator_profile":
-                        tool_result = creator_ctx
-                        executed_tools.append({
-                            "id": str(uuid.uuid4()),
-                            "name": "get_creator_profile",
-                            "label": "Creator Channel Profile",
-                            "badge": "Channel DB",
-                            "icon": "user",
-                            "summary": f"Loaded niches: {', '.join(creator_ctx.get('niches', []))}",
-                            "data": tool_result,
-                            "timestamp": datetime.now(timezone.utc).isoformat(),
-                        })
-                    else:
-                        tool_result = {"status": "unknown tool"}
+                    step_label = fn_name.replace("_", " ").title()
+                    tool_result = await self.copilot.tool_registry.execute(
+                        db,
+                        user_id=user_id,
+                        tool_name=fn_name,
+                        arguments=args,
+                        creator_context=creator_ctx,
+                    )
+                    executed_tools.append({
+                        "id": str(uuid.uuid4()),
+                        "name": fn_name,
+                        "label": step_label,
+                        "badge": "CreatorIQ Engine",
+                        "summary": f"Executed {step_label}",
+                        "data": tool_result,
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                    })
 
                     llm_messages.append({
                         "role": "tool",
@@ -638,26 +620,16 @@ class StrategyService:
                         "content": json.dumps(tool_result),
                     })
 
-                second_response = await chat_completion(llm_messages, temperature=0.6)
+                second_response = await llm_router.chat(llm_messages, temperature=0.6)
                 final_content = second_response.get("content") or ""
             else:
                 final_content = response_msg.get("content") or ""
 
         except Exception as e:
-            logger.warning("OpenRouter API call failed (%s), generating tailored strategic response", e)
-            niche_str = ", ".join(creator_ctx.get("niches", ["Creators"]))
+            logger.warning("LLM router call failed: %s", e)
             final_content = (
-                f"### Strategic Opportunity for {niche_str}\n\n"
-                f"Based on real-time signal analysis for your audience in **{creator_ctx.get('country', 'India')}**, here is your high-impact execution blueprint:\n\n"
-                f"#### 3 Viral Concepts & Titles\n"
-                f"1. **\"I Tried {prompt[:30]} for 7 Days (Shocking Results)\"** — High curiosity gap + personal journey.\n"
-                f"2. **\"Why Nobody Is Talking About This New Strategy in 2026\"** — Exclusivity + authority angle.\n"
-                f"3. **\"The 3-Step Blueprint to Master {prompt[:25]}\"** — High save/share utility value.\n\n"
-                f"#### Hook Architect (First 3 Seconds)\n"
-                f"- **Visual Hook:** Fast zoom-in or intense contrast on screen within 0.8s.\n"
-                f"- **Audio Hook:** *\"If you are still doing this the old way, you are losing 80% of your audience right now...\"*\n\n"
-                f"#### Retention Engine\n"
-                f"- Deliver the core payoff at 45% mark, then introduce a twist/bonus tip before the CTA."
+                "I apologize, but our intelligence models are experiencing heavy load right now. "
+                "Please try asking your question again in a moment, or try a more specific topic query."
             )
 
         # 6. Save Assistant message to PostgreSQL with Tools Metadata
@@ -667,7 +639,7 @@ class StrategyService:
             user_id=user_id,
             role="assistant",
             content=final_content,
-            metadata_json={"tools_used": executed_tools, "model": settings.llm_model},
+            metadata_json={"tools_used": executed_tools, "model": model_used, "provider": provider_used},
         )
         db.add(assistant_msg)
 

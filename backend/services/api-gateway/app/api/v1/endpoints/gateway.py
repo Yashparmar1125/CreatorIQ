@@ -2,7 +2,7 @@ import uuid
 
 import httpx
 from fastapi import APIRouter, Request, status
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import JSONResponse, Response, StreamingResponse
 
 from app.core.auth import build_trusted_user_headers, get_bearer_token_from_request, verify_bearer_token
 from app.core.routing import is_public_auth_path, resolve_target
@@ -57,6 +57,46 @@ async def route_all(path: str, request: Request):
             continue
         forward_headers[k] = v
     forward_headers.update(trusted_headers)
+
+    is_stream_req = (
+        request.headers.get("accept") == "text/event-stream"
+        or query.get("stream") in ("true", "1")
+        or path.endswith("/stream")
+    )
+
+    if is_stream_req:
+        client = httpx.AsyncClient(timeout=180.0)
+        req = client.build_request(
+            method=request.method,
+            url=upstream_url,
+            params=query,
+            content=body if body else None,
+            headers=forward_headers,
+        )
+        upstream = await client.send(req, stream=True)
+
+        async def stream_generator():
+            try:
+                async for chunk in upstream.aiter_bytes():
+                    yield chunk
+            finally:
+                await upstream.aclose()
+                await client.aclose()
+
+        resp_headers: dict[str, str] = {
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        }
+        content_type = upstream.headers.get("content-type") or "text/event-stream"
+        resp_headers["Content-Type"] = content_type
+
+        return StreamingResponse(
+            stream_generator(),
+            status_code=upstream.status_code,
+            headers=resp_headers,
+            media_type=content_type,
+        )
 
     async with httpx.AsyncClient(timeout=120.0) as client:
         upstream = await client.request(
