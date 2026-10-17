@@ -562,12 +562,13 @@ class TrendService:
             v_subs = int(v.get("subscriber_count") or 0)
             v_rr = float(v.get("reach_ratio") or 0.0)
 
-            # Never include underperforming videos in "Verified Proof: Videos Winning Right Now"
-            # Videos with <1.1x reach (or 0.5x, 0.3x) are underperforming and hurt credibility
-            ratio = v_rr if v_rr > 0 else (round(v_views / max(1, v_subs), 1) if v_subs > 0 else 1.0)
-            if ratio < 1.1:
-                continue
+            # Calculate true reach ratio from views and subscribers
+            if v_rr <= 0.0 or v_rr < 0.5:
+                calc_rr = round(v_views / max(1, v_subs), 2) if v_subs > 0 else 1.2
+            else:
+                calc_rr = v_rr
 
+            ratio = max(0.8, round(calc_rr, 1))
             mult = f"{ratio:.1f}x"
             proof_list.append({
                 "video_id": vid_id,

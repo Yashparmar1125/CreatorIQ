@@ -154,98 +154,45 @@ class YouTubePipelineClient:
         published_after: datetime | None = None,
         published_before: datetime | None = None,
     ) -> list[dict[str, Any]]:
-        if not settings.youtube_api_key:
+        from app.core.youtube_router import youtube_router, YouTubeQuotaExceededError
+        try:
+            videos = await youtube_router.search_videos(
+                query=query,
+                max_results=limit,
+                published_after=published_after,
+                published_before=published_before,
+            )
+            await self._log_api_call(
+                db,
+                endpoint="search.list",
+                operation="search_videos",
+                http_status=200,
+                quota_cost=100,
+                duration_ms=0,
+                attempt=1,
+                success=True,
+                metadata={"query": query, "limit": limit, "returned_count": len(videos)},
+            )
+            return videos
+        except YouTubeQuotaExceededError as q_err:
+            logger.warning("YouTube search daily limit reached (270 queries) or all keys exhausted: %s", q_err)
+            await self._log_api_call(
+                db,
+                endpoint="search.list",
+                operation="search_videos",
+                http_status=429,
+                quota_cost=0,
+                duration_ms=0,
+                attempt=1,
+                success=False,
+                error_code="QUOTA_HELD",
+                error_message=str(q_err),
+                metadata={"query": query},
+            )
             return []
-
-        params: dict[str, Any] = {
-            "part": "snippet",
-            "q": query,
-            "type": "video",
-            "maxResults": min(limit, 50),
-            "relevanceLanguage": "en",
-            "videoDimension": "2d",
-            "key": settings.youtube_api_key,
-        }
-        if published_after:
-            params["publishedAfter"] = published_after.strftime("%Y-%m-%dT%H:%M:%SZ")
-        if published_before:
-            params["publishedBefore"] = published_before.strftime("%Y-%m-%dT%H:%M:%SZ")
-
-        max_retries = settings.youtube_api_max_retries
-        backoff = settings.youtube_api_retry_backoff
-
-        async with httpx.AsyncClient(timeout=20.0) as client:
-            for attempt in range(1, max_retries + 1):
-                t0 = time.perf_counter()
-                try:
-                    resp = await client.get(YOUTUBE_SEARCH_URL, params=params)
-                    duration_ms = int((time.perf_counter() - t0) * 1000)
-                    if resp.status_code == 200:
-                        data = resp.json()
-                        videos: list[dict[str, Any]] = []
-                        for item in data.get("items") or []:
-                            vid = (item.get("id") or {}).get("videoId")
-                            snippet = item.get("snippet") or {}
-                            if vid:
-                                videos.append(
-                                    {
-                                        "video_id": vid,
-                                        "title": snippet.get("title") or "",
-                                        "description": snippet.get("description") or "",
-                                        "channel_id": snippet.get("channelId") or "",
-                                        "channel_title": snippet.get("channelTitle") or "",
-                                        "published_at": snippet.get("publishedAt"),
-                                        "thumbnail_url": ((snippet.get("thumbnails") or {}).get("default") or {}).get("url"),
-                                    }
-                                )
-                        await self._log_api_call(
-                            db,
-                            endpoint="search.list",
-                            operation="search_videos",
-                            http_status=200,
-                            quota_cost=100,
-                            duration_ms=duration_ms,
-                            attempt=attempt,
-                            success=True,
-                            metadata={"query": query, "limit": limit, "returned_count": len(videos)},
-                        )
-                        return videos
-
-                    await self._log_api_call(
-                        db,
-                        endpoint="search.list",
-                        operation="search_videos",
-                        http_status=resp.status_code,
-                        quota_cost=0,
-                        duration_ms=duration_ms,
-                        attempt=attempt,
-                        success=False,
-                        error_code=f"HTTP_{resp.status_code}",
-                        error_message=resp.text[:300],
-                        metadata={"query": query},
-                    )
-                    if resp.status_code in (429, 500, 503) and attempt < max_retries:
-                        await asyncio.sleep(backoff * (2 ** (attempt - 1)) + random.uniform(0, 0.3))
-                    else:
-                        break
-                except Exception as exc:
-                    duration_ms = int((time.perf_counter() - t0) * 1000)
-                    await self._log_api_call(
-                        db,
-                        endpoint="search.list",
-                        operation="search_videos",
-                        http_status=500,
-                        quota_cost=0,
-                        duration_ms=duration_ms,
-                        attempt=attempt,
-                        success=False,
-                        error_code="NETWORK_ERROR",
-                        error_message=str(exc)[:300],
-                        metadata={"query": query},
-                    )
-                    if attempt < max_retries:
-                        await asyncio.sleep(backoff * (2 ** (attempt - 1)))
-        return []
+        except Exception as exc:
+            logger.error("Error in YouTubePipelineClient.search_videos: %s", exc)
+            return []
 
     async def get_videos_details(
         self,
@@ -426,148 +373,46 @@ class PipelineEngine:
         await db.flush()
         return seeded
 
-    def _synthesize_calibrated_candidates(
-        self,
-        concept: Concept,
-        target_date: date,
-    ) -> tuple[list[dict[str, Any]], dict[str, dict[str, Any]], dict[str, dict[str, Any]]]:
-        """
-        Generates realistic, statistically calibrated candidate populations per concept and date
-        when YouTube API quota is exhausted or for historical backfill days, ensuring the 3-stage
-        filter gate, percentile channel bucketing, and mu+2sigma outlier math run identically.
-        """
-        seed_val = sum(ord(c) for c in f"{concept.id}:{target_date.isoformat()}")
-        rng = random.Random(seed_val)
-        terms = concept.include_terms or [concept.name]
-        day_offset = (date.today() - target_date).days
-
-        # Give each concept a deterministic growth profile based on its ID
-        concept_hash = sum(ord(c) for c in concept.id) % 4
-        if concept_hash == 0:  # Emerging surging concept
-            day_multiplier = max(0.55, 1.38 - (day_offset * 0.045))
-        elif concept_hash == 1:  # Peaking high-velocity concept
-            day_multiplier = max(0.75, 1.25 - abs(day_offset - 5) * 0.03)
-        elif concept_hash == 2:  # Growing steady concept
-            day_multiplier = max(0.65, 1.18 - (day_offset * 0.025))
-        else:  # Moderately declining / saturating concept
-            day_multiplier = min(1.30, 0.78 + (day_offset * 0.03))
-
-        raw_candidates: list[dict[str, Any]] = []
-        video_details_map: dict[str, dict[str, Any]] = {}
-        channel_details_map: dict[str, dict[str, Any]] = {}
-
-        # Generate 14 candidate videos across small, medium, and big channels
-        templates = [
-            ("How I Mastered {term} in 30 Days (Science-Backed Breakdown)", "small", 1800, 42000),
-            ("The Truth About {term}: What Nobody Tells You in 2026", "small", 3400, 88000),
-            ("{term} Complete Blueprint for Beginners & Intermediate", "medium", 24000, 65000),
-            ("Why 90% of People Fail at {term} (And How to Fix It)", "small", 1200, 54000),
-            ("Testing the Viral {term} Protocol for 14 Days Straight", "medium", 48000, 145000),
-            ("{term} Tier List & Evidence-Based Ranking (2026 Update)", "big", 320000, 290000),
-            ("Stop Doing {term} Wrong: Step-by-Step Practical Guide", "medium", 19500, 52000),
-            ("I Tried Every {term} Strategy So You Don't Have To", "big", 680000, 510000),
-            ("{term} vs Traditional Methods: Full Data Comparison", "medium", 31000, 79000),
-            ("My Honest 6-Month Results with {term} (Full Breakdown)", "small", 4100, 39000),
-            ("The Ultimate {term} System for Busy Professionals", "medium", 62000, 118000),
-            ("Pro Breakdown: Advanced {term} Mistakes to Avoid", "big", 210000, 195000),
-        ]
-
-        for idx, (tpl, tier_hint, base_subs, base_views) in enumerate(templates):
-            term = terms[idx % len(terms)].title()
-            vid = f"yt_{concept.id[:8]}_{target_date.strftime('%m%d')}_{idx+1}"
-            cid = f"ch_{concept.id[:8]}_{idx+1}"
-            title = tpl.format(term=term)
-            desc = (
-                f"In this deep-dive video on {concept.name} ({term}), we break down {concept.description or term}. "
-                f"Topics covered: {', '.join(terms)}. Timestamps, data analysis, and actionable steps included."
-            )
-            pub_dt = datetime(target_date.year, target_date.month, target_date.day, (idx * 2) % 24, 15, tzinfo=timezone.utc)
-
-            subs = int(base_subs * rng.uniform(0.85, 1.20))
-            views = int(base_views * day_multiplier * rng.uniform(0.82, 1.35))
-            # Make index 1 a consistent breakout outlier on small channel
-            if idx == 1:
-                vid = f"yt_{concept.id[:8]}_outlier_top"
-                views = int(views * 2.8)
-            likes = int(views * rng.uniform(0.038, 0.072))
-            comments = int(views * rng.uniform(0.004, 0.012))
-
-            raw_candidates.append(
-                {
-                    "video_id": vid,
-                    "title": title,
-                    "description": desc,
-                    "channel_id": cid,
-                    "channel_title": f"{concept.category} Lab {idx+1}",
-                    "published_at": pub_dt.isoformat(),
-                    "thumbnail_url": f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg",
-                }
-            )
-            video_details_map[vid] = {
-                "video_id": vid,
-                "title": title,
-                "description": desc,
-                "channel_id": cid,
-                "channel_title": f"{concept.category} Lab {idx+1}",
-                "published_at": pub_dt.isoformat(),
-                "duration_seconds": rng.randint(420, 1480),
-                "category_id": "27",
-                "language": "en",
-                "thumbnail_url": f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg",
-                "view_count": views,
-                "like_count": likes,
-                "comment_count": comments,
-            }
-            channel_details_map[cid] = {
-                "channel_id": cid,
-                "title": f"{concept.category} Lab {idx+1}",
-                "subscriber_count": subs,
-                "video_count": rng.randint(35, 320),
-                "country": "US",
-            }
-
-        return raw_candidates, video_details_map, channel_details_map
-
     async def execute_concept_run(
         self,
         db: AsyncSession,
         concept: Concept,
         execution_date: date | None = None,
-        *,
-        allow_calibrated_fallback: bool = True,
     ) -> dict[str, Any]:
-        """Executes the 3-stage filtering & statistical aggregation pipeline for a single concept."""
+        """Executes the 3-stage filtering & statistical aggregation pipeline for a single concept using 100% real YouTube data."""
         if not execution_date:
             execution_date = datetime.now(timezone.utc).date()
 
-        target_date = execution_date - timedelta(days=settings.lag_days)
-        window_start, window_end = self.get_target_window(target_date)
+        target_date = execution_date
+        window_start = datetime(target_date.year, target_date.month, target_date.day, 0, 0, 0, tzinfo=timezone.utc) - timedelta(days=settings.youtube_search_days or 7)
+        window_end = datetime(target_date.year, target_date.month, target_date.day, 23, 59, 59, tzinfo=timezone.utc)
 
         q = YouTubePipelineClient.build_query(concept.include_terms or [], concept.exclude_terms or [])
+        if not q or len(q.strip()) < 3:
+            q = concept.name
+
         raw_candidates: list[dict[str, Any]] = []
         video_details_map: dict[str, dict[str, Any]] = {}
         channel_details_map: dict[str, dict[str, Any]] = {}
 
-        if settings.youtube_api_key:
-            raw_candidates = await self.youtube.search_videos(
-                db,
-                query=q,
-                limit=settings.search_max_results,
-                published_after=window_start,
-                published_before=window_end,
-            )
-            if raw_candidates:
-                video_ids = [v["video_id"] for v in raw_candidates if v.get("video_id")]
-                channel_ids = list({v["channel_id"] for v in raw_candidates if v.get("channel_id")})
-                v_stats = await self.youtube.get_videos_details(db, video_ids)
-                c_stats = await self.youtube.get_channels_details(db, channel_ids)
-                video_details_map = {item["video_id"]: item for item in v_stats if item.get("video_id")}
-                channel_details_map = {item["channel_id"]: item for item in c_stats if item.get("channel_id")}
+        raw_candidates = await self.youtube.search_videos(
+            db,
+            query=q,
+            limit=settings.search_max_results,
+            published_after=window_start,
+            published_before=window_end,
+        )
+        if raw_candidates:
+            video_ids = [v["video_id"] for v in raw_candidates if v.get("video_id")]
+            channel_ids = list({v["channel_id"] for v in raw_candidates if v.get("channel_id")})
+            v_stats = await self.youtube.get_videos_details(db, video_ids)
+            c_stats = await self.youtube.get_channels_details(db, channel_ids)
+            video_details_map = {item["video_id"]: item for item in v_stats if item.get("video_id")}
+            channel_details_map = {item["channel_id"]: item for item in c_stats if item.get("channel_id")}
 
-        if not raw_candidates and allow_calibrated_fallback:
-            raw_candidates, video_details_map, channel_details_map = self._synthesize_calibrated_candidates(
-                concept, target_date
-            )
+        if not raw_candidates:
+            logger.info("No real YouTube candidates found or 270 daily queries limit reached for '%s' on %s. System held.", concept.name, target_date)
+            return await self._persist_empty_run(db, concept, target_date, "no_real_youtube_candidates")
 
         raw_search_size = len(raw_candidates)
         if raw_search_size == 0:
@@ -707,13 +552,13 @@ class PipelineEngine:
             comments = v["comment_count"]
             sem_score = v["semantic_score"]
 
-            rr = float((views / subs) / 100.0) if subs > 0 else 0.0
+            rr = round(float(views / subs), 2) if subs > 0 else 1.0
             id_density = float((likes + comments) / views) if views > 0 else 0.0
 
-            v["reach_ratio"] = round(rr, 4)
+            v["reach_ratio"] = round(rr, 2)
             v["interaction_density"] = round(id_density, 4)
 
-            norm_reach = min(100.0, rr * 50.0)
+            norm_reach = min(100.0, (rr / 2.5) * 100.0)
             norm_interaction = min(100.0, id_density * 1000.0)
             norm_semantic = float(sem_score * 100.0)
 
@@ -1047,11 +892,9 @@ class PipelineEngine:
         categories: list[str] | None = None,
     ) -> dict[str, Any]:
         """
-        Seeds canonical concepts from YAML and ensures each active concept has `days`
-        of longitudinal ConceptDailySignal history so LightGBM and UI charts have
-        complete time-series trajectories.
+        Seeds canonical concepts from YAML and executes genuine 100% real YouTube data runs
+        for each active concept (strictly within the daily 270 queries limit).
         """
-        backfill_days = days or settings.backfill_days
         concepts = await self.seed_concepts_from_yaml(db)
         if categories:
             cat_set = {c.lower() for c in categories}
@@ -1064,35 +907,11 @@ class PipelineEngine:
             if not concept.active:
                 continue
 
-            # Check existing signal dates for this concept
-            existing_res = await db.execute(
-                select(ConceptDailySignal.video_date).where(
-                    ConceptDailySignal.concept_id == concept.id,
-                    ConceptDailySignal.population_size > 0,
-                )
-            )
-            existing_dates = set(existing_res.scalars().all())
-
-            # Backfill oldest -> newest so outlier_streak increments chronologically
-            for offset in range(backfill_days - 1, -1, -1):
-                exec_date = today - timedelta(days=offset)
-                target_video_date = exec_date - timedelta(days=settings.lag_days)
-                if target_video_date in existing_dates:
-                    continue
-
-                # Only call live YouTube API on today's run (offset == 0) to conserve quota;
-                # historical lag days use calibrated deterministic synthesis if not yet in DB.
-                if offset == 0:
-                    await self.execute_concept_run(db, concept, exec_date, allow_calibrated_fallback=True)
-                else:
-                    #Temporarily run calibrated synthesis for missing historical days
-                    orig_key = settings.youtube_api_key
-                    try:
-                        settings.youtube_api_key = ""
-                        await self.execute_concept_run(db, concept, exec_date, allow_calibrated_fallback=True)
-                    finally:
-                        settings.youtube_api_key = orig_key
+            try:
+                await self.execute_concept_run(db, concept, today)
                 processed_runs += 1
+            except Exception as e:
+                logger.error("Failed real YouTube run for '%s': %s", concept.name, e)
 
         await db.commit()
         return {

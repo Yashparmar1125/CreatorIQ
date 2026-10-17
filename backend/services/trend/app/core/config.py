@@ -27,11 +27,24 @@ class Settings(BaseSettings):
     serpapi_api_key: str = ""
     serpapi_base_url: str = "https://serpapi.com/search.json"
 
-    # YouTube Data API v3 — primary trend signal (server API key)
+    # YouTube Data API v3 — multi-key pool & rate limit (server API keys)
     youtube_api_key: str = Field(
         default="",
         validation_alias=AliasChoices("YOUTUBE_API_KEY", "GOOGLE_API_KEY"),
     )
+    youtube_api_key_2: str = Field(
+        default="",
+        validation_alias=AliasChoices("YOUTUBE_API_KEY_2", "GOOGLE_API_KEY_2", "Youtube_API_KEY_2"),
+    )
+    youtube_api_key_3: str = Field(
+        default="",
+        validation_alias=AliasChoices("YOUTUBE_API_KEY_3", "GOOGLE_API_KEY_3", "Youtube_API_KEY_3"),
+    )
+    youtube_api_keys: str = Field(
+        default="",
+        validation_alias=AliasChoices("YOUTUBE_API_KEYS", "GOOGLE_API_KEYS"),
+    )
+    youtube_max_daily_queries: int = 270
     youtube_search_days: int = 7
     youtube_search_max_results: int = 15
     youtube_min_views: int = 1000
@@ -44,7 +57,7 @@ class Settings(BaseSettings):
     min_views: int = 500
     min_subscribers: int = 100
     min_duration_seconds: int = 60
-    min_description_chars: int = 50
+    min_description_chars: int = 15
     semantic_score_threshold: float = 0.28
     youtube_api_max_retries: int = 3
     youtube_api_retry_backoff: float = 1.0
