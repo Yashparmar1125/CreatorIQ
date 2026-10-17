@@ -90,14 +90,14 @@ class LLMRouter:
                 try:
                     res = await self._call_groq(key, messages, tools=tools, temperature=temperature)
                     res["provider"] = "groq"
-                    res["model"] = "openai/gpt-oss-120b"
+                    res["model"] = "llama-3.3-70b-versatile"
                     return res
                 except Exception as exc:
                     errors.append(f"Groq error: {exc}")
                     logger.warning("Groq call failed with key ending in %s: %s", key[-6:], exc)
                     self._mark_cooldown(key, 45.0)
 
-        # 2. Try Gemini 3.8 Flash (if no tools or as fallback)
+        # 2. Try Gemini 2.0 Flash (if no tools or as fallback)
         if self.gemini_keys:
             for _ in range(len(self.gemini_keys)):
                 key = self._get_active_gemini_key()
@@ -106,7 +106,7 @@ class LLMRouter:
                 try:
                     res = await self._call_gemini(key, messages, tools=tools, temperature=temperature)
                     res["provider"] = "gemini"
-                    res["model"] = "gemini-3.8-flash"
+                    res["model"] = "gemini-2.0-flash"
                     return res
                 except Exception as exc:
                     errors.append(f"Gemini error: {exc}")
@@ -141,7 +141,7 @@ class LLMRouter:
             "Content-Type": "application/json",
         }
         body: dict[str, Any] = {
-            "model": "openai/gpt-oss-120b",
+            "model": "llama-3.3-70b-versatile",
             "messages": messages,
             "temperature": temperature,
         }
@@ -170,7 +170,7 @@ class LLMRouter:
         tools: list[dict[str, Any]] | None = None,
         temperature: float = 0.6,
     ) -> dict[str, Any]:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key={api_key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
         headers = {
             "Content-Type": "application/json",
             "User-Agent": "CreatorIQ/1.0",
