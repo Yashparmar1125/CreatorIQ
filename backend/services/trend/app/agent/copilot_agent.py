@@ -151,45 +151,33 @@ class CopilotAgent:
         active_tools = list(AGENT_TOOLS)
         executed_tools_metadata = []
 
-        # 6. Autonomous Multi-Turn Agent Loop (Max 6 rounds)
-        for round_idx in range(6):
+        # 6. Autonomous Multi-Turn Agent Loop (Max 4 rounds)
+        final_text = ""
+        last_provider = "groq"
+        last_model = "openai/gpt-oss-120b"
+
+        for round_idx in range(4):
             t0 = time.perf_counter()
-            # Force final synthesis after 2 tool rounds to keep responses rapid and high-yield
-            pass_tools = active_tools if len(executed_tools_metadata) < 3 and round_idx < 3 else None
-            response = await llm_router.chat(messages, tools=pass_tools, temperature=0.6)
+
+            if len(executed_tools_metadata) >= 2 or round_idx >= 2:
+                messages.append({
+                    "role": "user",
+                    "content": "You have gathered sufficient evidence. Synthesize your final strategic recommendation directly. Present 3 title angles, reach evidence, and next steps in clean markdown. Do not call any further tools."
+                })
+
+            response = await llm_router.chat(messages, tools=active_tools, temperature=0.6)
             tool_calls = response.get("tool_calls")
+            content = (response.get("content") or "").strip()
+            last_provider = response.get("provider", "groq")
+            last_model = response.get("model", "openai/gpt-oss-120b")
+
+            if content and (not tool_calls or len(executed_tools_metadata) >= 2):
+                final_text = content
+                break
 
             if not tool_calls:
-                # LLM finished research and produced final answer
-                final_text = response.get("content") or ""
-                # Stream the final text chunks
-                chunk_size = 4
-                words = final_text.split(" ")
-                for i in range(0, len(words), chunk_size):
-                    chunk = " ".join(words[i : i + chunk_size]) + " "
-                    yield f"data: {json.dumps({'type': 'token', 'delta': chunk})}\n\n"
-                    await asyncio.sleep(0.015)
-
-                asst_msg = ChatMessage(
-                    id=uuid.uuid4(),
-                    session_id=session.id,
-                    user_id=user_id,
-                    role="assistant",
-                    content=final_text,
-                    metadata_json={
-                        "tools_used": executed_tools_metadata,
-                        "provider": response.get("provider", "groq"),
-                        "model": response.get("model", "openai/gpt-oss-120b"),
-                    },
-                )
-                db.add(asst_msg)
-                session.updated_at = datetime.now(timezone.utc)
-                if session.title == "New Strategy Chat" or session.title == "Strategy Session":
-                    session.title = prompt[:42].strip()
-                await db.commit()
-
-                yield f"data: {json.dumps({'type': 'done', 'message_id': str(asst_msg.id)})}\n\n"
-                return
+                final_text = content
+                break
 
             # Append assistant message with tool calls to conversation trajectory
             messages.append({
@@ -232,7 +220,7 @@ class CopilotAgent:
                         tool_name=name,
                         args_json=args,
                         duration_ms=duration_ms,
-                        provider_model=response.get("model", "openai/gpt-oss-120b"),
+                        provider_model=last_model,
                         success="error" not in tool_result,
                     )
                 )
@@ -266,6 +254,44 @@ class CopilotAgent:
                     "content": json.dumps(tool_result),
                 })
 
-        # Loop limit reached fallback
-        yield f"data: {json.dumps({'type': 'token', 'delta': 'Research completed across platform data.'})}\n\n"
-        yield f"data: {json.dumps({'type': 'done', 'message_id': str(uuid.uuid4())})}\n\n"
+        # If final_text is still empty after loop, fallback to Gemini synthesis
+        if not final_text:
+            try:
+                gemini_resp = await llm_router.chat(messages, prefer_provider="gemini", temperature=0.6)
+                final_text = (gemini_resp.get("content") or "").strip()
+                last_provider = "gemini"
+                last_model = "gemini-3.8-flash"
+            except Exception as g_err:
+                logger.warning("Gemini synthesis fallback failed: %s", g_err)
+
+        if not final_text:
+            final_text = "I researched the live trends and market signals for your topic. Review the research steps and cards above for details."
+
+        # Stream the final text chunks
+        chunk_size = 4
+        words = final_text.split(" ")
+        for i in range(0, len(words), chunk_size):
+            chunk = " ".join(words[i : i + chunk_size]) + " "
+            yield f"data: {json.dumps({'type': 'token', 'delta': chunk})}\n\n"
+            await asyncio.sleep(0.015)
+
+        asst_msg = ChatMessage(
+            id=uuid.uuid4(),
+            session_id=session.id,
+            user_id=user_id,
+            role="assistant",
+            content=final_text,
+            metadata_json={
+                "tools_used": executed_tools_metadata,
+                "provider": last_provider,
+                "model": last_model,
+            },
+        )
+        db.add(asst_msg)
+        session.updated_at = datetime.now(timezone.utc)
+        if session.title == "New Strategy Chat" or session.title == "Strategy Session":
+            session.title = prompt[:42].strip()
+        await db.commit()
+
+        yield f"data: {json.dumps({'type': 'done', 'message_id': str(asst_msg.id)})}\n\n"
+        return
