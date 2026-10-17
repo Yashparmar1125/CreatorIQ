@@ -83,7 +83,9 @@ async def main() -> None:
         logger.info("Daily Quota Limit: %d search queries/day. Multi-key pool loaded with %d keys.", MAX_DAILY_SEARCH_QUERIES, len(youtube_router._keys))
 
         for idx, concept in enumerate(concepts, 1):
-            logger.info("[%d/%d] Hydrating concept: '%s' (%s)", idx, len(concepts), concept.name, concept.category)
+            c_name = concept.name
+            c_cat = concept.category
+            logger.info("[%d/%d] Hydrating concept: '%s' (%s)", idx, len(concepts), c_name, c_cat)
             try:
                 run_res = await pipeline.execute_concept_run(session, concept, today)
                 pop_size = run_res.get("population_size", 0)
@@ -92,14 +94,14 @@ async def main() -> None:
                 if pop_size > 0:
                     successful_hydrations += 1
                     total_real_videos += pop_size
-                    logger.info("   -> SUCCESS: %d real YouTube videos verified and saved for '%s'.", pop_size, concept.name)
+                    logger.info("   -> SUCCESS: %d real YouTube videos verified and saved for '%s'.", pop_size, c_name)
                 else:
-                    logger.warning("   -> Run completed with 0 population (%s) for '%s'.", status, concept.name)
+                    logger.warning("   -> Run completed with 0 population (%s) for '%s'.", status, c_name)
 
                 await session.commit()
             except Exception as e:
-                logger.error("   -> ERROR during hydration of '%s': %s", concept.name, e)
                 await session.rollback()
+                logger.error("   -> ERROR during hydration of '%s': %s", c_name, e)
 
         logger.info("=================================================================")
         logger.info("HYDRATION COMPLETED SUMMARY:")

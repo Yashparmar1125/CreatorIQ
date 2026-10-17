@@ -647,40 +647,60 @@ class PipelineEngine:
 
         keywords = [v["title"] for v in processed_videos]
 
-        # Delete existing record for (concept_id, target_date) and insert fresh signal
-        await db.execute(
-            delete(ConceptDailySignal).where(
-                ConceptDailySignal.concept_id == concept.id,
-                ConceptDailySignal.video_date == target_date,
+        stmt = (
+            pg_insert(ConceptDailySignal)
+            .values(
+                concept_id=concept.id,
+                concept_name=concept.name,
+                processed_at=datetime.now(timezone.utc),
+                video_date=target_date,
+                population_size=final_population_size,
+                reach_ratio_median=reach_ratio_median,
+                interaction_density_median=interaction_density_median,
+                semantic_score_mean=semantic_score_mean,
+                trend_score_median=trend_score_median,
+                top_outlier_video_id=top_outlier_video_id,
+                top_outlier_reach_ratio=top_outlier_reach_ratio,
+                top_outlier_interaction_density=top_outlier_interaction_density,
+                top_outlier_semantic_score=top_outlier_semantic_score,
+                top_outlier_channel_tier=top_outlier_channel_tier,
+                outlier_streak=outlier_streak,
+                big_channel_count=big_count,
+                medium_channel_count=medium_count,
+                small_channel_count=small_count,
+                keywords=keywords,
+                population=processed_videos,
+                high_variance_flags=high_variance_flags,
+                filter_audit=filter_audit_log,
             )
+            .on_conflict_do_update(
+                index_elements=["concept_id", "video_date"],
+                set_={
+                    "processed_at": datetime.now(timezone.utc),
+                    "population_size": final_population_size,
+                    "reach_ratio_median": reach_ratio_median,
+                    "interaction_density_median": interaction_density_median,
+                    "semantic_score_mean": semantic_score_mean,
+                    "trend_score_median": trend_score_median,
+                    "top_outlier_video_id": top_outlier_video_id,
+                    "top_outlier_reach_ratio": top_outlier_reach_ratio,
+                    "top_outlier_interaction_density": top_outlier_interaction_density,
+                    "top_outlier_semantic_score": top_outlier_semantic_score,
+                    "top_outlier_channel_tier": top_outlier_channel_tier,
+                    "outlier_streak": outlier_streak,
+                    "big_channel_count": big_count,
+                    "medium_channel_count": medium_count,
+                    "small_channel_count": small_count,
+                    "keywords": keywords,
+                    "population": processed_videos,
+                    "high_variance_flags": high_variance_flags,
+                    "filter_audit": filter_audit_log,
+                },
+            )
+            .returning(ConceptDailySignal)
         )
-
-        daily_signal = ConceptDailySignal(
-            concept_id=concept.id,
-            concept_name=concept.name,
-            processed_at=datetime.now(timezone.utc),
-            video_date=target_date,
-            population_size=final_population_size,
-            reach_ratio_median=reach_ratio_median,
-            interaction_density_median=interaction_density_median,
-            semantic_score_mean=semantic_score_mean,
-            trend_score_median=trend_score_median,
-            top_outlier_video_id=top_outlier_video_id,
-            top_outlier_reach_ratio=top_outlier_reach_ratio,
-            top_outlier_interaction_density=top_outlier_interaction_density,
-            top_outlier_semantic_score=top_outlier_semantic_score,
-            top_outlier_channel_tier=top_outlier_channel_tier,
-            outlier_streak=outlier_streak,
-            big_channel_count=big_count,
-            medium_channel_count=medium_count,
-            small_channel_count=small_count,
-            keywords=keywords,
-            population=processed_videos,
-            high_variance_flags=high_variance_flags,
-            filter_audit=filter_audit_log,
-        )
-        db.add(daily_signal)
-        await db.flush()
+        res = await db.execute(stmt)
+        daily_signal = res.scalar_one()
 
         # Sync canonical Concept + longitudinal signals into TrendConcept & Qdrant
         await self._sync_to_trend_concept(db, concept, daily_signal)
@@ -853,29 +873,40 @@ class PipelineEngine:
         reason: str,
         filter_audit: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        await db.execute(
-            delete(ConceptDailySignal).where(
-                ConceptDailySignal.concept_id == concept.id,
-                ConceptDailySignal.video_date == target_date,
+        stmt = (
+            pg_insert(ConceptDailySignal)
+            .values(
+                concept_id=concept.id,
+                concept_name=concept.name,
+                processed_at=datetime.now(timezone.utc),
+                video_date=target_date,
+                population_size=0,
+                outlier_streak=0,
+                big_channel_count=0,
+                medium_channel_count=0,
+                small_channel_count=0,
+                keywords=[],
+                population=[],
+                high_variance_flags=[],
+                filter_audit=filter_audit or {"raw_search_size": 0, "reason": reason},
+            )
+            .on_conflict_do_update(
+                index_elements=["concept_id", "video_date"],
+                set_={
+                    "processed_at": datetime.now(timezone.utc),
+                    "population_size": 0,
+                    "outlier_streak": 0,
+                    "big_channel_count": 0,
+                    "medium_channel_count": 0,
+                    "small_channel_count": 0,
+                    "keywords": [],
+                    "population": [],
+                    "high_variance_flags": [],
+                    "filter_audit": filter_audit or {"raw_search_size": 0, "reason": reason},
+                },
             )
         )
-        daily_signal = ConceptDailySignal(
-            concept_id=concept.id,
-            concept_name=concept.name,
-            processed_at=datetime.now(timezone.utc),
-            video_date=target_date,
-            population_size=0,
-            outlier_streak=0,
-            big_channel_count=0,
-            medium_channel_count=0,
-            small_channel_count=0,
-            keywords=[],
-            population=[],
-            high_variance_flags=[],
-            filter_audit=filter_audit or {"raw_search_size": 0, "reason": reason},
-        )
-        db.add(daily_signal)
-        await db.flush()
+        await db.execute(stmt)
         return {
             "status": "zero_population",
             "concept_id": concept.id,
