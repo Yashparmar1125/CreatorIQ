@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router';
-import logo from '../assets/logo.png';
+import { BrandLogo } from '../components/brand/BrandLogo';
 import {
   LayoutGrid,
   TrendingUp,
@@ -270,20 +270,12 @@ export const MainLayout: React.FC = () => {
             collapsed ? 'justify-center px-2' : 'px-4'
           )}
         >
-          <Link
+          <BrandLogo
             to="/"
-            className="flex items-center gap-2.5 transition-opacity hover:opacity-85"
+            size="sm"
+            showWordmark={!collapsed}
             title="Back to Home"
-          >
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white p-0.5 shadow-xs">
-              <img src={logo} alt="CreatorIQ" className="h-full w-full object-contain" />
-            </div>
-            {!collapsed && (
-              <span className="font-sora text-[15px] font-bold tracking-tight text-[#171717]">
-                CreatorIQ
-              </span>
-            )}
-          </Link>
+          />
         </div>
 
         <SidebarNav collapsed={collapsed} />
@@ -356,17 +348,12 @@ export const MainLayout: React.FC = () => {
           />
           <aside className="app-sidebar-light absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col border-r border-[#E5E0E8] shadow-xl">
             <div className="flex h-16 items-center justify-between border-b border-[#E5E0E8] px-4">
-              <Link
+              <BrandLogo
                 to="/"
-                onClick={() => setMobileOpen(false)}
-                className="flex items-center gap-2.5 transition-opacity hover:opacity-85"
+                size="sm"
                 title="Back to Home"
-              >
-                <div className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-lg bg-white p-0.5">
-                  <img src={logo} alt="CreatorIQ" className="h-full w-full object-contain" />
-                </div>
-                <span className="font-sora text-[15px] font-bold text-[#171717]">CreatorIQ</span>
-              </Link>
+                onClick={() => setMobileOpen(false)}
+              />
               <button
                 type="button"
                 onClick={() => setMobileOpen(false)}

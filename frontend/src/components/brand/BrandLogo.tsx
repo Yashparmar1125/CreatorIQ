@@ -18,6 +18,8 @@ interface BrandLogoProps {
   to?: string;
   className?: string;
   wordmarkClassName?: string;
+  title?: string;
+  onClick?: () => void;
 }
 
 /**
@@ -33,6 +35,8 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
   to,
   className = '',
   wordmarkClassName = '',
+  title,
+  onClick,
 }) => {
   const cfg = SIZES[size] ?? SIZES.md;
 
@@ -58,6 +62,8 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
       <Link
         to={to}
         aria-label="CreatorIQ home"
+        title={title}
+        onClick={onClick}
         className={`inline-flex items-center gap-2 transition-opacity hover:opacity-80 ${className}`}
       >
         {content}

@@ -14,7 +14,7 @@ import {
   ShieldCheck,
   Sparkles,
 } from 'lucide-react';
-import logo from '../assets/logo.png';
+import { BrandLogo } from '../components/brand/BrandLogo';
 import { api } from '../lib/api';
 
 interface EvaluationRecord {
@@ -215,14 +215,7 @@ export const ModelPerformancePage: React.FC = () => {
       <header className="sticky top-0 z-30 border-b border-neutral-800/80 bg-neutral-950/80 backdrop-blur-md px-4 sm:px-8 py-3.5">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <Link to="/" className="flex items-center gap-2.5 group">
-              <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg bg-white p-0.5 shadow-sm">
-                <img src={logo} alt="CreatorIQ" className="h-full w-full object-contain" />
-              </div>
-              <span className="font-sora text-base font-bold tracking-tight text-white">
-                Creator<span className="text-brand-500">IQ</span>
-              </span>
-            </Link>
+            <BrandLogo to="/" size="md" />
             <div className="h-4 w-px bg-neutral-800 mx-1 hidden sm:block" />
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold uppercase tracking-wider text-neutral-400 hidden sm:inline">

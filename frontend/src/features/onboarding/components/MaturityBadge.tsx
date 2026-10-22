@@ -9,8 +9,8 @@ function cn(...inputs: (string | undefined | null | false)[]) {
 export type ProfileMaturity = 'new' | 'emerging' | 'established';
 
 const LABELS: Record<ProfileMaturity, { label: string; className: string }> = {
-  new: { label: 'New Channel', className: 'bg-amber-50 text-amber-800 border-amber-300' },
-  emerging: { label: 'Growing', className: 'bg-[#f0ebff] text-[#6035c0] border-[#d8cbf9]' },
+  new: { label: 'New Channel', className: 'bg-[#F1ECFF] text-[#4A2E8F] border-[#D9CEF5]' },
+  emerging: { label: 'Growing', className: 'bg-[#F1ECFF] text-[#6035c0] border-[#d8cbf9]' },
   established: { label: 'Established', className: 'bg-[#ecfaf2] text-[#065f46] border-[#a7f3d0]' },
 };
 

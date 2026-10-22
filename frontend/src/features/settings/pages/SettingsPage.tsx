@@ -214,12 +214,12 @@ export const SettingsPage: React.FC = () => {
       </div>
 
       {loadError && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#F0D9B5] bg-[#FFF8EC] px-4 py-3">
-          <p className="text-[13px] leading-relaxed text-[#6B4A00]">{loadError}</p>
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#F3C9CE] bg-[#FDF1F2] px-4 py-3">
+          <p className="text-[13px] leading-relaxed text-[#8A1B26]">{loadError}</p>
           <button
             type="button"
             onClick={() => void loadProfile()}
-            className="rounded-full border border-[#E8D3AD] bg-white px-3 py-1.5 text-xs font-semibold text-[#6B4A00] transition-colors hover:bg-[#FFF3DE]"
+            className="rounded-full border border-[#E7B6BD] bg-white px-3 py-1.5 text-xs font-semibold text-[#8A1B26] transition-colors hover:bg-[#FFF4F5]"
           >
             Retry
           </button>

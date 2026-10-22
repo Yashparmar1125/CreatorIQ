@@ -1,9 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router';
-import { useTrendsStore, type Trend, type TrendSignalPoint } from '../../../stores/useTrendsStore';
+import { Link } from 'react-router';
+import { useTrendsStore, type Trend } from '../../../stores/useTrendsStore';
 import { FeedHistoryDrawer } from '../components/FeedHistoryDrawer';
 import { TrendMiniChart } from '../components/TrendMiniChart';
-import logo from '../../../assets/logo.png';
 import {
   cleanTrendText,
   cleanTrendTitle,
@@ -11,19 +10,16 @@ import {
 } from '../../../lib/cleanTrendTitle';
 import { formatCompactNumber } from '../../../lib/viewEstimator';
 import {
-  ArrowLeft,
   ArrowRight,
   Bookmark,
   Check,
   Film,
-  Globe,
   History,
   LayoutList,
   Layers,
   Loader2,
   RefreshCw,
   Search,
-  Sparkles,
   TrendingUp,
   X,
 } from 'lucide-react';
@@ -31,8 +27,7 @@ import {
 /* ------------------------------------------------------------------ *
  * Content-type filters — these map to the existing supported formats
  * ------------------------------------------------------------------ */
-const FORMAT_TABS = 
-[
+const FORMAT_TABS = [
   { key: 'all' as const, label: 'All content types', Icon: Layers },
   { key: 'long_form' as const, label: 'Long-form', Icon: LayoutList },
   { key: 'shorts' as const, label: 'Shorts', Icon: Film },
@@ -46,11 +41,11 @@ const FORMAT_TABS =
 type DemandKey = 'all' | 'growing' | 'peaking' | 'moderate' | 'declining';
 
 const DEMAND_FILTERS: { key: DemandKey; label: string; lifecycles: string[] | null }[] = [
-  { key: 'all', label: 'All demand', lifecycles: null },
-  { key: 'growing', label: 'Growing demand', lifecycles: ['growing'] },
-  { key: 'peaking', label: 'Interest at peak', lifecycles: ['peaking'] },
-  { key: 'moderate', label: 'Moderate demand', lifecycles: ['emerging'] },
-  { key: 'declining', label: 'Declining demand', lifecycles: ['declining', 'expired'] },
+  { key: 'all', label: 'All', lifecycles: null },
+  { key: 'growing', label: 'Rising', lifecycles: ['growing'] },
+  { key: 'peaking', label: 'At peak', lifecycles: ['peaking'] },
+  { key: 'moderate', label: 'Early', lifecycles: ['emerging'] },
+  { key: 'declining', label: 'Fading', lifecycles: ['declining', 'expired'] },
 ];
 
 const LIFECYCLE_META: Record<string, { label: string; className: string }> = {
@@ -81,34 +76,7 @@ function formatCompactVolume(num: number): string {
   return formatCompactNumber(num);
 }
 
-function daysBetween(from: string, to: string): number {
-  const start = Date.parse(from);
-  const end = Date.parse(to);
-  if (Number.isNaN(start) || Number.isNaN(end)) return 0;
-  return Math.max(0, Math.round((end - start) / 86_400_000));
-}
-
-interface GrowthReading {
-  pct: number;
-  days: number;
-}
-
-/** Growth measured from the real daily signal history the API returns. */
-function readGrowth(history?: TrendSignalPoint[]): GrowthReading | null {
-  if (!history || history.length < 2) return null;
-  const first = history[0];
-  const last = history[history.length - 1];
-  const base = Number(first.trend_score_median);
-  const current = Number(last.trend_score_median);
-  if (!Number.isFinite(base) || base <= 0 || !Number.isFinite(current)) return null;
-  return {
-    pct: ((current - base) / base) * 100,
-    days: daysBetween(first.video_date, last.video_date),
-  };
-}
-
 export const TrendsPage: React.FC = () => {
-  const navigate = useNavigate();
   const {
     trends,
     savedTrends,
@@ -185,18 +153,6 @@ export const TrendsPage: React.FC = () => {
     );
   }, [formatFiltered, demandFilter]);
 
-  const demandCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    DEMAND_FILTERS.forEach((d) => {
-      counts[d.key] = d.lifecycles
-        ? formatFiltered.filter((t) =>
-            d.lifecycles?.includes(String(t.lifecycle || t.status || '').toLowerCase())
-          ).length
-        : formatFiltered.length;
-    });
-    return counts;
-  }, [formatFiltered]);
-
   const isFiltered = activeFormatFilter !== 'all' || demandFilter !== 'all' || !!activeSearch;
 
   const resetFilters = () => {
@@ -204,24 +160,43 @@ export const TrendsPage: React.FC = () => {
     setDemandFilter('all');
   };
 
+  const contextParts = [
+    channelContext?.name ? `Ranked for ${channelContext.name}` : null,
+    channelContext?.niches?.length ? channelContext.niches.slice(0, 2).join(', ') : null,
+    geoContext?.badge || null,
+    aiEnriched ? 'AI-enriched angles' : null,
+    credits ? `${credits.remaining ?? credits.used ?? 0} refreshes left` : null,
+  ].filter(Boolean) as string[];
+
   return (
-    <div className="mx-auto w-full max-w-6xl pb-16">
+    <div className="mx-auto w-full max-w-5xl pb-16">
       {/* ---------------------------------------------------------- *
-          Brand header
+          Title + page utilities
          ---------------------------------------------------------- */}
-      <header className="flex items-center justify-between gap-3 border-b border-[#E5E0E8] pb-4">
-        <Link
-          to="/"
-          className="flex items-center gap-2 rounded-lg transition-opacity hover:opacity-80"
-          title="Back to home"
-        >
-          <span className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-lg bg-white p-0.5 shadow-xs">
-            <img src={logo} alt="CreatorIQ" className="h-full w-full object-contain" />
-          </span>
-          <span className="font-sora text-sm font-bold tracking-tight text-[#171717]">CreatorIQ</span>
-        </Link>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="font-sora text-[22px] font-extrabold leading-tight tracking-tight text-[#171717] sm:text-[28px]">
+            Content opportunities
+          </h1>
+          <p className="mt-1.5 max-w-xl text-[13px] leading-relaxed text-[#625D68]">
+            {activeSearch
+              ? `Results for “${activeSearch}”`
+              : isPersonalized
+                ? 'Ranked for your niche from the live signal feed.'
+                : 'Browse the collected signal feed.'}
+          </p>
+        </div>
 
         <div className="flex items-center gap-2">
+          {isHistorical && (
+            <button
+              type="button"
+              onClick={() => loadCurrentFeed()}
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[#D9CEF5] bg-[#F1ECFF] px-3 py-1.5 text-xs font-semibold text-[#4A2E8F] transition-colors hover:bg-[#E7E0FF]"
+            >
+              Past snapshot · Back to current
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setHistoryOpen(true)}
@@ -249,30 +224,6 @@ export const TrendsPage: React.FC = () => {
             Refresh
           </button>
         </div>
-      </header>
-
-      {/* ---------------------------------------------------------- *
-          Page title
-         ---------------------------------------------------------- */}
-      <div className="mt-6 flex items-start gap-3">
-        <button
-          type="button"
-          onClick={() => navigate('/app/dashboard')}
-          aria-label="Back to overview"
-          className="mt-0.5 inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-[#E5E0E8] bg-white text-[#625D68] transition-colors hover:border-[#C9BCF0] hover:bg-[#F6F3FF] hover:text-[#171717]"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </button>
-        <div className="min-w-0">
-          <h1 className="font-sora text-[22px] font-extrabold leading-tight tracking-tight text-[#171717] sm:text-[28px]">
-            View all popular content ideas
-          </h1>
-          <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-[#625D68]">
-            {isPersonalized
-              ? 'Ranked for your niche from the live signal feed. Every metric below comes from the collected signals.'
-              : 'Browse the collected signal feed. Every metric below comes from the collected signals.'}
-          </p>
-        </div>
       </div>
 
       {/* ---------------------------------------------------------- *
@@ -294,7 +245,7 @@ export const TrendsPage: React.FC = () => {
           type="search"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search content topics or trends..."
+          placeholder="Search a topic you want to cover..."
           className="h-9 min-w-0 flex-1 border-0 bg-transparent text-sm text-[#171717] placeholder-[#9B94A5] focus:outline-none"
         />
         {activeSearch && (
@@ -317,120 +268,65 @@ export const TrendsPage: React.FC = () => {
       </form>
 
       {/* ---------------------------------------------------------- *
-          Filter chips — content type and demand are separate dimensions
+          One filter row — demand chips + content-type icons
          ---------------------------------------------------------- */}
-      <div className="mt-5 space-y-2.5">
-        <div className="flex flex-wrap items-center gap-2">
-          {/* <span className="app-section-label mr-1">Content type</span>
-          {FORMAT_TABS.map(({ key, label, Icon }) => {
-            const isActive = activeFormatFilter === key;
-            return (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setFormatFilter(key)}
-                aria-pressed={isActive}
-                className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
-                  isActive
-                    ? 'border-[#171717] bg-[#171717] text-white'
-                    : 'border-[#E5E0E8] bg-white text-[#625D68] hover:border-[#C9BCF0] hover:bg-[#F6F3FF] hover:text-[#171717]'
-                }`}
-              >
-                <Icon className="h-3.5 w-3.5" />
-                {label}
-              </button>
-            );
-          })} */}
-        </div>
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        {DEMAND_FILTERS.map((d) => {
+          const isActive = demandFilter === d.key;
+          return (
+            <button
+              key={d.key}
+              type="button"
+              onClick={() => setDemandFilter(d.key)}
+              aria-pressed={isActive}
+              className={`inline-flex cursor-pointer items-center rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                isActive
+                  ? 'border-[#171717] bg-[#171717] text-white'
+                  : 'border-[#E5E0E8] bg-white text-[#625D68] hover:border-[#C9BCF0] hover:bg-[#F6F3FF] hover:text-[#171717]'
+              }`}
+            >
+              {d.label}
+            </button>
+          );
+        })}
 
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="app-section-label mr-1">Demand</span>
-          {DEMAND_FILTERS.map((d) => {
-            const isActive = demandFilter === d.key;
-            return (
-              <button
-                key={d.key}
-                type="button"
-                onClick={() => setDemandFilter(d.key)}
-                aria-pressed={isActive}
-                className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
-                  isActive
-                    ? 'border-[#171717] bg-[#171717] text-white'
-                    : 'border-[#E5E0E8] bg-white text-[#625D68] hover:border-[#C9BCF0] hover:bg-[#F6F3FF] hover:text-[#171717]'
-                }`}
-              >
-                {d.label}
-                <span
-                  className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
-                    isActive ? 'bg-white/20 text-white' : 'bg-[#F1ECFF] text-[#4A2E8F]'
-                  }`}
-                >
-                  {demandCounts[d.key] ?? 0}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+        <span className="mx-1 hidden h-4 w-px bg-[#E5E0E8] sm:block" aria-hidden="true" />
+
+        {FORMAT_TABS.map(({ key, label, Icon }) => {
+          const isActive = activeFormatFilter === key;
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setFormatFilter(key)}
+              aria-pressed={isActive}
+              aria-label={label}
+              title={label}
+              className={`inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border transition-colors ${
+                isActive
+                  ? 'border-[#171717] bg-[#171717] text-white'
+                  : 'border-[#E5E0E8] bg-white text-[#77717F] hover:border-[#C9BCF0] hover:bg-[#F6F3FF] hover:text-[#171717]'
+              }`}
+            >
+              <Icon className="h-3.5 w-3.5" />
+            </button>
+          );
+        })}
       </div>
 
       {/* ---------------------------------------------------------- *
-          Feed context
+          Feed context — one quiet line
          ---------------------------------------------------------- */}
-      {(geoContext?.badge || credits || isHistorical || snapshotAt || aiEnriched) && (
-        <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-[#E5E0E8] bg-white px-3.5 py-2.5 text-xs text-[#625D68]">
-          {isHistorical && (
-            <span className="text-[#946200]">
-              Viewing a past snapshot.{' '}
-              <button
-                type="button"
-                onClick={() => loadCurrentFeed()}
-                className="cursor-pointer font-semibold text-[#4A2E8F] underline hover:text-[#171717]"
-              >
-                Back to current
-              </button>
-            </span>
-          )}
-          {geoContext?.badge && (
-            <span className="inline-flex items-center gap-1.5">
-              <Globe className="h-3.5 w-3.5 text-[#77717F]" />
-              {geoContext.badge}
-            </span>
-          )}
-          {aiEnriched && (
-            <span className="inline-flex items-center gap-1.5 text-[#4A2E8F]">
-              <Sparkles className="h-3.5 w-3.5" />
-              AI enriched
-            </span>
-          )}
-          {credits && (
-            <span className="inline-flex items-center gap-1.5">
-              Refresh credits: {credits.remaining ?? credits.used ?? 0} left
-            </span>
-          )}
+      {(contextParts.length > 0 || snapshotAt) && (
+        <p className="mt-4 text-[11px] leading-relaxed text-[#77717F]">
+          {contextParts.join(' · ')}
           {snapshotAt && (
-            <span className="ml-auto text-[11px] text-[#77717F]">
+            <>
+              {contextParts.length > 0 ? ' · ' : ''}
               Updated {new Date(snapshotAt).toLocaleString()}
-            </span>
+            </>
           )}
-        </div>
-      )}
-
-      {channelContext?.name && !activeSearch && (
-        <div className="mt-3 flex items-center gap-2.5 text-xs text-[#625D68]">
-          {channelContext.thumbnail_url ? (
-            <img
-              src={channelContext.thumbnail_url}
-              alt=""
-              className="h-6 w-6 shrink-0 rounded-md border border-[#E5E0E8] object-cover"
-            />
-          ) : null}
-          <span>
-            Ranked for <span className="font-semibold text-[#171717]">{channelContext.name}</span>
-            {channelContext.niches?.length
-              ? ` · ${channelContext.niches.slice(0, 3).join(', ')}`
-              : ''}
-          </span>
-        </div>
+        </p>
       )}
 
       <FeedHistoryDrawer
@@ -449,7 +345,7 @@ export const TrendsPage: React.FC = () => {
       {error && (
         <div
           role="alert"
-          className="mt-5 rounded-xl border border-[#F5C6CE] bg-[#FDECEF] px-4 py-3 text-xs text-[#B42332]"
+          className="mt-5 rounded-xl border border-[#F3C9CE] bg-[#FDF1F2] px-4 py-3 text-xs text-[#8A1B26]"
         >
           Could not load trends — {error}. Your search text is kept, try again in a moment.
         </div>
@@ -523,16 +419,17 @@ export const TrendsPage: React.FC = () => {
                   : null;
             const lifecycle = String(trend.lifecycle || trend.status || '').toLowerCase();
             const lifecycleMeta = LIFECYCLE_META[lifecycle];
-            const growth = readGrowth(trend.signal_history);
             const volumeValue =
               trend.search_volume != null && trend.search_volume > 0
                 ? formatCompactVolume(trend.search_volume)
                 : trend.volume && trend.volume !== 'N/A'
                   ? trend.volume
                   : null;
-            const interactionRate =
-              trend.interaction_density_median != null && trend.interaction_density_median > 0
-                ? `${(Number(trend.interaction_density_median) * 100).toFixed(1)}%`
+            /* Views of the topic's videos divided by their own channel's
+               subscriber count — how far a video travels beyond its channel. */
+            const reachValue =
+              trend.reach_ratio_median != null && trend.reach_ratio_median > 0
+                ? `${Number(trend.reach_ratio_median).toFixed(1)}x`
                 : null;
             const angle = !isBoilerplateConcept(trend.video_concept)
               ? cleanTrendText(trend.video_concept)
@@ -543,7 +440,7 @@ export const TrendsPage: React.FC = () => {
             return (
               <article
                 key={trend.id}
-                className="group flex flex-col rounded-2xl border border-[#E5E0E8] bg-white p-5 transition-all duration-150 hover:-translate-y-0.5 hover:border-[#C9BCF0] hover:shadow-[0_12px_28px_rgba(23,23,23,0.06)]"
+                className="group flex flex-col rounded-2xl border border-[#E5E0E8] bg-white p-5 transition-colors hover:border-[#C9BCF0]"
               >
                 {/* Badge row */}
                 <div className="flex items-start justify-between gap-3">
@@ -565,8 +462,8 @@ export const TrendsPage: React.FC = () => {
                     ))}
                   </div>
                   {score != null && (
-                    <span className="shrink-0 rounded-full border border-[#E5E0E8] bg-[#FBFAF8] px-2.5 py-0.5 font-mono text-[11px] font-bold text-[#171717]">
-                      {score}/100 fit
+                    <span className="shrink-0 text-[11px] font-semibold text-[#77717F]">
+                      Fit {score}/100
                     </span>
                   )}
                 </div>
@@ -578,53 +475,40 @@ export const TrendsPage: React.FC = () => {
                   </Link>
                 </h3>
 
+                {/* Why this is worth a look */}
                 {angle && (
                   <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-[#625D68]">
-                    <span className="font-semibold text-[#171717]">Angle: </span>
                     {angle}
                   </p>
                 )}
 
-                {/* Metrics */}
-                <dl className="mt-4 grid grid-cols-3 gap-3">
-                  <div>
+                {/* Measured momentum (real data only) */}
+                <div className="mt-4">
+                  <TrendMiniChart trend={trend} />
+                </div>
+
+                {/* Two decision metrics */}
+                <dl className="mt-4 grid grid-cols-2 gap-4 border-t border-[#EFEBF2] pt-3.5">
+                  <div className="min-w-0">
+                    <dt
+                      className="text-[11px] text-[#77717F]"
+                      title="Median views divided by the subscriber count of the channel that published the video"
+                    >
+                      Reach vs channel size
+                    </dt>
+                    <dd className="mt-0.5 font-mono text-[15px] font-bold text-[#171717]">
+                      {reachValue ?? '—'}
+                    </dd>
+                  </div>
+                  <div className="min-w-0">
                     <dt className="text-[11px] text-[#77717F]">Search volume</dt>
                     <dd className="mt-0.5 font-mono text-[15px] font-bold text-[#171717]">
                       {volumeValue ?? '—'}
                     </dd>
                   </div>
-                  <div>
-                    <dt className="text-[11px] text-[#77717F]">
-                      {growth ? `vs ${growth.days}d ago` : 'Momentum'}
-                    </dt>
-                    <dd
-                      className={`mt-0.5 font-mono text-[15px] font-bold ${
-                        growth
-                          ? growth.pct >= 0
-                            ? 'text-[#167A59]'
-                            : 'text-[#B42332]'
-                          : 'text-[#171717]'
-                      }`}
-                    >
-                      {growth
-                        ? `${growth.pct >= 0 ? '+' : ''}${growth.pct.toFixed(1)}%`
-                        : trend.velocity || '—'}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-[11px] text-[#77717F]">Interaction rate</dt>
-                    <dd className="mt-0.5 font-mono text-[15px] font-bold text-[#171717]">
-                      {interactionRate ?? '—'}
-                    </dd>
-                  </div>
                 </dl>
 
-                {/* Compact real-data graph: momentum series, upload reach, or score */}
-                <div className="mt-4">
-                  <TrendMiniChart trend={trend} />
-                </div>
-
-                {/* Footer */}
+                {/* Footer — one primary action, one secondary */}
                 <div className="mt-4 flex items-center justify-between gap-3 border-t border-[#EFEBF2] pt-3.5">
                   <button
                     type="button"
@@ -651,7 +535,7 @@ export const TrendsPage: React.FC = () => {
                     to={`/app/trends/detail/${trend.id}`}
                     onClick={() => setPendingDetailId(trend.id)}
                     aria-busy={pendingDetailId === trend.id}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-[#E5E0E8] bg-white px-3.5 py-1.5 text-xs font-bold text-[#171717] transition-colors hover:border-[#C9BCF0] hover:bg-[#F6F3FF]"
+                    className="app-btn-pink inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs"
                   >
                     {pendingDetailId === trend.id ? (
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
