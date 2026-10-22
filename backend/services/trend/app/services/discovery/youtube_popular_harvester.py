@@ -25,7 +25,6 @@ CATEGORY_MAP: dict[str, str] = {
     "20": "Gaming",                  # Gaming
     "24": "Entertainment",           # Entertainment
     "25": "News & Current Affairs",  # News & Politics (breaking events, debates, controversies)
-    "27": "Education",               # Education / Explainers / Analysis
 }
 
 
