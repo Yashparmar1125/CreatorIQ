@@ -130,10 +130,10 @@ class DiscoveryEngine:
                 in_batch_dup = False
                 for prev in batch_promoted_vectors:
                     sim = float(np.dot(cand_vec, prev["vector"]))
-                    if sim >= 0.75:
+                    if sim >= 0.72:
                         summary["merged_duplicates"] += 1
                         logger.info(
-                            "Candidate '%s' matches in-batch candidate '%s' (similarity: %.3f >= 0.75), skipping.",
+                            "Candidate '%s' matches in-batch candidate '%s' (similarity: %.3f >= 0.72), skipping.",
                             name,
                             prev["name"],
                             sim,

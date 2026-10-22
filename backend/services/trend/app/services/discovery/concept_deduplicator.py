@@ -17,7 +17,7 @@ from app.services.vector_service import VectorService
 
 logger = logging.getLogger(__name__)
 
-SIMILARITY_DUPLICATE_THRESHOLD = 0.75
+SIMILARITY_DUPLICATE_THRESHOLD = 0.72
 
 
 @dataclass
