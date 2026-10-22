@@ -61,6 +61,12 @@ NICHE_CLUSTERS: dict[str, dict] = {
         "geo_default": "IN",
         "category_id": "0",
     },
+    "News & Current Affairs": {
+        "queries": ["breaking news india", "political controversy", "current affairs debate", "trending news topic"],
+        "youtube_queries": ["breaking news today india", "controversy explainer", "political debate trending", "current affairs analysis"],
+        "geo_default": "IN",
+        "category_id": "16",
+    },
 }
 
 # YouTube Data API search queries (primary signal — real videos)
@@ -81,6 +87,7 @@ NICHE_KEYWORDS: dict[str, list[str]] = {
     "music": ["music", "song", "album", "singer", "concert", "spotify"],
     "travel": ["travel", "trip", "tour", "destination", "hotel", "flight"],
     "beauty": ["beauty", "skincare", "makeup", "fashion", "style"],
+    "news & current affairs": ["news", "politics", "controversy", "current affairs", "debate", "minister", "government", "election", "scandal", "breaking", "ambani", "starlink", "policy", "court", "verdict", "jamnagar"],
 }
 
 PLAN_CREDITS = {"free": 999999, "pro": 999999, "agency": 999999}
@@ -97,4 +104,5 @@ ON_DEMAND_QUERIES: dict[str, list[str]] = {
     "Education": ["study tips shorts", "exam preparation"],
     "Finance": ["stock market india", "investing tips"],
     "Travel": ["travel vlog india", "budget travel"],
+    "News & Current Affairs": ["breaking news india", "trending controversy explainer", "political debate youtube", "current affairs analysis"],
 }

@@ -34,12 +34,15 @@ class TavilyTrendHarvester:
             logger.info("No Tavily API keys configured, skipping Tavily harvest.")
             return []
 
-        target_niches = niches or ["Tech", "Fitness", "Gaming", "Finance"]
+        target_niches = niches or ["Tech", "Fitness", "Gaming", "Finance", "News & Current Affairs"]
         signals: list[dict[str, Any]] = []
 
         async with httpx.AsyncClient(timeout=12.0) as client:
             for niche in target_niches:
-                query = f"trending YouTube video topics and breakout ideas {niche} 2026"
+                if niche == "News & Current Affairs":
+                    query = "trending breaking news controversy India debates viral current affairs 2026"
+                else:
+                    query = f"trending YouTube video topics and breakout ideas {niche} 2026"
                 max_attempts = len(all_keys)
                 for _ in range(max_attempts):
                     key = await tavily_pool.get_active_key()

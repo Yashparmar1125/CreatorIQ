@@ -7,6 +7,7 @@ import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.core.key_pool import serpapi_pool
 from app.integrations.serpapi_client import search_google_trends, search_trending_now
 from app.models.concept_models import ConceptLifecycle, ConceptSignalSource
 from app.repositories.concept_repository import ConceptRepository
@@ -89,6 +90,7 @@ class ConceptCollector:
             )
         except Exception:
             logger.exception("Dynamic Trend Discovery cycle failed")
+            await db.rollback()
 
         # 2. Primary Canonical Concept Pipeline (3-stage gate, Reach Ratio, Outlier Detection & Longitudinal Backfill)
         try:
@@ -102,8 +104,9 @@ class ConceptCollector:
             )
         except Exception:
             logger.exception("Canonical PipelineEngine collection failed")
+            await db.rollback()
 
-        if not settings.serpapi_api_key or not settings.enable_serpapi_collector:
+        if not serpapi_pool.get_all_keys() or not settings.enable_serpapi_collector:
             return ingested
 
         for cluster_name, cfg in NICHE_CLUSTERS.items():
@@ -129,8 +132,9 @@ class ConceptCollector:
             ingested += int(summary.get("daily_signals_processed", 0))
         except Exception:
             logger.exception("Canonical PipelineEngine on-demand collection failed")
+            await db.rollback()
 
-        if not settings.serpapi_api_key or not niches:
+        if not serpapi_pool.get_all_keys() or not niches:
             return ingested
 
         queries: list[tuple[str, str]] = []

@@ -165,67 +165,97 @@ class DiscoveryEngine:
                     )
                     continue
 
-                # 5. Persist candidate to `concept_candidates` table
-                cand_id = uuid.uuid4()
-                cand_signals_sample = [s.get("title") for s in signals[:5]]
+                # 5. Persist candidate to `concept_candidates` table with savepoint
+                try:
+                    async with db.begin_nested():
+                        cand_signals_sample = [s.get("title") for s in signals[:5]]
 
-                db_candidate = ConceptCandidate(
-                    id=cand_id,
-                    proposed_name=name,
-                    category=category,
-                    description=desc,
-                    include_terms=inc_terms,
-                    exclude_terms=exc_terms,
-                    discovery_source="discovery_engine",
-                    raw_signals=cand_signals_sample,
-                    confidence_score=conf,
-                    status="pending",
-                )
-                db.add(db_candidate)
-                await db.flush()
+                        cand_stmt = select(ConceptCandidate).where(
+                            func.lower(ConceptCandidate.proposed_name) == name.lower()
+                        )
+                        existing_cand = (await db.execute(cand_stmt)).scalar_one_or_none()
 
-                # 6. Autonomous Promotion Gate
-                # If confidence is solid and quota limit has headroom, promote immediately
-                if conf >= 0.70 and promotions_count < max_promotions_per_cycle:
-                    new_concept_id = str(uuid.uuid4())
-                    promoted_concept = Concept(
-                        id=new_concept_id,
-                        name=name,
-                        category=category,
-                        description=desc,
-                        active=True,
-                        is_dynamic=True,
-                        discovery_source="discovery_engine",
-                        confidence_score=conf,
-                        include_terms=inc_terms,
-                        exclude_terms=exc_terms,
-                    )
-                    db.add(promoted_concept)
-                    db_candidate.status = "promoted"
-                    promotions_count += 1
-                    batch_promoted_vectors.append({"name": name, "vector": cand_vec})
-
-                    # Index new concept into Qdrant
-                    if settings.enable_vector_search:
-                        try:
-                            self.vector_service.upsert_concept_vector(
-                                concept_id=new_concept_id,
-                                title=f"{name} {desc or ''}",
-                                niche_tags=[category] + inc_terms[:3],
-                                raw_momentum=60.0,
+                        if existing_cand:
+                            existing_cand.confidence_score = max(existing_cand.confidence_score, conf)
+                            existing_cand.raw_signals = cand_signals_sample
+                            existing_cand.category = category
+                            if desc:
+                                existing_cand.description = desc
+                            db_candidate = existing_cand
+                        else:
+                            cand_id = uuid.uuid4()
+                            db_candidate = ConceptCandidate(
+                                id=cand_id,
+                                proposed_name=name,
+                                category=category,
+                                description=desc,
+                                include_terms=inc_terms,
+                                exclude_terms=exc_terms,
+                                discovery_source="discovery_engine",
+                                raw_signals=cand_signals_sample,
+                                confidence_score=conf,
+                                status="pending",
                             )
-                        except Exception as v_err:
-                            logger.warning("Vector upsert for promoted concept failed: %s", v_err)
+                            db.add(db_candidate)
 
-                    summary["promoted_concepts"].append(
-                        {
-                            "id": new_concept_id,
-                            "name": name,
-                            "category": category,
-                            "confidence": conf,
-                        }
-                    )
-                    logger.info("PROMOTED new dynamic concept: '%s' [%s]", name, category)
+                        await db.flush()
+
+                        # 6. Autonomous Promotion Gate
+                        # If confidence is solid, not already promoted, and quota limit has headroom, promote immediately
+                        if (
+                            db_candidate.status != "promoted"
+                            and conf >= 0.70
+                            and promotions_count < max_promotions_per_cycle
+                        ):
+                            # Double check that the concept doesn't already exist in concepts table
+                            existing_concept = (
+                                await db.execute(select(Concept).where(func.lower(Concept.name) == name.lower()))
+                            ).scalar_one_or_none()
+
+                            if not existing_concept:
+                                new_concept_id = str(uuid.uuid4())
+                                promoted_concept = Concept(
+                                    id=new_concept_id,
+                                    name=name,
+                                    category=category,
+                                    description=desc,
+                                    active=True,
+                                    is_dynamic=True,
+                                    discovery_source="discovery_engine",
+                                    confidence_score=conf,
+                                    include_terms=inc_terms,
+                                    exclude_terms=exc_terms,
+                                )
+                                db.add(promoted_concept)
+                                db_candidate.status = "promoted"
+                                promotions_count += 1
+                                batch_promoted_vectors.append({"name": name, "vector": cand_vec})
+
+                                # Index new concept into Qdrant
+                                if settings.enable_vector_search:
+                                    try:
+                                        self.vector_service.upsert_concept_vector(
+                                            concept_id=new_concept_id,
+                                            title=f"{name} {desc or ''}",
+                                            niche_tags=[category] + inc_terms[:3],
+                                            raw_momentum=60.0,
+                                        )
+                                    except Exception as v_err:
+                                        logger.warning("Vector upsert for promoted concept failed: %s", v_err)
+
+                                summary["promoted_concepts"].append(
+                                    {
+                                        "id": new_concept_id,
+                                        "name": name,
+                                        "category": category,
+                                        "confidence": conf,
+                                    }
+                                )
+                                logger.info("PROMOTED new dynamic concept: '%s' [%s]", name, category)
+                            else:
+                                db_candidate.status = "promoted"
+                except Exception as cand_err:
+                    logger.warning("Failed candidate persistence/promotion for '%s': %s", name, cand_err)
 
         # 7. Self-Pruning & Archival of Stale Dynamic Concepts (>14 days inactive)
         pruned = await self._prune_stale_dynamic_concepts(db)

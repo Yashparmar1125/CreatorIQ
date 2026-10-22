@@ -20,6 +20,7 @@ SEED_SEARCH_QUERIES: dict[str, list[str]] = {
     "Education": ["study techniques", "productivity hacks", "career growth"],
     "Finance": ["stock market investing", "budgeting savings", "passive income"],
     "Lifestyle": ["meal prep", "morning routine", "travel vlog"],
+    "News & Current Affairs": ["breaking news India", "political controversy", "current affairs debate", "trending news topic"],
 }
 
 

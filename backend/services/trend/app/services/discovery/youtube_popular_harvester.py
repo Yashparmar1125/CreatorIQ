@@ -19,11 +19,13 @@ logger = logging.getLogger(__name__)
 YOUTUBE_VIDEOS_URL = "https://www.googleapis.com/youtube/v3/videos"
 
 CATEGORY_MAP: dict[str, str] = {
-    "0": "General",         # All trending topics (Lifestyle, Education, Culture)
-    "28": "Tech",           # Science & Technology
-    "17": "Fitness",        # Sports / Fitness / Gym
-    "20": "Gaming",         # Gaming
-    "24": "Entertainment",  # Entertainment
+    "0": "General",                  # All trending topics (Lifestyle, Culture)
+    "28": "Tech",                    # Science & Technology
+    "17": "Fitness",                 # Sports / Fitness / Gym
+    "20": "Gaming",                  # Gaming
+    "24": "Entertainment",           # Entertainment
+    "25": "News & Current Affairs",  # News & Politics (breaking events, debates, controversies)
+    "27": "Education",               # Education / Explainers / Analysis
 }
 
 

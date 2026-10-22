@@ -65,16 +65,18 @@ class LLMConceptExtractor:
         system_prompt = (
             "You are CreatorIQ's Chief Topic Taxonomy Engine. Your task is to analyze raw trending video titles, "
             "search queries, and creator discussions, and identify 1 to 3 distinct, emerging CANONICAL CONCEPTS. "
-            "A Canonical Concept is a broad, repeatable topic cluster that multiple creators are making videos about.\n\n"
+            "A Canonical Concept is a broad, repeatable topic cluster that multiple creators are making videos about "
+            "(including major breaking news, political issues, corporate controversies, and public debates that creators react to or explain).\n\n"
             "DO NOT create single-video titles or clickbait names (e.g. 'I Tried X for 7 Days' is NOT a concept; "
-            "'Carnivore Diet & Animal-Based Nutrition' IS a concept).\n\n"
+            "'Carnivore Diet & Animal-Based Nutrition' IS a concept; "
+            "'Starlink vs Indian Telcos Satellite Spectrum Debate' IS a concept).\n\n"
             f"Already existing concepts in this niche: [{existing_str}]. DO NOT duplicate or closely rephrase these!\n\n"
             "Return ONLY a valid JSON object matching this schema:\n"
             "{\n"
             '  "concepts": [\n'
             "    {\n"
             '      "proposed_name": "string (Clean, professional 3-6 word canonical title)",\n'
-            '      "category": "string (e.g. Tech, Fitness, Gaming, Finance, Education, Lifestyle)",\n'
+            '      "category": "string (e.g. Tech, Fitness, Gaming, Finance, Education, Lifestyle, News & Current Affairs, Entertainment)",\n'
             '      "description": "string (1-2 sentences explaining what this trend is and why creators are covering it)",\n'
             '      "include_terms": ["string", "string", "string"] (3 to 5 targeted search phrases to find real videos),\n'
             '      "exclude_terms": ["string", "string"] (2 to 3 negative keywords to filter off-topic noise),\n'
