@@ -252,6 +252,10 @@ export const MainLayout: React.FC = () => {
   const userInitial = user?.full_name?.charAt(0) || user?.email?.charAt(0)?.toUpperCase() || 'U';
   const userName = user?.full_name || user?.email?.split('@')[0] || 'Creator';
 
+  if (location.pathname.startsWith('/app/strategy')) {
+    return <Outlet />;
+  }
+
   return (
     <div className="app-shell flex min-h-screen bg-[#0a0a0a] text-[#ededed]">
       {/* Desktop sidebar */}

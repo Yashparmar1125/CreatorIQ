@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { Youtube, Users, AtSign, Tv, Check } from 'lucide-react';
+import { Youtube, Users, Check } from 'lucide-react';
 import { OnboardingStepShell } from '../OnboardingStepShell';
 import { cn } from '../../../../lib/utils';
+import { useState } from 'react';
 
 interface ManualChannelStepProps {
   channelName: string;
