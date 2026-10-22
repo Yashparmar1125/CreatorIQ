@@ -25,6 +25,7 @@ class Settings(BaseSettings):
 
     # SerpApi Google Trends — https://serpapi.com/google-trends-api
     serpapi_api_key: str = ""
+    serpapi_api_keys: str = ""
     serpapi_base_url: str = "https://serpapi.com/search.json"
 
     # YouTube Data API v3 — multi-key pool & rate limit (server API keys)

@@ -9,7 +9,7 @@ import logging
 from typing import Any
 
 from app.core.config import settings
-from app.integrations.serpapi_client import search_google_trends, search_trending_now
+from app.integrations.serpapi_client import search_google_trends, search_trending_now, serpapi_pool
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ class GoogleTrendsHarvester:
         categories: list[str] | None = None,
         geo: str = "IN",
     ) -> list[dict[str, Any]]:
-        if not settings.serpapi_api_key or not settings.enable_serpapi_collector:
+        if not serpapi_pool.get_keys() or not settings.enable_serpapi_collector:
             logger.info("SerpApi collector disabled or API key missing.")
             return []
 
