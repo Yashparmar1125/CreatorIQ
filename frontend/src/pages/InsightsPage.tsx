@@ -1,122 +1,166 @@
 import React from 'react';
-import { TrendingUp, BarChart3, Globe, ArrowRight, Shield, Zap } from 'lucide-react';
+import { Link } from 'react-router';
+import { ArrowRight, BarChart3, Globe, Shield, TrendingUp, Zap } from 'lucide-react';
 import { PublicLayout } from '../components/organisms/PublicLayout';
 import { MarketingHero, MarketingSection, MarketingCta } from '../components/marketing/MarketingSections';
-import { Button } from '../components/ui/Button';
-import { Card } from '../components/ui/Card';
-import { Badge } from '../components/ui/Badge';
-import { Input } from '../components/ui/Input';
-import { Link } from 'react-router';
+import './PublicPages.css';
 
-const articles = [
+const steps = [
   {
-    category: 'Case study',
-    title: 'How a comedy channel used trend velocity to 3× weekly views',
-    description:
-      'By acting on Top 5 shorts signals within 24 hours, one Entertainment creator captured rising search demand before saturation.',
-    icon: TrendingUp,
-  },
-  {
-    category: 'Research',
-    title: 'YouTube retention in 2026: the first 30 seconds matter more',
-    description:
-      'Channels that front-load payoff in Shorts see measurably higher average view duration across niches.',
-    icon: BarChart3,
-  },
-  {
-    category: 'Playbook',
-    title: 'Turning a trend into a publishable video in one afternoon',
-    description:
-      'A repeatable workflow: trend detail → title ideas → strategy brief → planner slot.',
     icon: Globe,
+    title: 'Collect public uploads',
+    body: 'Recent public videos are gathered for each concept, along with views, engagement and subscriber counts. No private viewer data is used for discovery.',
+  },
+  {
+    icon: BarChart3,
+    title: 'Filter before ranking',
+    body: 'Uploads pass duration, language and relevance checks. A concept only reaches the feed when enough verified videos support it.',
+  },
+  {
+    icon: TrendingUp,
+    title: 'Measure against channel size',
+    body: 'A video is compared with the size of the channel that published it. That reach ratio shows whether a topic is travelling beyond its usual audience.',
+  },
+  {
+    icon: Zap,
+    title: 'Rank and explain',
+    body: 'Niche fit, momentum, geography and format are combined into an opportunity score. The evidence behind the score stays visible on the card and detail page.',
+  },
+];
+
+const signals = [
+  {
+    title: 'Reach ratio',
+    body: 'Views divided by subscribers for a tracked upload. Above 1× means the video reached beyond the channel’s own audience.',
+    caveat: 'A median, not a guarantee for your channel.',
+  },
+  {
+    title: 'Interaction density',
+    body: 'Likes plus comments divided by views. Useful for spotting engagement, not for ranking raw popularity.',
+    caveat: 'Different niches have different baselines.',
+  },
+  {
+    title: 'Small-channel wins',
+    body: 'The number of tracked uploads that beat their channel baseline from smaller channels in the concept.',
+    caveat: 'A signal of openness, not a promise of virality.',
+  },
+  {
+    title: 'Stability',
+    body: 'How consistent the concept’s performance is across tracked uploads.',
+    caveat: 'Show only when enough uploads exist to measure it.',
+  },
+  {
+    title: 'Saturation',
+    body: 'How crowded the topic already is. Lower saturation means more room for a distinct angle.',
+    caveat: 'Crowded topics can still work with a better angle.',
+  },
+  {
+    title: 'Forecast band',
+    body: 'A time-series projection with lower and upper bounds, using the measured daily series.',
+    caveat: 'A projection is not a guarantee of future views.',
   },
 ];
 
 const principles = [
-  { icon: Shield, title: 'Evidence-based', desc: 'Insights tied to real platform signals, not hype.' },
-  { icon: Zap, title: 'Actionable', desc: 'Every piece ends with a step you can take today.' },
-  { icon: TrendingUp, title: 'Creator-focused', desc: 'Written for people who publish, not just analyze.' },
+  {
+    icon: Shield,
+    title: 'Evidence first',
+    body: 'Every recommendation shows the measured signals behind it. Generated text is labelled as generated.',
+  },
+  {
+    icon: TrendingUp,
+    title: 'Honest uncertainty',
+    body: 'Forecasts appear with their bounds. Missing data is shown as missing, never filled with a guess.',
+  },
+  {
+    icon: Zap,
+    title: 'Built for decisions',
+    body: 'The product ends in a next step: save the trend, open the detail, or generate a strategy brief.',
+  },
 ];
 
 export const InsightsPage: React.FC = () => {
   return (
     <PublicLayout>
       <MarketingHero
-        badge="Creator intelligence"
-        title="Research and playbooks for serious creators"
-        description="Case studies, trend analysis, and workflows to help you make better content decisions — faster."
+        badge="Methodology"
+        title="How CreatorIQ reads a trend"
+        description="The signals behind a recommendation, what each one means, and what it does not mean."
       />
 
-      <MarketingSection className="bg-neutral-50 pt-0">
-        <div className="grid gap-6 md:grid-cols-3">
-          {articles.map((item) => (
-            <Card key={item.title} hover className="flex flex-col">
-              <Badge variant="neutral" className="w-fit">
-                <item.icon className="h-3 w-3" />
-                {item.category}
-              </Badge>
-              <h3 className="mt-4 text-base font-semibold text-neutral-900 leading-snug">
-                {item.title}
-              </h3>
-              <p className="mt-2 flex-1 text-sm text-neutral-500">{item.description}</p>
-              <button
-                type="button"
-                className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-brand-600 hover:underline"
-              >
-                Read more <ArrowRight className="h-3.5 w-3.5" />
-              </button>
-            </Card>
-          ))}
+      <MarketingSection
+        title="From public uploads to an opportunity"
+        description="Four steps happen before a trend reaches your shortlist."
+      >
+        <div className="public-grid public-grid-4">
+          {steps.map((step, index) => {
+            const Icon = step.icon;
+            return (
+              <article key={step.title} className="public-card is-compact">
+                <div className="flex items-center justify-between">
+                  <span className="public-icon-tile is-inline">
+                    <Icon size={18} aria-hidden="true" />
+                  </span>
+                  <span className="font-mono text-[12px] font-bold tracking-[0.08em] text-[#9B94A5]">
+                    0{index + 1}
+                  </span>
+                </div>
+                <h3 className="mt-5">{step.title}</h3>
+                <p>{step.body}</p>
+              </article>
+            );
+          })}
         </div>
       </MarketingSection>
 
       <MarketingSection
-        title="Resources"
-        description="Guides and updates to keep your content strategy sharp."
-        className="border-t border-neutral-200 bg-white"
+        title="What the signals mean"
+        description="Each term below matches a value shown in the product."
+        className="border-t border-[#EFEAF2] bg-white"
       >
-        <div className="grid gap-6 lg:grid-cols-2">
-          <Card className="bg-neutral-900 text-white border-neutral-800">
-            <h3 className="text-lg font-semibold">Creator playbook</h3>
-            <p className="mt-2 text-sm text-neutral-400">
-              Step-by-step guides from first 1K subscribers to a consistent publishing system.
-            </p>
-            <Button variant="secondary" className="mt-6 bg-[#1f1f1f] text-white border border-[#333333] hover:bg-[#282828]">
-              Coming soon
-            </Button>
-          </Card>
-          <Card>
-            <h3 className="text-lg font-semibold text-neutral-900">Weekly digest</h3>
-            <p className="mt-2 text-sm text-neutral-500">
-              Trend highlights, retention tips, and product updates — once a week, no spam.
-            </p>
-            <div className="mt-6 flex flex-col gap-2 sm:flex-row">
-              <Input type="email" placeholder="you@email.com" className="flex-1" />
-              <Button>Subscribe</Button>
-            </div>
-          </Card>
-        </div>
-      </MarketingSection>
-
-      <MarketingSection title="Our editorial principles" className="bg-neutral-50">
-        <div className="grid gap-6 md:grid-cols-3">
-          {principles.map((p) => (
-            <Card key={p.title}>
-              <p.icon className="h-5 w-5 text-brand-600" />
-              <h3 className="mt-3 text-base font-semibold text-neutral-900">{p.title}</h3>
-              <p className="mt-2 text-sm text-neutral-500">{p.desc}</p>
-            </Card>
+        <div className="public-grid public-grid-3">
+          {signals.map((signal) => (
+            <article key={signal.title} className="public-card is-compact">
+              <h3>{signal.title}</h3>
+              <p>{signal.body}</p>
+              <p className="mt-4 border-t border-[#F0EDF3] pt-3 text-[12px] leading-relaxed text-[#9B94A5]">
+                {signal.caveat}
+              </p>
+            </article>
           ))}
         </div>
       </MarketingSection>
 
+      <MarketingSection title="Our editorial principles">
+        <div className="public-grid public-grid-3">
+          {principles.map((p) => {
+            const Icon = p.icon;
+            return (
+              <article key={p.title} className="public-card">
+                <span className="public-icon-tile">
+                  <Icon size={18} aria-hidden="true" />
+                </span>
+                <h3>{p.title}</h3>
+                <p>{p.body}</p>
+              </article>
+            );
+          })}
+        </div>
+      </MarketingSection>
+
       <MarketingCta
-        title="Put insights into action"
-        description="Use CreatorIQ to turn research into your next published video."
+        title="Put the evidence to work"
+        description="Open your own shortlist and see which signals are strongest for your niche."
       >
-        <Link to="/signup">
-          <Button size="lg">Get started free</Button>
-        </Link>
+        <div className="public-cta-actions">
+          <Link to="/signup" className="pink-button">
+            Get started free
+            <ArrowRight size={17} aria-hidden="true" />
+          </Link>
+          <Link to="/model-performance" className="outline-button">
+            Model performance
+          </Link>
+        </div>
       </MarketingCta>
     </PublicLayout>
   );

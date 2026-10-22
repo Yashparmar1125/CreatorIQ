@@ -1,64 +1,39 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { useLocation, useNavigate, useSearchParams } from 'react-router';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation, useNavigate, useSearchParams, Link } from 'react-router';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { useStrategyStore, type ChatMessage, type AgentStep, type AgentCard } from '../../../stores/useStrategyStore';
+import { useStrategyStore, type AgentStep, type AgentCard } from '../../../stores/useStrategyStore';
 import { useAuthStore } from '../../../stores/useAuthStore';
-import { Button } from '../../../components/ui/Button';
 import { TopicStrategyCard, type TopicStrategyItem } from '../components/TopicStrategyCard';
 import { ScriptStudioModal } from '../components/ScriptStudioModal';
+import { StrategyResearchLoader } from '../components/StrategyResearchLoader';
 import { parseStrategyTopics } from '../utils/parseStrategyTopics';
+import { ALL_CONNECTORS, CONNECTOR_OPTIONS } from '../../../lib/connectors';
+import { BrandLogo } from '../../../components/brand/BrandLogo';
 import {
   Sparkles,
   Plus,
-  Zap,
-  Copy,
+  ArrowRight,
+  User,
+  LayoutGrid,
   Check,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
-  ArrowRight,
-  Database,
-  Flame,
-  Code2,
-  Globe,
   ExternalLink,
-  X,
-  Layers,
+  Flame,
+  Copy,
   Lightbulb,
   Target,
   TrendingUp,
-  SlidersHorizontal,
+  Trash2,
+  AlertCircle,
+  RefreshCw,
+  Radio,
 } from 'lucide-react';
+import './StrategyPage.css';
 
-const SUGGESTIONS = [
-  {
-    icon: Sparkles,
-    title: 'Top 3 Breakout Topics',
-    desc: 'Query verified momentum trends with high reach multipliers',
-    prompt: 'What are the top 3 breakout video topics in tech right now with high reach multipliers?',
-  },
-  {
-    icon: Flame,
-    title: 'Small Channel Outlier Radar',
-    desc: 'Find creators under 25K subs getting 5x–20x baseline views',
-    prompt: 'Show me recent small creator outlier videos that got over 5x their baseline views.',
-  },
-  {
-    icon: Zap,
-    title: '3-Second Hook Architect',
-    desc: 'Craft visual & audio hooks to eliminate first 3s swipe-aways',
-    prompt: 'Design 3 irresistible first 3-second hook variations (Visual + Audio script) for my next video.',
-  },
-  {
-    icon: Globe,
-    title: 'Live Web & Industry News',
-    desc: 'Search breaking news and viral controversies across the web',
-    prompt: 'Search the live web for breaking announcements and trending creator controversies this week.',
-  },
-];
-
-/* ── Inline Research Steps Accordion ─────────────────────────────────────── */
+/* â”€â”€ Inline Research Steps Accordion â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 const ResearchStepsAccordion: React.FC<{ steps: AgentStep[] }> = ({ steps }) => {
   const [isOpen, setIsOpen] = useState(false);
   if (!steps || steps.length === 0) return null;
@@ -67,50 +42,50 @@ const ResearchStepsAccordion: React.FC<{ steps: AgentStep[] }> = ({ steps }) => 
   const doneCount = steps.filter((s) => s.status === 'done').length;
 
   return (
-    <div className="my-2 rounded-2xl border border-[#23232c] bg-[#121217] overflow-hidden text-xs">
+    <div className="my-2 rounded-2xl border border-[#E5E0E8] bg-[#F6F3FF] overflow-hidden text-xs">
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-3.5 py-2 hover:bg-[#181820] transition-colors cursor-pointer text-left"
+        className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-[#F1ECFF] transition-colors cursor-pointer text-left"
       >
-        <div className="flex items-center gap-2 text-neutral-300">
+        <div className="flex items-center gap-2 text-[#171717]">
           {runningStep ? (
-            <div className="flex items-center gap-2 text-indigo-400">
+            <div className="flex items-center gap-2 text-[#171717]">
               <Sparkles className="h-3.5 w-3.5 animate-spin" />
-              <span className="font-medium">{runningStep.summary}</span>
+              <span className="font-semibold">{runningStep.summary}</span>
             </div>
           ) : (
-            <div className="flex items-center gap-2 text-emerald-400 font-medium">
-              <CheckCircle2 className="h-3.5 w-3.5" />
+            <div className="flex items-center gap-2 text-[#167A59] font-bold">
+              <CheckCircle2 className="h-4 w-4" />
               <span>Researched {doneCount} live data {doneCount === 1 ? 'source' : 'sources'}</span>
             </div>
           )}
         </div>
-        <div className="flex items-center gap-2 text-neutral-500">
+        <div className="flex items-center gap-2 text-[#625D68]">
           <span className="text-[11px] font-mono">{steps.length} {steps.length === 1 ? 'step' : 'steps'}</span>
           {isOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
         </div>
       </button>
 
       {isOpen && (
-        <div className="px-3.5 pb-3 pt-1 border-t border-[#1d1d24] space-y-2">
+        <div className="px-4 pb-3 pt-1 border-t border-[#E5E0E8] space-y-2">
           {steps.map((st, i) => (
-            <div key={i} className="flex items-start gap-2.5 text-[11px] text-neutral-400 pt-1">
+            <div key={i} className="flex items-start gap-2.5 text-[11px] text-[#625D68] pt-1">
               <div className="mt-0.5 shrink-0">
                 {st.status === 'running' ? (
-                  <div className="h-3 w-3 rounded-full border border-indigo-400 border-t-transparent animate-spin" />
+                  <div className="h-3 w-3 rounded-full border border-[#625D68] border-t-transparent animate-spin" />
                 ) : (
-                  <Check className="h-3 w-3 text-emerald-400" />
+                  <Check className="h-3 w-3 text-[#167A59]" />
                 )}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="font-semibold text-neutral-200">{st.label}</span>
+                  <span className="font-bold text-[#171717]">{st.label}</span>
                   {st.duration_ms !== undefined && st.duration_ms > 0 && (
-                    <span className="text-[10px] font-mono text-neutral-500">{st.duration_ms}ms</span>
+                    <span className="text-[10px] font-mono text-[#77717F]">{st.duration_ms}ms</span>
                   )}
                 </div>
-                <p className="text-neutral-400 truncate">{st.summary}</p>
+                <p className="text-[#625D68] truncate">{st.summary}</p>
               </div>
             </div>
           ))}
@@ -120,7 +95,7 @@ const ResearchStepsAccordion: React.FC<{ steps: AgentStep[] }> = ({ steps }) => 
   );
 };
 
-/* ── Interactive Cards List (Trends + Outlier Videos) ────────────────────── */
+/* â”€â”€ Interactive Cards List (Trends + Outlier Videos) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 const InteractiveCardsList: React.FC<{ cards: AgentCard[] }> = ({ cards }) => {
   const navigate = useNavigate();
   if (!cards || cards.length === 0) return null;
@@ -133,30 +108,30 @@ const InteractiveCardsList: React.FC<{ cards: AgentCard[] }> = ({ cards }) => {
           return (
             <div
               key={i}
-              className="rounded-2xl border border-[#2b2b38] bg-[#13131b] p-3.5 flex flex-col justify-between space-y-3 hover:border-indigo-500/50 transition-all shadow-md"
+              className="rounded-2xl border border-[#E5E0E8] bg-white p-4 flex flex-col justify-between space-y-3 shadow-xs hover:border-[#C9C0DA] transition-all"
             >
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="rounded-full bg-indigo-500/20 border border-indigo-500/30 px-2 py-0.5 text-[10px] font-medium text-indigo-300">
+                  <span className="rounded-full bg-[#F1ECFF] border border-[#D9CEF5] px-2.5 py-0.5 text-[10px] font-bold text-[#4A2E8F]">
                     Trend Opportunity
                   </span>
                   {t.opportunity_score && (
-                    <span className="rounded-full bg-emerald-500/20 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-bold text-emerald-400">
+                    <span className="rounded-full bg-[#E4FBF2] border border-[#B9EFDD] px-2.5 py-0.5 text-[10px] font-bold text-[#167A59]">
                       {Math.round(t.opportunity_score)} / 100
                     </span>
                   )}
                 </div>
-                <h4 className="text-xs font-bold text-white line-clamp-1">{t.topic}</h4>
+                <h4 className="text-sm font-bold text-[#171717] line-clamp-1">{t.topic}</h4>
                 {t.why_trending && (
-                  <p className="text-[11px] text-neutral-400 line-clamp-2 leading-relaxed">{t.why_trending}</p>
+                  <p className="text-xs text-[#625D68] line-clamp-2 leading-relaxed">{t.why_trending}</p>
                 )}
               </div>
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#1f1f28]">
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#EFEBF2]">
                 {t.id && (
                   <button
                     type="button"
                     onClick={() => navigate(`/app/trends/${t.id}`)}
-                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-400 hover:text-indigo-300 cursor-pointer"
+                    className="inline-flex items-center gap-1 text-xs font-bold text-[#4A2E8F] hover:text-[#171717] cursor-pointer"
                   >
                     <span>View Detail</span>
                     <ArrowRight className="h-3 w-3" />
@@ -172,32 +147,33 @@ const InteractiveCardsList: React.FC<{ cards: AgentCard[] }> = ({ cards }) => {
           return (
             <div
               key={i}
-              className="rounded-2xl border border-[#2b2b38] bg-[#13131b] p-3.5 flex flex-col justify-between space-y-3 hover:border-amber-500/50 transition-all shadow-md"
+              className="rounded-2xl border border-[#E5E0E8] bg-white p-4 flex flex-col justify-between space-y-3 shadow-xs hover:border-[#C9C0DA] transition-all"
             >
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="rounded-full bg-amber-500/20 border border-amber-500/30 px-2 py-0.5 text-[10px] font-medium text-amber-300">
+                  <span className="rounded-full bg-[#F6F3FF] border border-[#E5E0E8] px-2.5 py-0.5 text-[10px] font-bold text-[#625D68] inline-flex items-center gap-1">
+                    <Flame className="h-3 w-3" />
                     Outlier Video Proof
                   </span>
                   {v.reach_multiplier && (
-                    <span className="rounded-full bg-rose-500/20 border border-rose-500/30 px-2 py-0.5 text-[10px] font-bold text-rose-300">
+                    <span className="rounded-full bg-[#F6F3FF] border border-[#E5E0E8] px-2.5 py-0.5 text-[10px] font-bold text-[#625D68]">
                       {v.reach_multiplier} Outlier
                     </span>
                   )}
                 </div>
-                <h4 className="text-xs font-bold text-white line-clamp-2">{v.title}</h4>
-                <div className="flex items-center gap-2 text-[10px] text-neutral-400 font-mono">
+                <h4 className="text-sm font-bold text-[#171717] line-clamp-2">{v.title}</h4>
+                <div className="flex items-center gap-2 text-[11px] text-[#625D68]">
                   <span>{v.channel}</span>
-                  {v.views !== undefined && <span>• {Number(v.views).toLocaleString()} views</span>}
+                  {v.views !== undefined && <span>â€¢ {Number(v.views).toLocaleString()} views</span>}
                 </div>
               </div>
               {v.url && (
-                <div className="flex items-center justify-end pt-2 border-t border-[#1f1f28]">
+                <div className="flex items-center justify-end pt-2 border-t border-[#EFEBF2]">
                   <a
                     href={v.url}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-400 hover:text-amber-300"
+                    className="inline-flex items-center gap-1 text-xs font-bold text-[#4A2E8F] hover:text-[#171717]"
                   >
                     <span>Watch on YouTube</span>
                     <ExternalLink className="h-3 w-3" />
@@ -214,7 +190,7 @@ const InteractiveCardsList: React.FC<{ cards: AgentCard[] }> = ({ cards }) => {
   );
 };
 
-/* ── Strategy Message Content with Claude-style Interactive Cards ──────── */
+/* â”€â”€ Light-Themed Strategy Markdown & Interactive Cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 const StrategyMessageContent: React.FC<{
   content: string;
   onOpenStudio: (t: TopicStrategyItem) => void;
@@ -224,100 +200,83 @@ const StrategyMessageContent: React.FC<{
 
   const markdownComponents = {
     h1: ({ children }: any) => (
-      <h1 className="text-lg font-bold text-white pb-1 mb-2 mt-2 font-sora flex items-center gap-2">
-        <Sparkles className="h-4 w-4 text-indigo-400 shrink-0" />
+      <h1 className="text-xl font-extrabold text-[#171717] pb-1 mb-2 mt-3 font-cal-sans flex items-center gap-2">
+        <Sparkles className="h-4 w-4 text-[#4A2E8F] shrink-0" />
         <span>{children}</span>
       </h1>
     ),
     h2: ({ children }: any) => (
-      <h2 className="text-base font-semibold text-white pb-1 mb-2 mt-5 font-sora flex items-center gap-2">
-        <Target className="h-4 w-4 text-indigo-400 shrink-0" />
+      <h2 className="text-lg font-bold text-[#171717] pb-1 mb-2 mt-5 font-cal-sans flex items-center gap-2">
+        <Target className="h-4 w-4 text-[#4A2E8F] shrink-0" />
         <span>{children}</span>
       </h2>
     ),
     h3: ({ children }: any) => (
-      <h3 className="text-sm font-semibold text-neutral-100 mt-4 mb-1.5 flex items-center gap-2">
-        <Lightbulb className="h-3.5 w-3.5 text-indigo-400 shrink-0" />
+      <h3 className="text-base font-bold text-[#171717] mt-4 mb-1.5 flex items-center gap-2">
+        <Lightbulb className="h-3.5 w-3.5 text-[#4A2E8F] shrink-0" />
         <span>{children}</span>
       </h3>
     ),
     h4: ({ children }: any) => (
-      <h4 className="text-xs font-semibold uppercase tracking-wider text-neutral-300 mt-3 mb-1 flex items-center gap-1.5">
-        <TrendingUp className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+      <h4 className="text-xs font-bold uppercase tracking-wider text-[#625D68] mt-3 mb-1 flex items-center gap-1.5">
+        <TrendingUp className="h-3.5 w-3.5 text-[#167A59] shrink-0" />
         <span>{children}</span>
       </h4>
     ),
     p: ({ children }: any) => (
-      <p className="text-[#e3e3e3] leading-7 my-2 text-[14px]">
+      <p className="text-[#2C2834] leading-relaxed my-2 text-sm sm:text-[14.5px]">
         {children}
       </p>
     ),
     ul: ({ children }: any) => (
-      <ul className="space-y-1.5 my-2.5 pl-5 list-disc text-[#dcdce0] marker:text-neutral-500">
+      <ul className="space-y-1.5 my-2.5 pl-5 list-disc text-[#383340] marker:text-[#7A6FA3]">
         {children}
       </ul>
     ),
     ol: ({ children }: any) => (
-      <ol className="space-y-2 my-2.5 pl-5 list-decimal text-[#dcdce0] marker:text-neutral-400">
+      <ol className="space-y-2 my-2.5 pl-5 list-decimal text-[#383340] marker:text-[#7A6FA3]">
         {children}
       </ol>
     ),
     li: ({ children }: any) => (
-      <li className="text-[14px] leading-7">{children}</li>
+      <li className="text-sm leading-relaxed">{children}</li>
     ),
     blockquote: ({ children }: any) => (
-      <blockquote className="border-l-2 border-indigo-500/70 bg-[#141418] px-4 py-2.5 my-3 rounded-r-xl text-neutral-300 text-[13.5px]">
+      <blockquote className="border-l-4 border-[#C9BCF0] bg-[#F6F3FF] px-4 py-2.5 my-3 rounded-r-xl text-[#2C2834] text-sm">
         {children}
       </blockquote>
     ),
+    hr: () => <hr className="border-t border-[#E5E0E8] my-5" />,
+    strong: ({ children }: any) => (
+      <strong className="text-[#171717] font-bold">{children}</strong>
+    ),
     table: ({ children }: any) => (
-      <div className="overflow-x-auto my-4 rounded-xl border border-[#262626]">
-        <table className="min-w-full divide-y divide-[#262626] text-left text-xs">
-          {children}
-        </table>
+      <div className="my-4 w-full overflow-x-auto rounded-xl border border-[#E5E0E8] bg-white custom-scrollbar">
+        <table className="w-full border-collapse text-left text-sm">{children}</table>
       </div>
     ),
     thead: ({ children }: any) => (
-      <thead className="bg-[#161616] text-neutral-200 font-semibold">{children}</thead>
+      <thead className="bg-[#F6F3FF]">{children}</thead>
+    ),
+    tbody: ({ children }: any) => <tbody>{children}</tbody>,
+    tr: ({ children }: any) => (
+      <tr className="border-b border-[#EFEBF2] last:border-b-0">{children}</tr>
     ),
     th: ({ children }: any) => (
-      <th className="px-3.5 py-2.5 border-b border-[#262626]">{children}</th>
+      <th className="whitespace-nowrap px-3.5 py-2.5 text-[11px] font-bold uppercase tracking-wide text-[#4A2E8F]">
+        {children}
+      </th>
     ),
     td: ({ children }: any) => (
-      <td className="px-3.5 py-2.5 border-t border-[#1e1e1e] text-neutral-300">{children}</td>
-    ),
-    code: ({ children, className }: any) => {
-      const isBlock = className || (typeof children === 'string' && children.includes('\n'));
-      if (isBlock) {
-        return (
-          <div className="my-3 rounded-xl border border-[#262626] bg-[#111113] overflow-hidden">
-            <div className="flex items-center justify-between px-3.5 py-1.5 bg-[#18181b] border-b border-[#242429] text-[11px] text-neutral-400 font-mono">
-              <span className="flex items-center gap-1.5">
-                <Code2 className="h-3 w-3 text-indigo-400" />
-                Blueprint
-              </span>
-            </div>
-            <pre className="p-3.5 text-xs text-neutral-200 font-mono overflow-x-auto">
-              <code>{children}</code>
-            </pre>
-          </div>
-        );
-      }
-      return (
-        <code className="rounded-md bg-[#1c1c22] px-1.5 py-0.5 font-mono text-xs text-indigo-300">
-          {children}
-        </code>
-      );
-    },
-    hr: () => <hr className="border-t border-[#1f1f1f] my-5" />,
-    strong: ({ children }: any) => (
-      <strong className="text-white font-semibold">{children}</strong>
+      <td className="px-3.5 py-2.5 align-top text-[13px] leading-relaxed text-[#2C2834]">
+        {children}
+      </td>
     ),
   };
 
   if (!parsed.hasTopics) {
     return (
-      <div className="prose prose-invert max-w-none space-y-3">
+      <div className="prose max-w-none space-y-3 text-[#171717]">
         <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
           {content}
         </ReactMarkdown>
@@ -327,16 +286,14 @@ const StrategyMessageContent: React.FC<{
 
   return (
     <div className="space-y-4">
-      {/* Intro section if present */}
       {parsed.introText && (
-        <div className="prose prose-invert max-w-none">
+        <div className="prose max-w-none text-[#171717]">
           <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
             {parsed.introText}
           </ReactMarkdown>
         </div>
       )}
 
-      {/* Interactive Claude/ChatGPT-style Topic Cards */}
       <div className="space-y-4 my-2 not-prose">
         {parsed.topics.map((t) => (
           <TopicStrategyCard
@@ -348,9 +305,8 @@ const StrategyMessageContent: React.FC<{
         ))}
       </div>
 
-      {/* Outro section if present */}
       {parsed.outroText && (
-        <div className="prose prose-invert max-w-none">
+        <div className="prose max-w-none text-[#171717]">
           <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
             {parsed.outroText}
           </ReactMarkdown>
@@ -360,66 +316,131 @@ const StrategyMessageContent: React.FC<{
   );
 };
 
-/* ── Main StrategyPage Component ─────────────────────────────────────────── */
+/* â”€â”€ Scope prompts (sent to the real API) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+const SCOPE_PROMPTS: Record<string, string> = {
+  practical:
+    'Give me practical, easy-to-follow video ideas for my channel, with titles, hooks and a retention outline.',
+  compare:
+    'Compare every angle you find and give me the 3 strongest options, with the evidence behind each one.',
+  channel:
+    'Start from my channel: analyse what has worked for me and propose the next 3 videos to make.',
+};
+
+const STARTER_PROMPTS = [
+  'What should I publish in the next 14 days?',
+  'Give me 5 video ideas with hooks and titles for my niche.',
+  'Plan a 2-week series on my strongest topic.',
+  'Which of my past videos should I make a follow-up to?',
+];
+
+/* â”€â”€ Main StrategyPage Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 export const StrategyPage: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const user = useAuthStore((s) => s.user);
+
   const {
     messages,
     isSending,
+    isLoadingSessions,
     isLoadingMessages,
-    error,
     activeConnectors,
     toggleConnector,
+    setConnectors,
     sendMessage,
     selectSession,
+    deleteSession,
     fetchSessions,
     clearCurrentSession,
+    sessions,
+    currentSessionId,
+    error,
   } = useStrategyStore();
 
   const [inputPrompt, setInputPrompt] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [sourcesDrawerMessage, setSourcesDrawerMessage] = useState<ChatMessage | null>(null);
   const [showConnectorsMenu, setShowConnectorsMenu] = useState(false);
   const [studioTopic, setStudioTopic] = useState<TopicStrategyItem | null>(null);
+  const [selectedScope, setSelectedScope] = useState('practical');
+  const [historyError, setHistoryError] = useState<string | null>(null);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const initialTriggered = useRef(false);
+  const sessionInitTriggered = useRef(false);
 
-  const sessionParam = searchParams.get('session');
-  const isNewParam = searchParams.get('new');
+  const userName = user?.full_name || '';
 
-  // Fetch sessions and restore conversation on mount / reload
+  const activeSession = sessions.find((s) => s.id === currentSessionId) || null;
+  const sessionTitle =
+    activeSession?.title && activeSession.title !== 'New Strategy Chat'
+      ? activeSession.title
+      : 'Strategy research';
+  const sessionDate = activeSession?.created_at
+    ? new Date(activeSession.created_at).toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      })
+    : new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+
+  /** Live steps of the in-flight request (real SSE events). */
+  const liveSteps = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i -= 1) {
+      const m = messages[i];
+      if (m.role === 'assistant' && m.metadata?.steps?.length) {
+        return m.metadata.steps;
+      }
+    }
+    return [] as AgentStep[];
+  }, [messages]);
+
+  /** Loads the real session list and records any failure separately. */
+  const loadHistory = async (): Promise<typeof sessions> => {
+    const loaded = await fetchSessions();
+    const failure = useStrategyStore.getState().error;
+    setHistoryError(failure);
+    return loaded;
+  };
+
+  // Restore the real history on mount
   useEffect(() => {
-    const init = async () => {
-      const loadedSessions = await fetchSessions();
+    if (sessionInitTriggered.current) return;
+    sessionInitTriggered.current = true;
+
+    (async () => {
+      const loaded = await loadHistory();
+      const navState = location.state as { prompt?: string; topic?: string } | null;
+      if (navState?.prompt || navState?.topic) return;
+
+      const sessionParam = searchParams.get('session');
       if (sessionParam) {
         await selectSession(sessionParam);
-      } else if (!isNewParam && !location.state?.prompt && loadedSessions.length > 0) {
-        await selectSession(loadedSessions[0].id);
-        setSearchParams({ session: loadedSessions[0].id }, { replace: true });
+        return;
       }
-    };
-    init();
-  }, [sessionParam, isNewParam]);
+      if (searchParams.get('new') === 'true') return;
 
-  // Handle incoming navigation state (e.g. from Dashboard or Trends page)
+      if (loaded.length > 0) {
+        await selectSession(loaded[0].id);
+        setSearchParams({ session: loaded[0].id }, { replace: true });
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Handle incoming navigation state
   useEffect(() => {
     if (initialTriggered.current) return;
-    const state = location.state as { prompt?: string; topic?: string; autoGenerate?: boolean } | null;
+    const state = location.state as { prompt?: string; topic?: string } | null;
     if (state?.prompt || state?.topic) {
       initialTriggered.current = true;
       const initialText = state.prompt || (state.topic ? `Deep strategy and viral hooks for: ${state.topic}` : '');
       if (initialText) {
-        sendMessage(initialText).then((newSessionId) => {
-          if (newSessionId) {
-            setSearchParams({ session: newSessionId }, { replace: true });
-          }
-        });
+        sendMessage(initialText);
       }
     }
-  }, [location.state, sendMessage, setSearchParams]);
+  }, [location.state, sendMessage]);
 
   // Auto scroll to bottom
   useEffect(() => {
@@ -430,7 +451,7 @@ export const StrategyPage: React.FC = () => {
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 180)}px`;
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
     }
   }, [inputPrompt]);
 
@@ -442,10 +463,7 @@ export const StrategyPage: React.FC = () => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
     }
-    const newSessionId = await sendMessage(p);
-    if (newSessionId && searchParams.get('session') !== newSessionId) {
-      setSearchParams({ session: newSessionId }, { replace: true });
-    }
+    await sendMessage(p);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -455,139 +473,326 @@ export const StrategyPage: React.FC = () => {
     }
   };
 
+  /**
+   * Research asks run with live sources enabled. A plain message typed in the
+   * composer uses whatever the creator selected in the Live research control,
+   * so normal chat never triggers a search.
+   */
+  const sendResearchMessage = async (prompt: string) => {
+    if (activeConnectors.length === 0) setConnectors(ALL_CONNECTORS);
+    await sendMessage(prompt);
+  };
+
+  const handleNewResearch = () => {
+    clearCurrentSession();
+    setSearchParams({ new: 'true' }, { replace: true });
+  };
+
+  const handleSelectSession = async (id: string) => {
+    await selectSession(id);
+    setSearchParams({ session: id }, { replace: true });
+  };
+
+  const handleDeleteSession = async (id: string) => {
+    await deleteSession(id);
+    const nextId = useStrategyStore.getState().currentSessionId;
+    setSearchParams(nextId ? { session: nextId } : { new: 'true' }, { replace: true });
+  };
+
   const handleCopy = (id: string, text: string) => {
     navigator.clipboard.writeText(text);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const handleNewChat = async () => {
-    clearCurrentSession();
-    setSourcesDrawerMessage(null);
-    setSearchParams({ new: 'true' }, { replace: true });
-  };
-
-  const toolsUsed = sourcesDrawerMessage?.metadata?.tools_used || [];
+  const hasMessages = messages.length > 0;
+  const streamError = error && error !== historyError ? error : null;
 
   return (
-    <div className="relative flex h-full w-full overflow-hidden bg-[#0a0a0a] animate-in">
-      {/* Main Chat Workspace */}
-      <div className="relative flex flex-1 flex-col h-full min-w-0">
-        {/* Subtle Floating Top-Right New Chat Action */}
-        {messages.length > 0 && (
-          <div className="pointer-events-none absolute top-3 right-4 z-10 flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={handleNewChat}
-              className="pointer-events-auto rounded-full bg-[#161616]/90 backdrop-blur-md border-[#282828] px-3.5 py-1.5 text-xs hover:bg-[#222222] text-neutral-300 shadow-lg"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              New Chat
-            </Button>
-          </div>
-        )}
+    <div className="strategy-page min-h-screen flex w-full bg-[#FBFAF8] text-[#171717] overflow-hidden">
+      {/* â”€â”€ Left Sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      <aside className="strategy-sidebar hidden lg:flex flex-col justify-between shrink-0 p-5 z-20">
+        <div>
+          {/* Top Logo â€” same lockup as every other page header */}
+          <BrandLogo to="/" size="sm" className="mb-7" />
 
-        {/* Full-Width Scrollable Stream */}
-        <div className="flex-1 w-full overflow-y-auto no-scrollbar px-4 sm:px-6 pt-6 pb-8">
-          <div className="mx-auto w-full max-w-3xl space-y-8">
-            {messages.length === 0 && !isLoadingMessages && (
-              <div className="flex min-h-[62vh] flex-col items-center justify-center text-center space-y-7">
-                <div className="space-y-2.5 max-w-lg">
-                  <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-2xl border border-[#262626] bg-[#141414] text-indigo-400 shadow-lg">
-                    <Sparkles className="h-5 w-5" />
-                  </div>
-                  <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white font-sora">
-                    CreatorIQ Copilot{user?.full_name ? `, ${user.full_name.split(' ')[0]}` : ''}
+          {/* '+ New research' Button */}
+          <button
+            type="button"
+            onClick={handleNewResearch}
+            className="strategy-btn-pink w-full h-11 text-xs sm:text-[13px] mb-3"
+          >
+            <Plus className="h-4 w-4 stroke-[3]" />
+            <span>New research</span>
+          </button>
+
+          {/* 'Overview' Nav Button */}
+          <button
+            type="button"
+            onClick={() => navigate('/app/dashboard')}
+            className="strategy-nav-overview w-full h-11 px-4 flex items-center gap-2.5 text-xs sm:text-[13px] cursor-pointer mb-7"
+          >
+            <LayoutGrid className="h-4 w-4 stroke-[2.5]" />
+            <span>Overview</span>
+          </button>
+
+          {/* 'YOUR RESEARCH HISTORY' Section â€” real API sessions */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-2 px-1">
+              <p className="text-[10px] font-bold text-[#77717F] tracking-[0.14em] uppercase">
+                YOUR RESEARCH HISTORY
+              </p>
+              <button
+                type="button"
+                onClick={() => loadHistory()}
+                aria-label="Refresh research history"
+                className="text-[#77717F] hover:text-[#171717] transition-colors"
+              >
+                <RefreshCw className="h-3 w-3" />
+              </button>
+            </div>
+
+            {isLoadingSessions ? (
+              <div className="space-y-2 px-1" aria-hidden="true">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="h-6 rounded-lg bg-[#F1EEF5] animate-pulse" />
+                ))}
+              </div>
+            ) : historyError ? (
+              <div className="px-1 space-y-2">
+                <p className="text-[11px] leading-relaxed text-[#B42332]">{historyError}</p>
+                <button
+                  type="button"
+                  onClick={() => loadHistory()}
+                  className="text-[11px] font-bold text-[#171717] underline hover:opacity-80 cursor-pointer"
+                >
+                  Try again
+                </button>
+              </div>
+            ) : sessions.length === 0 ? (
+              <p className="px-1 text-[11px] leading-relaxed text-[#77717F]">
+                No research sessions yet. Ask a question below to start one.
+              </p>
+            ) : (
+              <div className="space-y-1">
+                {sessions.map((s) => {
+                  const isActive = s.id === currentSessionId;
+                  return (
+                    <div key={s.id} className="group relative">
+                      <button
+                        type="button"
+                        onClick={() => handleSelectSession(s.id)}
+                        aria-current={isActive ? 'true' : undefined}
+                        className={`w-full text-left px-2 py-1.5 rounded-lg text-xs font-semibold transition-colors truncate cursor-pointer pr-7 ${
+                          isActive
+                            ? 'bg-[#F1ECFF] text-[#171717] font-bold'
+                            : 'text-[#625D68] hover:bg-[#F6F3FF] hover:text-[#171717]'
+                        }`}
+                      >
+                        {s.title}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteSession(s.id)}
+                        aria-label={`Delete session ${s.title}`}
+                        className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 text-[#A79FB0] opacity-60 hover:text-[#B42332] group-hover:opacity-100 focus-visible:opacity-100 transition-opacity cursor-pointer"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Bottom Profile Name */}
+        <div className="pt-4 border-t border-[#E5E0E8]">
+          <p className="text-xs sm:text-[13px] font-bold text-[#171717] truncate px-1">
+            {userName || 'Creator'}
+          </p>
+        </div>
+      </aside>
+
+      {/* â”€â”€ Main Chat Stream & Workspace â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      <div className="flex-1 flex flex-col h-screen min-w-0 bg-[#FBFAF8] overflow-hidden">
+        {/* Top Header */}
+        <header className="h-16 shrink-0 border-b border-[#E5E0E8] bg-white px-6 sm:px-10 flex items-center justify-between z-10">
+          <div className="min-w-0">
+            <h1 className="font-cal-sans text-base sm:text-lg font-extrabold text-[#171717] leading-tight truncate">
+              {sessionTitle}
+            </h1>
+            <p className="text-xs text-[#625D68] mt-0.5 truncate">
+              {userName ? `${userName.split(' ')[0]}'s research / ` : 'Research / '}
+              {sessionDate}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Link
+              to="/app/dashboard"
+              className="text-xs font-bold text-[#625D68] hover:text-[#171717] transition-colors"
+            >
+              Dashboard âž”
+            </Link>
+          </div>
+        </header>
+
+        {/* Scrollable Chat Stream */}
+        <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-8 pb-40">
+          <div className="max-w-3xl mx-auto space-y-7">
+            {isLoadingMessages ? (
+              <div className="space-y-4" aria-hidden="true">
+                <div className="h-24 rounded-2xl bg-[#F1EEF5] animate-pulse" />
+                <div className="h-40 rounded-2xl bg-[#F1EEF5] animate-pulse" />
+              </div>
+            ) : !hasMessages && !isSending ? (
+              /* â”€â”€ Empty state: honest, no invented findings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+              <div className="space-y-6">
+                <div>
+                  <h2 className="font-cal-sans text-xl sm:text-[22px] font-bold text-[#171717]">
+                    What should we research?
                   </h2>
-                  <p className="text-sm text-neutral-400 leading-relaxed">
-                    Autonomous YouTube strategist powered by live concept radar, outlier detection, and multi-key LLM reasoning.
+                  <p className="text-xs sm:text-[13px] text-[#625D68] mt-1.5 leading-relaxed max-w-xl">
+                    Ask about your next videos. We search the live sources you enable, then return a
+                    strategy brief with angles, titles, hooks and a retention outline.
                   </p>
                 </div>
 
-                {/* Suggestion Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-2xl">
-                  {SUGGESTIONS.map((s, idx) => (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {STARTER_PROMPTS.map((p) => (
                     <button
-                      key={idx}
+                      key={p}
                       type="button"
-                      onClick={() => sendMessage(s.prompt)}
-                      className="flex flex-col justify-between text-left p-4 rounded-2xl border border-[#222222] bg-[#141414] hover:bg-[#1b1b1b] hover:border-[#333333] transition-all group cursor-pointer"
+                      onClick={() => sendResearchMessage(p)}
+                      className="strategy-lavender-box p-4 text-left flex items-center justify-between gap-3 cursor-pointer hover:border-[#C9BCF0] transition-colors"
                     >
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-xs font-semibold text-neutral-200 group-hover:text-white transition-colors flex items-center gap-2">
-                          <s.icon className="h-4 w-4 text-indigo-400 shrink-0" />
-                          {s.title}
-                        </span>
-                        <ArrowRight className="h-3.5 w-3.5 text-neutral-600 group-hover:text-neutral-300 transition-transform group-hover:translate-x-0.5" />
-                      </div>
-                      <p className="text-xs text-neutral-500 leading-relaxed">{s.desc}</p>
+                      <span className="text-xs sm:text-[13px] font-semibold text-[#171717] leading-relaxed">
+                        {p}
+                      </span>
+                      <ArrowRight className="h-3.5 w-3.5 shrink-0 text-[#4A2E8F]" />
                     </button>
                   ))}
                 </div>
+
+                {/* Scope picker â€” sends a real request */}
+                <div className="rounded-2xl border border-[#E5E0E8] bg-white p-6 sm:p-7 shadow-xs space-y-4">
+                  <div>
+                    <h3 className="font-cal-sans text-lg sm:text-[20px] font-bold text-[#171717]">
+                      How should we scope this?
+                    </h3>
+                    <p className="text-xs sm:text-[13px] text-[#625D68] mt-1">
+                      Pick how deep we go. You can change it in your next message.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedScope('practical')}
+                      className={`rounded-full px-3.5 py-1.5 text-xs transition-all cursor-pointer ${
+                        selectedScope === 'practical' ? 'strategy-chip-active' : 'strategy-chip-inactive'
+                      }`}
+                    >
+                      {selectedScope === 'practical' ? 'âœ“ ' : ''}Practical explainers
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setSelectedScope('compare')}
+                      className={`rounded-full px-3.5 py-1.5 text-xs transition-all cursor-pointer ${
+                        selectedScope === 'compare' ? 'strategy-chip-active' : 'strategy-chip-inactive'
+                      }`}
+                    >
+                      {selectedScope === 'compare' ? 'âœ“ ' : ''}Compare every angle
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setSelectedScope('channel')}
+                      className={`rounded-full px-3.5 py-1.5 text-xs transition-all cursor-pointer ${
+                        selectedScope === 'channel' ? 'strategy-chip-active' : 'strategy-chip-inactive'
+                      }`}
+                    >
+                      {selectedScope === 'channel' ? 'âœ“ ' : ''}Start from my channel
+                    </button>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-4 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => sendResearchMessage(SCOPE_PROMPTS[selectedScope])}
+                      className="strategy-btn-pink px-5 py-2 text-xs"
+                    >
+                      <span>Shape my brief</span>
+                      <ArrowRight className="h-3.5 w-3.5 stroke-[2.5]" />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => sendResearchMessage(SCOPE_PROMPTS.practical)}
+                      className="text-xs font-bold text-[#171717] underline hover:opacity-80 cursor-pointer"
+                    >
+                      Use sensible defaults
+                    </button>
+                  </div>
+
+                  <p className="text-[11px] text-[#77717F] pt-1">
+                    This request runs with live research on. Use the Live research control in the
+                    composer to narrow or turn the sources off.
+                  </p>
+                </div>
               </div>
-            )}
-
-            {messages.map((m) => {
-              const isUser = m.role === 'user';
-              const steps = m.metadata?.steps || [];
-              const cards = m.metadata?.cards || [];
-              const msgTools = m.metadata?.tools_used || [];
-              const cleanContent = m.content.replace(
-                /[\p{Extended_Pictographic}\u{1F300}-\u{1FAFF}\uFE0F\u20E3]/gu,
-                ''
-              );
-
-              if (isUser) {
-                return (
-                  <div key={m.id} className="flex justify-end">
-                    <div className="max-w-[78%] rounded-3xl bg-[#212121] px-5 py-3 text-[14px] leading-relaxed text-[#ececec]">
-                      <p className="whitespace-pre-wrap font-normal">{cleanContent}</p>
-                    </div>
-                  </div>
+            ) : (
+              /* â”€â”€ Real conversation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+              messages.map((m) => {
+                const isUser = m.role === 'user';
+                const steps = m.metadata?.steps || [];
+                const cards = m.metadata?.cards || [];
+                const cleanContent = m.content.replace(
+                  /[\p{Extended_Pictographic}\u{1F300}-\u{1FAFF}]|\u{20E3}|\uFE0F/gu,
+                  ''
                 );
-              }
 
-              return (
-                <div key={m.id} className="flex items-start gap-4">
-                  {/* Avatar */}
-                  <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[#2a2a35] bg-[#14141c] text-indigo-400">
-                    <Sparkles className="h-3.5 w-3.5" />
-                  </div>
+                if (isUser) {
+                  return (
+                    <div key={m.id} className="flex items-start gap-3.5">
+                      <div className="w-8 h-8 rounded-full bg-[#F1ECFF] border border-[#E5E0E8] flex items-center justify-center shrink-0 mt-1">
+                        <User className="w-4 h-4 text-[#171717]" />
+                      </div>
+                      <div className="flex-1 bg-[#F1ECFF] rounded-2xl p-4 sm:p-5 text-sm sm:text-[15px] font-medium text-[#171717] leading-relaxed">
+                        {cleanContent}
+                      </div>
+                    </div>
+                  );
+                }
 
-                  {/* Assistant Response Canvas */}
-                  <div className="min-w-0 flex-1 space-y-3">
-                    {/* Collapsible Research Steps Timeline */}
+                return (
+                  <div key={m.id} className="space-y-4 pt-2">
                     {steps.length > 0 && <ResearchStepsAccordion steps={steps} />}
-
-                    {/* Interactive Cards (e.g. Trends & Outlier Videos) */}
                     {cards.length > 0 && <InteractiveCardsList cards={cards} />}
-
-                    {/* Markdown Content & Claude-style Interactive Topic Cards */}
                     {cleanContent && (
                       <StrategyMessageContent
                         content={cleanContent}
                         onOpenStudio={(t) => setStudioTopic(t)}
-                        onAskCopilot={(prompt) => {
-                          setInputPrompt(prompt);
-                          sendMessage(prompt);
+                        onAskCopilot={(p) => {
+                          setInputPrompt(p);
+                          sendMessage(p);
                         }}
                       />
                     )}
-
-                    {/* Action Bar Under Response */}
-                    <div className="flex items-center gap-2 pt-1 not-prose">
-                      {cleanContent && (
+                    {cleanContent && (
+                      <div className="flex items-center gap-2 pt-1">
                         <button
                           type="button"
                           onClick={() => handleCopy(m.id, cleanContent)}
-                          className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium text-neutral-500 hover:bg-[#181818] hover:text-neutral-200 transition-colors cursor-pointer"
-                          title="Copy response"
+                          className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-bold text-[#625D68] hover:bg-[#F6F3FF] hover:text-[#171717] transition-colors cursor-pointer"
                         >
                           {copiedId === m.id ? (
                             <>
-                              <Check className="h-3.5 w-3.5 text-emerald-400" />
-                              <span className="text-emerald-400">Copied</span>
+                              <Check className="h-3.5 w-3.5 text-[#167A59]" />
+                              <span className="text-[#167A59]">Copied</span>
                             </>
                           ) : (
                             <>
@@ -596,45 +801,28 @@ export const StrategyPage: React.FC = () => {
                             </>
                           )}
                         </button>
-                      )}
-
-                      {msgTools.length > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => setSourcesDrawerMessage(m)}
-                          className="inline-flex items-center gap-1.5 rounded-full border border-[#262626] bg-[#141414] px-3 py-1 text-xs font-medium text-neutral-400 hover:border-[#383838] hover:bg-[#1c1c1c] hover:text-white transition-colors cursor-pointer"
-                        >
-                          <Globe className="h-3 w-3 text-indigo-400" />
-                          <span>{msgTools.length} Sources</span>
-                        </button>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
-                </div>
-              );
-            })}
-
-            {isSending && (
-              <div className="flex items-start gap-4 animate-in">
-                <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[#2a2a35] bg-[#14141c] text-indigo-400">
-                  <Sparkles className="h-3.5 w-3.5 animate-spin" />
-                </div>
-                <div className="flex items-center gap-2 py-1.5">
-                  <span className="text-sm text-neutral-400 animate-pulse">Running live market research...</span>
-                </div>
-              </div>
+                );
+              })
             )}
 
-            {error && (
-              <div className="rounded-xl border border-red-900/40 bg-red-950/20 p-3 text-xs text-red-300 flex items-center justify-between">
-                <span>{error}</span>
-                <button
-                  type="button"
-                  onClick={() => useStrategyStore.getState().fetchSessions()}
-                  className="underline text-red-200 hover:text-white"
-                >
-                  Retry
-                </button>
+            {/* Real live loader driven by the SSE steps */}
+            {isSending && (
+              <StrategyResearchLoader
+                steps={liveSteps}
+                liveResearch={activeConnectors.length > 0}
+              />
+            )}
+
+            {streamError && !isSending && (
+              <div
+                role="alert"
+                className="flex items-start gap-2.5 rounded-2xl border border-[#F5C6CE] bg-[#FDECEF] p-4 text-xs text-[#B42332]"
+              >
+                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                <span className="leading-relaxed">{streamError}</span>
               </div>
             )}
 
@@ -642,224 +830,117 @@ export const StrategyPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Bottom Capsule Composer */}
-        <div className="shrink-0 w-full bg-[#0a0a0a] px-4 pb-4 pt-1">
-          <div className="mx-auto w-full max-w-3xl relative">
-            {/* Connectors Popover */}
+        {/* â”€â”€ Floating Bottom Composer Bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        <div className="fixed bottom-5 left-0 right-0 px-4 sm:px-6 pointer-events-none z-30 lg:pl-64">
+          <div className="max-w-3xl mx-auto w-full pointer-events-auto">
+            {/* Connectors Popup Menu */}
             {showConnectorsMenu && (
-              <div className="absolute bottom-full mb-3 left-2 z-30 w-80 rounded-2xl border border-[#2e2e3a] bg-[#14141c] p-3.5 shadow-2xl space-y-3 animate-in fade-in zoom-in-95 duration-150">
-                <div className="flex items-center justify-between pb-1.5 border-b border-[#22222e]">
-                  <span className="text-xs font-bold text-white font-sora">Intelligence Connectors</span>
-                  <span className="text-[10px] font-mono text-neutral-400">Real-Time</span>
+              <div className="mb-2 w-80 rounded-2xl border border-[#E5E0E8] bg-white p-3.5 shadow-lg space-y-2.5 animate-in fade-in zoom-in-95 duration-150">
+                <div className="flex items-center justify-between pb-1.5 border-b border-[#EFEBF2]">
+                  <span className="text-xs font-bold text-[#171717] font-cal-sans">Live research</span>
+                  <span className="text-[10px] font-mono text-[#77717F]">Real-Time</span>
                 </div>
-
-                {/* YouTube Channel Status */}
-                <div className="rounded-xl border border-[#22222d] bg-[#0d0d12] p-2.5 space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-neutral-200 flex items-center gap-1.5">
-                      <Flame className="h-3.5 w-3.5 text-rose-400" />
-                      YouTube Channel
-                    </span>
-                    <span className="text-[10px] rounded-full bg-emerald-500/20 text-emerald-400 px-2 py-0.5 font-mono font-medium">
-                      Connected
-                    </span>
-                  </div>
-                  <p className="text-[10px] text-neutral-400">
-                    Channel: <strong className="text-white">Tech In Shorts</strong> (Optional connector)
-                  </p>
-                </div>
-
-                {/* Toggles */}
-                <div className="space-y-1 text-xs">
-                  <button
-                    type="button"
-                    onClick={() => toggleConnector('trends')}
-                    className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-[#1c1c28] transition-colors cursor-pointer"
-                  >
-                    <div className="flex items-center gap-2 text-neutral-300">
-                      <Database className="h-3.5 w-3.5 text-emerald-400" />
-                      <span>CreatorIQ Concept Radar</span>
-                    </div>
-                    <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded ${
-                        activeConnectors.includes('trends')
-                          ? 'bg-emerald-500/20 text-emerald-400'
-                          : 'bg-neutral-800 text-neutral-500'
-                      }`}
-                    >
-                      {activeConnectors.includes('trends') ? 'ON' : 'OFF'}
-                    </span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => toggleConnector('web')}
-                    className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-[#1c1c28] transition-colors cursor-pointer"
-                  >
-                    <div className="flex items-center gap-2 text-neutral-300">
-                      <Globe className="h-3.5 w-3.5 text-cyan-400" />
-                      <span>Tavily Live Web Search</span>
-                    </div>
-                    <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded ${
-                        activeConnectors.includes('web')
-                          ? 'bg-cyan-500/20 text-cyan-400'
-                          : 'bg-neutral-800 text-neutral-500'
-                      }`}
-                    >
-                      {activeConnectors.includes('web') ? 'ON' : 'OFF'}
-                    </span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => toggleConnector('youtube')}
-                    className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-[#1c1c28] transition-colors cursor-pointer"
-                  >
-                    <div className="flex items-center gap-2 text-neutral-300">
-                      <Flame className="h-3.5 w-3.5 text-amber-400" />
-                      <span>Live YouTube Outliers</span>
-                    </div>
-                    <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded ${
-                        activeConnectors.includes('youtube')
-                          ? 'bg-amber-500/20 text-amber-400'
-                          : 'bg-neutral-800 text-neutral-500'
-                      }`}
-                    >
-                      {activeConnectors.includes('youtube') ? 'ON' : 'OFF'}
-                    </span>
-                  </button>
+                <p className="text-[11px] text-[#625D68] leading-relaxed">
+                  Off by default so a normal question is answered straight away. Turn a source on
+                  only when you want live evidence.
+                </p>
+                <div className="space-y-1.5 text-xs">
+                  {CONNECTOR_OPTIONS.map((c) => {
+                    const isOn = activeConnectors.includes(c.id);
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => toggleConnector(c.id)}
+                        aria-pressed={isOn}
+                        className="w-full flex items-center justify-between gap-2 p-2 rounded-lg hover:bg-[#F6F3FF] transition-colors cursor-pointer"
+                      >
+                        <span className="flex items-center gap-2 text-[#171717] min-w-0">
+                          <c.icon className="h-3.5 w-3.5 text-[#625D68] shrink-0" />
+                          <span className="font-semibold truncate">{c.label}</span>
+                        </span>
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded shrink-0 ${
+                            isOn ? 'bg-[#E4FBF2] text-[#167A59]' : 'bg-[#F6F3FF] text-[#77717F]'
+                          }`}
+                        >
+                          {isOn ? 'ON' : 'OFF'}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
 
-            <form
-              onSubmit={handleSend}
-              className="relative rounded-3xl border border-[#2e2e2e] bg-[#1b1b1b] px-4 pt-3 pb-2.5 shadow-[0_8px_30px_rgba(0,0,0,0.6)] focus-within:border-[#404040] transition-all"
-            >
+            {/* Composer Box */}
+            <form onSubmit={handleSend} className="strategy-composer-bar p-3.5">
               <textarea
                 ref={textareaRef}
                 rows={1}
                 value={inputPrompt}
                 onChange={(e) => setInputPrompt(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask anything about video ideas, hooks, or trend forecasts..."
-                className="w-full resize-none bg-transparent px-1 py-0.5 text-sm text-white placeholder-neutral-500 focus:outline-none no-scrollbar font-normal leading-relaxed max-h-36 min-h-[28px]"
+                placeholder="Ask about your next videos, angles, hooks or a content planâ€¦"
+                className="app-field w-full resize-none px-3 py-2 text-sm sm:text-[14.5px] text-[#171717] placeholder-[#9B94A5] focus:outline-none font-normal leading-relaxed max-h-32 min-h-[30px] [--field-radius:10px]"
               />
 
-              {/* Bottom Action Row inside Capsule */}
-              <div className="mt-2 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-                  {/* Connectors '+' Pill Button */}
+              {/* Bottom Toolbar */}
+              <div className="mt-2 flex items-center justify-between gap-2 pt-1 border-t border-[#EFEBF2]">
+                <div className="flex items-center gap-2 text-xs font-semibold text-[#625D68]">
                   <button
                     type="button"
                     onClick={() => setShowConnectorsMenu(!showConnectorsMenu)}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-indigo-500/40 bg-indigo-950/30 px-2.5 py-1 text-[11px] font-medium text-indigo-300 hover:bg-indigo-900/40 hover:text-white transition-colors cursor-pointer shrink-0"
+                    aria-expanded={showConnectorsMenu}
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 transition-colors cursor-pointer ${
+                      activeConnectors.length > 0
+                        ? 'border-[#B9EFDD] bg-[#E4FBF2] text-[#167A59]'
+                        : 'border-[#E5E0E8] bg-white text-[#625D68] hover:text-[#171717]'
+                    }`}
                   >
-                    <SlidersHorizontal className="h-3 w-3 text-indigo-400" />
-                    <span>Connectors ({activeConnectors.length})</span>
+                    <Radio className="h-3 w-3" />
+                    <span>
+                      {activeConnectors.length > 0
+                        ? `Live research Â· ${activeConnectors.length}`
+                        : 'Live research off'}
+                    </span>
+                    <ChevronDown className="h-3 w-3" />
                   </button>
-
+                  <span className="text-[#DCD6E2]">Â·</span>
                   <button
                     type="button"
-                    onClick={() => setInputPrompt('Query CreatorIQ Database for top trending concepts in my niche')}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-[#2e2e2e] bg-[#242424] px-2.5 py-1 text-[11px] font-medium text-neutral-300 hover:bg-[#2e2e2e] hover:text-white transition-colors cursor-pointer shrink-0"
+                    onClick={() => setInputPrompt((p) => `${p} @source `)}
+                    className="hover:text-[#171717] transition-colors cursor-pointer"
                   >
-                    <Database className="h-3 w-3 text-emerald-400" />
-                    <span>DB Radar</span>
+                    @ source
                   </button>
+                  <span className="text-[#DCD6E2]">Â·</span>
                   <button
                     type="button"
-                    onClick={() => setInputPrompt('Show me recent small creator outlier videos with 5x baseline views')}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-[#2e2e2e] bg-[#242424] px-2.5 py-1 text-[11px] font-medium text-neutral-300 hover:bg-[#2e2e2e] hover:text-white transition-colors cursor-pointer shrink-0"
+                    onClick={() => setInputPrompt((p) => `${p} #idea `)}
+                    className="hover:text-[#171717] transition-colors cursor-pointer"
                   >
-                    <Flame className="h-3 w-3 text-amber-400" />
-                    <span>Outliers</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setInputPrompt('Design 3 high-retention 3-second hook variations for ')}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-[#2e2e2e] bg-[#242424] px-2.5 py-1 text-[11px] font-medium text-neutral-300 hover:bg-[#2e2e2e] hover:text-white transition-colors cursor-pointer shrink-0"
-                  >
-                    <Zap className="h-3 w-3 text-purple-400" />
-                    <span>Hook Architect</span>
+                    # idea
                   </button>
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={!inputPrompt.trim() || isSending}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-black hover:bg-neutral-200 disabled:opacity-30 transition-all cursor-pointer shadow-xs"
-                  style={{ backgroundColor: '#ffffff', color: '#000000' }}
-                  title="Send message"
-                >
-                  <ArrowRight className="h-4 w-4 -rotate-90" style={{ color: '#000000' }} />
-                </button>
+                <div className="flex items-center gap-2.5">
+                  <button
+                    type="submit"
+                    disabled={!inputPrompt.trim() || isSending}
+                    className="strategy-btn-pink px-4 py-1.5 text-xs font-bold"
+                  >
+                    <span>Send</span>
+                    <ArrowRight className="h-3.5 w-3.5 stroke-[2.5]" />
+                  </button>
+                </div>
               </div>
             </form>
           </div>
         </div>
       </div>
 
-      {/* Right Slide-Over Sources & Telemetry Drawer */}
-      {sourcesDrawerMessage && (
-        <aside className="w-80 sm:w-96 shrink-0 h-full border-l border-[#24242e] bg-[#0e0e12] flex flex-col z-20 shadow-2xl animate-in slide-in-from-right duration-200">
-          <div className="flex items-center justify-between p-4 border-b border-[#20202a] bg-[#121217]">
-            <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-600/20 text-indigo-400 border border-indigo-500/30">
-                <Layers className="h-3.5 w-3.5" />
-              </div>
-              <div>
-                <h3 className="text-xs font-bold text-white">Sources &amp; Telemetry</h3>
-                <p className="text-[10px] text-neutral-400 font-mono">
-                  {sourcesDrawerMessage.metadata?.model || 'Free Multi-Model Router'}
-                </p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setSourcesDrawerMessage(null)}
-              className="p-1 rounded-md text-neutral-400 hover:text-white hover:bg-[#1f1f28] transition-colors"
-              title="Close panel"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar text-xs">
-            <div className="flex items-center justify-between text-[11px] text-neutral-400 font-mono pb-2 border-b border-[#1c1c24]">
-              <span>Signals Used:</span>
-              <span className="font-bold text-indigo-300">{toolsUsed.length} Active Sources</span>
-            </div>
-
-            {toolsUsed.length === 0 ? (
-              <div className="text-center py-10 text-neutral-500 text-xs">
-                No external tool calls recorded for this message.
-              </div>
-            ) : (
-              toolsUsed.map((tool: any, idx: number) => (
-                <div
-                  key={idx}
-                  className="rounded-xl border border-[#22222c] bg-[#14141a] p-3.5 space-y-2 shadow-sm"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-white text-xs">{tool.label || tool.tool}</span>
-                    {tool.duration_ms && (
-                      <span className="rounded bg-[#1c1c26] border border-[#2c2c3a] px-1.5 py-0.5 text-[9px] font-mono text-neutral-300">
-                        {tool.duration_ms}ms
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-[11px] text-neutral-400 leading-snug">{tool.summary}</p>
-                </div>
-              ))
-            )}
-          </div>
-        </aside>
-      )}
-
-      {/* Script Studio & Teleprompter Modal */}
+      {/* Script Studio Modal */}
       <ScriptStudioModal
         topic={studioTopic}
         isOpen={!!studioTopic}

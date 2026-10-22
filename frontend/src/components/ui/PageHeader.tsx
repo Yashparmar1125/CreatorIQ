@@ -24,7 +24,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   >
     <div className="min-w-0 space-y-1.5">
       {badge}
-      <h1 className="text-xl font-bold font-sora text-[#ededed] tracking-tight sm:text-2xl lg:text-[1.75rem]">
+      <h1 className="text-xl font-bold font-cal-sans text-[#ededed] tracking-tight sm:text-2xl lg:text-[1.75rem]">
         {title}
       </h1>
       {description && (

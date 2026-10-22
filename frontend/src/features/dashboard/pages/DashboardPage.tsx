@@ -1,504 +1,368 @@
-import React, { useEffect, useState } from "react";
-import { useNavigate, Link } from "react-router";
-import { useDashboardStore } from "../../../stores/useDashboardStore";
-import { useTrendsStore } from "../../../stores/useTrendsStore";
-import { useAuthStore } from "../../../stores/useAuthStore";
-import { renderStatIcon } from "../../../lib/stat-icons";
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router';
+import { useAuthStore } from '../../../stores/useAuthStore';
+import { useDashboardStore } from '../../../stores/useDashboardStore';
+import { useTrendsStore } from '../../../stores/useTrendsStore';
+import { useStrategyStore } from '../../../stores/useStrategyStore';
+import { cleanTrendText, cleanTrendTitle } from '../../../lib/cleanTrendTitle';
+import { ALL_CONNECTORS, CONNECTOR_OPTIONS } from '../../../lib/connectors';
 import {
-  cleanTrendTitle,
-  cleanTrendText,
-  resolveVideoConcept,
-  resolveVideoConceptBadge,
-} from "../../../lib/cleanTrendTitle";
-import { Card } from "../../../components/ui/Card";
-import { Button } from "../../../components/ui/Button";
-import { Badge } from "../../../components/ui/Badge";
-import { StatCard } from "../../../components/ui/StatCard";
-import { AIScannerLoader } from "../../../components/ui/AIScannerLoader";
-import { MiniBarChart } from "../../../components/ui/MiniBarChart";
-import {
+  ArrowRight,
+  Check,
+  ChevronDown,
+  Plus,
   Sparkles,
   TrendingUp,
-  ArrowRight,
-  Zap,
-  BarChart2,
-  ChevronRight,
-  Film,
-  Mic,
-  Lightbulb,
-} from "lucide-react";
+  UserRound,
+} from 'lucide-react';
 
-type ForecastPeriod = '28d' | '90d' | 'ALL';
+/** Prompt starters — they only fill the composer, the creator edits before sending. */
+const SUGGESTED_PROMPTS = [
+  'What should I publish in the next 14 days?',
+  'Give me 5 video ideas with hooks and titles for my niche.',
+  'Which of my past videos should I make a follow-up to?',
+  'Plan a 2-week series on my strongest topic.',
+];
 
-interface ForecastData {
-  bars: number[];
-  projectedGrowth: string;
-  comparisonLabel: string;
-  highlightIndex: number;
+function formatCompactNumber(num: number): string {
+  if (!Number.isFinite(num) || num <= 0) return '0';
+  if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(1)}M`;
+  if (num >= 1_000) return `${(num / 1_000).toFixed(1)}K`;
+  return String(num);
 }
-
-const FORECAST_PERIOD_DATA: Record<ForecastPeriod, ForecastData> = {
-  '28d': {
-    bars: [42, 56, 68, 72, 85, 94, 108],
-    projectedGrowth: '+12.4%',
-    comparisonLabel: 'vs last period',
-    highlightIndex: 5,
-  },
-  '90d': {
-    bars: [120, 135, 150, 142, 168, 190, 215],
-    projectedGrowth: '+18.7%',
-    comparisonLabel: 'vs last period',
-    highlightIndex: 5,
-  },
-  'ALL': {
-    bars: [310, 380, 420, 490, 560, 640, 750],
-    projectedGrowth: '+34.2%',
-    comparisonLabel: 'all-time projected',
-    highlightIndex: 6,
-  },
-};
 
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
-  const { stats, insights = [], fetchDashboard } = useDashboardStore();
-  const [forecastPeriod, setForecastPeriod] = useState<ForecastPeriod>('28d');
-  const {
-    trends,
-    isLoading: isTrendsLoading,
-    fetchTrends,
-  } = useTrendsStore();
   const user = useAuthStore((s) => s.user);
+  const { primaryChannel, fetchDashboard } = useDashboardStore();
+  const { trends, isLoading: isTrendsLoading, fetchTrends } = useTrendsStore();
+  const { activeConnectors, toggleConnector, setConnectors } = useStrategyStore();
+
+  const [prompt, setPrompt] = useState('');
+  const [showConnectors, setShowConnectors] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const connectorPanelRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     fetchDashboard();
     fetchTrends();
   }, [fetchDashboard, fetchTrends]);
 
-  const [chatQuery, setChatQuery] = useState("");
-
-  const handleChatSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!chatQuery.trim()) return;
-    navigate("/app/strategy", {
-      state: { prompt: chatQuery },
-    });
-  };
-
-  const handleQuickPrompt = (promptText: string) => {
-    navigate("/app/strategy", {
-      state: { prompt: promptText },
-    });
-  };
-
-  const topTrends = trends.slice(0, 3);
-  const currentForecast = React.useMemo<ForecastData>(() => {
-    if (trends.length === 0) {
-      return FORECAST_PERIOD_DATA[forecastPeriod] ?? FORECAST_PERIOD_DATA['28d'];
-    }
-    const baseScores = trends
-      .slice(0, 7)
-      .map((t) => Math.max(25, Math.round(t.opportunity_score ?? t.tvs_score ?? 65)));
-    while (baseScores.length < 7) {
-      baseScores.push(Math.round((baseScores[baseScores.length - 1] ?? 60) * 1.06));
-    }
-    const sorted = [...baseScores].sort((a, b) => a - b);
-    const mult = forecastPeriod === '28d' ? 1.15 : forecastPeriod === '90d' ? 2.4 : 5.2;
-    const bars = sorted.map((s, i) => Math.round(s * mult * (0.85 + i * 0.06)));
-    const avgScore = sorted.reduce((a, b) => a + b, 0) / sorted.length;
-    const growthPct = (
-      (avgScore / 55) *
-      (forecastPeriod === '28d' ? 11.4 : forecastPeriod === '90d' ? 21.8 : 38.5)
-    ).toFixed(1);
-    return {
-      bars,
-      projectedGrowth: `+${growthPct}%`,
-      comparisonLabel:
-        forecastPeriod === 'ALL'
-          ? 'cumulative LightGBM trajectory'
-          : `LightGBM ${forecastPeriod} horizon`,
-      highlightIndex: bars.length - 1,
-    };
-  }, [trends, forecastPeriod]);
-
-  const displayName = user?.full_name?.trim() || user?.email?.split("@")[0] || "Creator";
-
-  // Typewriter phrases
-  const TYPEWRITER_PHRASES = [
-    "What do you want to build or create today?",
-    "Need a high-retention 3-second hook for your next Short?",
-    "Looking for breakout viral topics in your niche?",
-    "Want a full high-CTR video script outline?",
-    "Analyze momentum signals & velocity across YouTube trends?",
-  ];
-
-  const [phraseIndex, setPhraseIndex] = useState(0);
-  const [displayedText, setDisplayedText] = useState("");
-  const [isDeleting, setIsDeleting] = useState(false);
-
   useEffect(() => {
-    const currentPhrase = TYPEWRITER_PHRASES[phraseIndex];
-    let timer: NodeJS.Timeout;
+    if (!showConnectors) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (connectorPanelRef.current && !connectorPanelRef.current.contains(e.target as Node)) {
+        setShowConnectors(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showConnectors]);
 
-    if (!isDeleting) {
-      if (displayedText.length < currentPhrase.length) {
-        timer = setTimeout(() => {
-          setDisplayedText(currentPhrase.slice(0, displayedText.length + 1));
-        }, 50);
-      } else {
-        timer = setTimeout(() => {
-          setIsDeleting(true);
-        }, 2200);
-      }
-    } else {
-      if (displayedText.length > 0) {
-        timer = setTimeout(() => {
-          setDisplayedText(currentPhrase.slice(0, displayedText.length - 1));
-        }, 25);
-      } else {
-        setIsDeleting(false);
-        setPhraseIndex((prev) => (prev + 1) % TYPEWRITER_PHRASES.length);
-      }
+  const firstName = useMemo(() => {
+    const name = user?.full_name?.trim() || user?.email?.split('@')[0] || '';
+    return name ? name.split(' ')[0] : 'creator';
+  }, [user?.full_name, user?.email]);
+
+  const channelSummary = useMemo(() => {
+    if (!primaryChannel) return null;
+    const parts: string[] = [];
+    if (primaryChannel.handle) parts.push(`@${primaryChannel.handle.replace(/^@/, '')}`);
+    else if (primaryChannel.name) parts.push(primaryChannel.name);
+    if (primaryChannel.subscriber_count > 0) {
+      parts.push(`${formatCompactNumber(primaryChannel.subscriber_count)} subscribers`);
     }
+    if (primaryChannel.video_count > 0) {
+      parts.push(`${primaryChannel.video_count} videos`);
+    }
+    return parts.length ? parts.join(' · ') : primaryChannel.name;
+  }, [primaryChannel]);
 
-    return () => clearTimeout(timer);
-  }, [displayedText, isDeleting, phraseIndex]);
+  const topTrends = useMemo(() => trends.slice(0, 3), [trends]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const text = prompt.trim();
+    // Research always runs with live sources so the brief is evidence based.
+    if (activeConnectors.length === 0) setConnectors(ALL_CONNECTORS);
+    navigate('/app/strategy', text ? { state: { prompt: text } } : undefined);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit(e as unknown as React.FormEvent);
+    }
+  };
+
+  const applySuggestion = (text: string) => {
+    setPrompt(text);
+    textareaRef.current?.focus();
+  };
 
   return (
-    <div className="space-y-8 pb-12">
-      {/* ChatGPT/Gemini Center Hero Greeting with Typewriter */}
-      <div className="pt-8 pb-2 text-center space-y-2.5">
-        <h1 className="font-sora text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-white">
-          How can I help,{" "}
-          <span className="bg-gradient-to-r from-white via-neutral-200 to-neutral-400 bg-clip-text text-transparent">
-            {displayName}
-          </span>
-          ?
+    <div className="mx-auto w-full max-w-6xl">
+      {/* ------------------------------------------------------------------
+          Main workspace — the research task is the primary content
+         ------------------------------------------------------------------ */}
+      <div className="mx-auto w-full max-w-3xl">
+        <h1 className="font-sora text-[26px] font-extrabold leading-tight tracking-tight text-[#171717] sm:text-[32px]">
+          What content to plan today,{' '}
+          <span className="text-[#4A2E8F]">{firstName}</span>?
         </h1>
+        <p className="mt-2 text-[13px] leading-relaxed text-[#625D68] sm:text-sm">
+          {channelSummary ? (
+            <>
+              Researching for <span className="font-semibold text-[#171717]">{channelSummary}</span>.
+              Ask for ideas, hooks or a content plan and CreatorIQ will bring live evidence.
+            </>
+          ) : (
+            <>
+              Ask for ideas, hooks or a content plan and CreatorIQ will bring live evidence.
+              Connect your channel to personalise every answer.
+            </>
+          )}
+        </p>
 
-        {/* Dynamic Typewriter Subtitle */}
-        <div
-          onClick={() => {
-            setChatQuery(TYPEWRITER_PHRASES[phraseIndex]);
-          }}
-          className="h-8 flex items-center justify-center gap-1 cursor-pointer group"
-          title="Click to use this prompt"
-        >
-          <span className="text-sm sm:text-base text-neutral-400 group-hover:text-indigo-300 transition-colors font-medium">
-            {displayedText}
-          </span>
-          <span className="inline-block w-0.5 h-4 bg-indigo-400 animate-pulse ml-0.5" />
-        </div>
-      </div>
-
-      {/* ChatGPT-Style Capsule Input Bar */}
-      <div className="mx-auto w-full max-w-2xl">
+        {/* Research composer */}
         <form
-          onSubmit={handleChatSubmit}
-          className="relative flex items-center rounded-3xl border border-[#2e2e2e] bg-[#212121] px-4 py-3 shadow-xl shadow-black/40 focus-within:border-[#404040] focus-within:ring-1 focus-within:ring-[#404040] transition-all"
+          ref={connectorPanelRef}
+          onSubmit={handleSubmit}
+          className="app-field app-field-lg mt-6 p-4 sm:p-5"
         >
-          {/* Left Plus Attachment Action */}
-          <button
-            type="button"
-            className="mr-2.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-neutral-400 hover:bg-[#2c2c2c] hover:text-white transition-colors cursor-pointer"
-            title="Attach signal context"
-            onClick={() => handleQuickPrompt("Analyze my channel niche velocity and growth gaps")}
-          >
-            <span className="text-xl font-light leading-none">+</span>
-          </button>
-
-          {/* Central Input */}
-          <input
-            type="text"
-            value={chatQuery}
-            onChange={(e) => setChatQuery(e.target.value)}
-            placeholder="Ask anything about video ideas, viral hooks, script breakdowns..."
-            className="flex-1 bg-transparent text-sm text-white placeholder-neutral-500 focus:outline-none border-0"
+          <label htmlFor="dashboard-prompt" className="sr-only">
+            Describe what you want to research
+          </label>
+          <textarea
+            id="dashboard-prompt"
+            ref={textareaRef}
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            onKeyDown={handleKeyDown}
+            rows={3}
+            placeholder="Describe a video idea, a topic, or the outcome you want…"
+            className="w-full resize-none border-0 bg-transparent text-[15px] leading-relaxed text-[#171717] placeholder-[#9B94A5] focus:outline-none"
           />
 
-          {/* Right Action Icons (Think chip, Mic, Audio/Send) */}
-          <div className="flex items-center gap-2 shrink-0 ml-2">
+          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-[#EFEBF2] pt-3.5">
             <button
               type="button"
-              onClick={() => handleQuickPrompt(chatQuery ? `Deep research: ${chatQuery}` : "Deep research rising trending concepts in India")}
-              className="flex items-center gap-1.5 rounded-full border border-[#333333] bg-[#181818] px-3 py-1.5 text-xs font-medium text-neutral-300 hover:border-[#444444] hover:text-white transition-colors cursor-pointer"
+              onClick={() => setShowConnectors((v) => !v)}
+              aria-expanded={showConnectors}
+              aria-controls="dashboard-connector-panel"
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[#E5E0E8] bg-white px-3 py-1.5 text-xs font-semibold text-[#625D68] transition-colors hover:border-[#C9BCF0] hover:bg-[#F6F3FF] hover:text-[#171717]"
             >
-              <Lightbulb className="h-3.5 w-3.5 text-neutral-400" />
-              <span>Think</span>
+              <Plus className="h-3.5 w-3.5" />
+              add connectors
+              {activeConnectors.length > 0 && (
+                <span className="rounded-full bg-[#F1ECFF] px-1.5 py-0.5 text-[10px] font-bold text-[#4A2E8F]">
+                  {activeConnectors.length}
+                </span>
+              )}
+              <ChevronDown
+                className={`h-3 w-3 transition-transform ${showConnectors ? 'rotate-180' : ''}`}
+              />
             </button>
 
-            <button
-              type="button"
-              className="flex h-8 w-8 items-center justify-center rounded-full text-neutral-400 hover:bg-[#2a2a2a] hover:text-white transition-colors cursor-pointer"
-              title="Voice dictation"
-              onClick={() => handleQuickPrompt("Brainstorm 5 high-CTR video concepts for my niche")}
-            >
-              <Mic className="h-4 w-4" />
-            </button>
+            {/* Connected account chip — real channel state only */}
+            {primaryChannel ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-[#B8EED8] bg-[#E8FBF4] px-3 py-1.5 text-xs font-semibold text-[#0F5C43]">
+                <UserRound className="h-3.5 w-3.5" />
+                {primaryChannel.handle
+                  ? `@${primaryChannel.handle.replace(/^@/, '')}`
+                  : primaryChannel.name}
+              </span>
+            ) : (
+              <Link
+                to="/app/settings"
+                className="inline-flex items-center gap-1.5 rounded-full border border-[#E5E0E8] bg-[#FBFAF8] px-3 py-1.5 text-xs font-semibold text-[#625D68] transition-colors hover:border-[#C9BCF0] hover:text-[#171717]"
+              >
+                <UserRound className="h-3.5 w-3.5" />
+                Connect a channel
+              </Link>
+            )}
 
-            <button
-              type="submit"
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-pure-white text-black hover:bg-neutral-200 transition-colors cursor-pointer shadow-sm"
-              style={{ backgroundColor: '#ffffff', color: '#000000' }}
-              title="Send prompt to AI"
-            >
-              <ArrowRight className="h-4 w-4" style={{ color: '#000000' }} />
-            </button>
+            <div className="ml-auto flex items-center gap-3">
+              <span className="hidden text-[11px] text-[#77717F] sm:inline">
+                {prompt.trim() ? 'Enter to research' : 'Shift + Enter for a new line'}
+              </span>
+              <button type="submit" className="app-btn-pink h-9 px-4 text-[13px]">
+                Research
+                <ArrowRight className="h-3.5 w-3.5 stroke-[2.5]" />
+              </button>
+            </div>
           </div>
+
+          {/* Inline connector picker — expands the composer instead of floating over it */}
+          {showConnectors && (
+            <div
+              id="dashboard-connector-panel"
+              className="mt-3 w-full min-w-0 rounded-xl border border-[#E5E0E8] bg-[#FBFAF8] p-3"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#EFEBF2] pb-2">
+                <span className="font-sora text-xs font-bold text-[#171717]">Live research</span>
+                <span className="text-[10px] font-mono text-[#77717F]">REAL-TIME SOURCES</span>
+              </div>
+              <p className="mt-2 max-w-prose text-[11px] leading-relaxed text-[#625D68]">
+                Pick the sources the research request may query. Nothing is sent anywhere until you
+                press Research.
+              </p>
+              <div className="mt-2.5 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {CONNECTOR_OPTIONS.map((c) => {
+                  const isOn = activeConnectors.includes(c.id);
+                  const Icon = c.icon;
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => toggleConnector(c.id)}
+                      aria-pressed={isOn}
+                      className={`flex w-full min-w-0 cursor-pointer items-start gap-2.5 overflow-hidden rounded-xl border p-2.5 text-left transition-colors ${
+                        isOn
+                          ? 'border-[#D9CEF5] bg-white'
+                          : 'border-[#EFEBF2] bg-white hover:bg-[#F6F3FF]'
+                      }`}
+                    >
+                      <span
+                        className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border ${
+                          isOn
+                            ? 'border-[#D9CEF5] bg-[#F1ECFF] text-[#4A2E8F]'
+                            : 'border-[#E5E0E8] bg-[#FBFAF8] text-[#77717F]'
+                        }`}
+                      >
+                        <Icon className="h-3.5 w-3.5" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="flex items-center gap-1.5 text-xs font-bold text-[#171717]">
+                          {c.label}
+                          {isOn && <Check className="h-3 w-3 shrink-0 text-[#167A59]" />}
+                        </span>
+                        <span className="mt-0.5 block break-words text-[11px] leading-relaxed text-[#77717F]">
+                          {c.description}
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </form>
 
-        {/* Prompt Suggestion Pills */}
-        <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-xs">
-          {[
-            { label: "5 Viral Short Ideas for my Niche", prompt: "Give me 5 viral short video ideas tailored to my channel niche with high novelty.", icon: Sparkles, iconColor: "text-indigo-400" },
-            { label: "3-Second Retention Hook Architect", prompt: "Design 3 irresistible first 3-second hook variations (Visual + Audio script) for my next video.", icon: Zap, iconColor: "text-amber-400" },
-            { label: "Breakout Content Angles in India", prompt: "What are the biggest rising trend opportunities and audience demand gaps in India right now?", icon: TrendingUp, iconColor: "text-emerald-400" },
-            { label: "7-Day Growth Content Plan", prompt: "Create a strategic 7-day YouTube posting calendar balancing viral shorts and high-retention concepts.", icon: Film, iconColor: "text-purple-400" },
-          ].map((item, idx) => (
-            <button
-              key={idx}
-              type="button"
-              onClick={() => handleQuickPrompt(item.prompt)}
-              className="inline-flex items-center gap-2 rounded-full border border-[#2a2a2a] bg-[#161616] px-3.5 py-1.5 text-xs text-neutral-300 hover:border-[#3a3a3a] hover:bg-[#1f1f1f] hover:text-white transition-colors cursor-pointer shadow-xs"
-            >
-              <item.icon className={`h-3.5 w-3.5 shrink-0 ${item.iconColor}`} />
-              <span>{item.label}</span>
-            </button>
-          ))}
+        {/* Suggested prompts */}
+        <div className="mt-6">
+          <p className="app-section-label">Try a prompt</p>
+          <div className="mt-2.5 flex flex-wrap gap-2">
+            {SUGGESTED_PROMPTS.map((text) => (
+              <button
+                key={text}
+                type="button"
+                onClick={() => applySuggestion(text)}
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[#E5E0E8] bg-white px-3.5 py-1.5 text-xs font-medium text-[#625D68] transition-colors hover:border-[#C9BCF0] hover:bg-[#F6F3FF] hover:text-[#171717]"
+              >
+                <Sparkles className="h-3.5 w-3.5 text-[#4A2E8F]" />
+                {text}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
-
-      {/* Top Predicted Trend Cards Grid (Directly matching wireframe) */}
-      <div className="space-y-3.5 pt-2">
-        <div className="flex items-center justify-between">
+      {/* ------------------------------------------------------------------
+          Evidence entry point — real opportunities from the personalised feed
+         ------------------------------------------------------------------ */}
+      <section className="mt-14">
+        <div className="flex flex-wrap items-end justify-between gap-2">
           <div>
-            <h2 className="text-sm font-bold uppercase tracking-wider text-neutral-300">
-              Top Predicted Opportunities
-            </h2>
-            <p className="text-xs text-neutral-500">
-              Click any concept card to inspect trajectory forecast, audience demand and evidence.
+            <h2 className="font-sora text-base font-bold text-[#171717]">Top predicted opportunities</h2>
+            <p className="mt-1 text-xs text-[#625D68]">
+              Ranked for your niche from the live feed. Open one to see the evidence.
             </p>
           </div>
           <Link
             to="/app/trends"
-            className="flex items-center gap-1 text-xs font-semibold text-neutral-400 hover:text-white transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-[#4A2E8F] transition-colors hover:text-[#171717]"
           >
-            Explore all trends
-            <ArrowRight className="h-3 w-3" />
+            View all ideas
+            <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </div>
 
         {isTrendsLoading && topTrends.length === 0 ? (
-          <AIScannerLoader message="Analyzing signals and vector-matching concepts..." />
+          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3" aria-hidden="true">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="h-40 animate-pulse rounded-2xl bg-[#F1EEF5]" />
+            ))}
+          </div>
         ) : topTrends.length === 0 ? (
-          <Card className="py-12 text-center" variant="elevated">
-            <TrendingUp className="mx-auto h-7 w-7 text-neutral-600" />
-            <h3 className="mt-2 text-sm font-semibold text-neutral-300">
-              No trend predictions yet
-            </h3>
-            <p className="mt-1 text-xs text-neutral-500">
-              Run trend collector or complete onboarding to populate your feed.
+          <div className="mt-4 rounded-2xl border border-dashed border-[#E5E0E8] bg-white p-8 text-center">
+            <TrendingUp className="mx-auto h-6 w-6 text-[#A79FB0]" />
+            <p className="mt-2 text-sm font-semibold text-[#171717]">No opportunities yet</p>
+            <p className="mx-auto mt-1 max-w-sm text-xs leading-relaxed text-[#77717F]">
+              Your personalised feed is still empty. Finish onboarding or refresh the feed to get
+              ranked opportunities for your niche.
             </p>
-          </Card>
+            <Link
+              to="/app/trends"
+              className="mt-4 inline-flex items-center gap-1.5 text-xs font-bold text-[#4A2E8F] hover:text-[#171717]"
+            >
+              Go to trends
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
         ) : (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            {topTrends.map((trend: any) => (
-              <Card
-                key={trend.id}
-                variant="elevated"
-                hover
-                className="group flex cursor-pointer flex-col justify-between gap-3.5 p-5 border-[#222222] hover:border-[#3a3a3a] transition-all duration-150"
-                onClick={() => navigate(`/app/trends/detail/${trend.id}`)}
-              >
-                <div className="space-y-3">
+          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+            {topTrends.map((trend) => {
+              const score =
+                trend.opportunity_score != null ? Math.round(trend.opportunity_score) : null;
+              const why = cleanTrendText(trend.why_predicted);
+              return (
+                <Link
+                  key={trend.id}
+                  to={`/app/trends/detail/${trend.id}`}
+                  className="group flex flex-col gap-3 rounded-2xl border border-[#E5E0E8] bg-white p-4 transition-all duration-150 hover:-translate-y-0.5 hover:border-[#C9BCF0] hover:shadow-[0_10px_24px_rgba(23,23,23,0.06)]"
+                >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex flex-wrap gap-1.5">
                       {trend.niches?.slice(0, 1).map((tag: string) => (
-                        <Badge key={tag} variant="neutral" className="text-[10px]">
+                        <span
+                          key={tag}
+                          className="rounded-md border border-[#E5E0E8] bg-[#F6F3FF] px-2 py-0.5 text-[10px] font-semibold text-[#4A2E8F]"
+                        >
                           {tag}
-                        </Badge>
+                        </span>
                       ))}
-                      <Badge variant="brand" className="text-[10px] capitalize">
-                        {trend.archetype}
-                      </Badge>
+                      {trend.archetype && (
+                        <span className="rounded-md border border-[#E5E0E8] bg-[#FBFAF8] px-2 py-0.5 text-[10px] font-semibold capitalize text-[#625D68]">
+                          {trend.archetype}
+                        </span>
+                      )}
                     </div>
-                    {trend.opportunity_score != null && (
-                      <span className="shrink-0 rounded bg-[#1f1f1f] border border-[#2c2c2c] px-2 py-0.5 text-[10px] font-bold text-white">
-                        {Math.round(trend.opportunity_score ?? trend.tvs_score)} Fit
+                    {score != null && (
+                      <span className="shrink-0 rounded-md border border-[#B8EED8] bg-[#E8FBF4] px-2 py-0.5 text-[10px] font-bold text-[#0F5C43]">
+                        {score}/100 fit
                       </span>
                     )}
                   </div>
 
-                  <h3 className="text-sm font-bold text-white group-hover:text-indigo-400 transition-colors line-clamp-2">
+                  <h3 className="text-[13.5px] font-bold leading-snug text-[#171717] group-hover:text-[#4A2E8F]">
                     {cleanTrendTitle(trend.topic)}
                   </h3>
 
-                  {/* Video Concept Highlight */}
-                  <div className="rounded-lg border border-[#282828] bg-[#141414] p-3 transition-colors group-hover:border-[#383838]">
-                    <div className="flex items-center justify-between gap-2 mb-1">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 flex items-center gap-1">
-                        <Sparkles className="h-3 w-3 text-indigo-400" />
-                        Video Concept
-                      </span>
-                      <span className="text-[9px] font-medium text-neutral-500 flex items-center gap-1">
-                        <Film className="h-2.5 w-2.5" />
-                        {resolveVideoConceptBadge(trend)}
-                      </span>
-                    </div>
-                    <p className="text-xs font-medium text-neutral-200 leading-snug line-clamp-2">
-                      &ldquo;{resolveVideoConcept(trend)}&rdquo;
-                    </p>
-                  </div>
-
-                  {trend.why_predicted && (
-                    <p className="text-xs text-neutral-400 line-clamp-2 leading-relaxed">
-                      <span className="font-semibold text-neutral-300">Why Predicted: </span>
-                      {cleanTrendText(trend.why_predicted)}
-                    </p>
+                  {why && (
+                    <p className="line-clamp-3 text-xs leading-relaxed text-[#625D68]">{why}</p>
                   )}
-                </div>
 
-                <div className="flex items-center justify-between border-t border-[#1e1e1e] pt-3">
-                  <div className="flex items-center gap-1 text-xs font-medium text-neutral-400 group-hover:text-white transition-colors">
-                    <span>View Concept Graph</span>
+                  <span className="mt-auto inline-flex items-center gap-1 pt-1 text-xs font-bold text-[#4A2E8F]">
+                    Inspect evidence
                     <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(`/app/trends/detail/${trend.id}`);
-                    }}
-                    className="text-xs px-2.5 py-1 h-7 border-[#2a2a2a] bg-[#161616] hover:bg-[#202020] text-neutral-200"
-                  >
-                    <TrendingUp className="h-3.5 w-3.5" />
-                    View Trend
-                  </Button>
-                </div>
-              </Card>
-            ))}
+                  </span>
+                </Link>
+              );
+            })}
           </div>
         )}
-      </div>
-
-      {/* Performance Forecast Chart & Priority Insights */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-        <Card variant="elevated" className="lg:col-span-8 p-5 border-[#222222]">
-          <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-xs font-bold uppercase tracking-wider text-neutral-300">
-                Performance Forecast
-              </h2>
-              <p className="text-xs text-neutral-500">Projected view velocity over time</p>
-            </div>
-            <div className="flex gap-1 rounded-lg border border-[#242424] bg-[#121212] p-1">
-              {(['28d', '90d', 'ALL'] as const).map((tab) => (
-                <button
-                  key={tab}
-                  type="button"
-                  onClick={() => setForecastPeriod(tab)}
-                  className={`rounded px-2.5 py-1 text-xs font-medium transition-all cursor-pointer ${
-                    forecastPeriod === tab
-                      ? 'bg-[#222222] text-white'
-                      : 'text-neutral-500 hover:text-neutral-300'
-                  }`}
-                >
-                  {tab}
-                </button>
-              ))}
-            </div>
-          </div>
-          <MiniBarChart
-            data={currentForecast.bars}
-            highlightIndex={currentForecast.highlightIndex}
-            formatValue={(v) => `${v}K views`}
-          />
-          <div className="mt-4 flex items-center justify-between rounded-lg border border-[#222222] bg-[#141414] px-3.5 py-2.5 text-xs">
-            <div className="flex items-center gap-2 text-neutral-300">
-              <BarChart2 className="h-3.5 w-3.5 text-indigo-400" />
-              <span className="font-semibold text-white">{currentForecast.projectedGrowth} projected</span>
-              <span className="text-neutral-500">{currentForecast.comparisonLabel}</span>
-            </div>
-          </div>
-        </Card>
-
-        <Card variant="elevated" className="lg:col-span-4 p-5 border-[#222222]">
-          <div className="mb-4 flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#2a2a2a] bg-[#181818] text-neutral-300">
-              <Sparkles className="h-3.5 w-3.5 text-indigo-400" />
-            </div>
-            <div>
-              <h2 className="text-xs font-bold uppercase tracking-wider text-neutral-300">
-                AI Priority Insights
-              </h2>
-              <p className="text-[11px] text-neutral-500">{insights.length} actions available</p>
-            </div>
-          </div>
-          {insights.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <p className="text-xs font-medium text-neutral-400">No pending insights</p>
-              <p className="mt-1 text-[11px] text-neutral-600">Your channel strategy is running smoothly.</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {insights.map((item, j) => (
-                <div
-                  key={item.id || j}
-                  onClick={() =>
-                    item.trendId
-                      ? navigate(`/app/trends/detail/${item.trendId}`)
-                      : navigate('/app/trends')
-                  }
-                  className="group cursor-pointer rounded-lg border border-[#222222] bg-[#141414] p-3 transition-colors hover:border-[#3a3a3a]"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <Badge variant="neutral" className="text-[9px]">
-                      Priority {j + 1}
-                    </Badge>
-                    <ChevronRight className="h-3.5 w-3.5 text-neutral-600 group-hover:text-neutral-300 transition-colors" />
-                  </div>
-                  <p className="mt-1.5 text-xs font-medium text-neutral-200 group-hover:text-indigo-300 transition-colors">
-                    {item.title}
-                  </p>
-                  <p className="mt-0.5 text-[11px] text-neutral-500">{item.impact}</p>
-                </div>
-              ))}
-            </div>
-          )}
-          <Link to="/app/trends">
-            <Button variant="secondary" className="mt-4 w-full text-xs">
-              Explore All Trends
-            </Button>
-          </Link>
-        </Card>
-      </div>
-
-      {/* Low-Priority Channel Baseline Snapshot at Bottom */}
-      <div className="space-y-2.5 border-t border-[#181818] pt-5">
-        <div className="flex items-center justify-between">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
-            Channel Baseline Snapshot
-          </span>
-          <Link
-            to="/app/settings"
-            className="text-[11px] text-neutral-500 hover:text-neutral-300 transition-colors"
-          >
-            Manage channel &rarr;
-          </Link>
-        </div>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          {stats.map((stat, i) => (
-            <StatCard
-              key={i}
-              label={stat.label}
-              value={stat.value}
-              trend={stat.trend}
-              icon={renderStatIcon(stat.icon)}
-            />
-          ))}
-        </div>
-      </div>
+      </section>
     </div>
   );
 };

@@ -14,7 +14,7 @@ import {
   ShieldCheck,
   Sparkles,
 } from 'lucide-react';
-import logo from '../assets/logo.png';
+import { BrandLogo } from '../components/brand/BrandLogo';
 import { api } from '../lib/api';
 
 interface EvaluationRecord {
@@ -49,95 +49,20 @@ interface EvaluationSummary {
   storage_tier: string;
 }
 
-// Initial fallback baseline when the database has 0 historical evaluations
-const DEFAULT_SUMMARY: EvaluationSummary = {
-  total_evaluations: 128,
-  avg_mae: 1.42,
-  avg_rmse: 1.98,
-  avg_r2_score: 0.94,
-  avg_ci_coverage_pct: 96.4,
-  avg_latency_ms: 114.5,
-  sources_breakdown: { real_history: 92, synthetic_prior_fallback: 36 },
-  quality_breakdown: { high_accuracy: 84, synthetic_calibrated: 36, moderate: 8 },
-  storage_tier: 'postgresql_and_jsonl',
-};
-
-const DEFAULT_RECENT: EvaluationRecord[] = [
-  {
-    id: 'eval-001',
-    timestamp: new Date(Date.now() - 1000 * 60 * 4).toISOString(),
-    model_name: 'LightGBM_85Features_300Trees',
-    entity_type: 'trend',
-    topic: 'React 19 Deep Dive & Server Actions',
-    mae: 1.18,
-    rmse: 1.62,
-    r2_score: 0.96,
-    ci_coverage_pct: 97.2,
-    fit_quality: 'high_accuracy',
-    latency_ms: 68.4,
-    observations_count: 28,
-    data_source: 'real_history',
-    status: 'success',
-  },
-  {
-    id: 'eval-002',
-    timestamp: new Date(Date.now() - 1000 * 60 * 18).toISOString(),
-    model_name: 'LightGBM_85Features_300Trees',
-    entity_type: 'trend',
-    topic: 'AI Video Editing Automation Tools',
-    mae: 1.45,
-    rmse: 2.05,
-    r2_score: 0.93,
-    ci_coverage_pct: 95.8,
-    fit_quality: 'high_accuracy',
-    latency_ms: 72.1,
-    observations_count: 30,
-    data_source: 'real_history',
-    status: 'success',
-  },
-  {
-    id: 'eval-003',
-    timestamp: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
-    model_name: 'LightGBM_85Features_300Trees',
-    entity_type: 'trend',
-    topic: 'Next.js 15 Fast Refresh Benchmarks',
-    mae: 1.72,
-    rmse: 2.34,
-    r2_score: 0.89,
-    ci_coverage_pct: 94.1,
-    fit_quality: 'moderate',
-    latency_ms: 74.8,
-    observations_count: 14,
-    data_source: 'real_history',
-    status: 'success',
-  },
-  {
-    id: 'eval-004',
-    timestamp: new Date(Date.now() - 1000 * 60 * 90).toISOString(),
-    model_name: 'LightGBM_85Features_300Trees',
-    entity_type: 'trend',
-    topic: 'Tailwind 4 Best Practices for Creators',
-    mae: 2.1,
-    rmse: 2.85,
-    r2_score: 0.86,
-    ci_coverage_pct: 92.5,
-    fit_quality: 'synthetic_calibrated',
-    latency_ms: 64.6,
-    observations_count: 7,
-    data_source: 'synthetic_prior_fallback',
-    status: 'success',
-  },
-];
-
 export const ModelPerformancePage: React.FC = () => {
-  const [summary, setSummary] = useState<EvaluationSummary>(DEFAULT_SUMMARY);
-  const [evaluations, setEvaluations] = useState<EvaluationRecord[]>(DEFAULT_RECENT);
+  /* The page only ever renders numbers the scoring service actually returned.
+     No demonstration baseline is substituted when the audit log is empty. */
+  const [summary, setSummary] = useState<EvaluationSummary | null>(null);
+  const [evaluations, setEvaluations] = useState<EvaluationRecord[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [modelFilter, setModelFilter] = useState<'all' | 'LightGBM_85Features_300Trees' | 'Idea_Evaluator' | 'Title_CTR_Predictor'>('all');
+  const [modelFilter, setModelFilter] = useState<
+    'all' | 'LightGBM_85Features_300Trees' | 'Idea_Evaluator' | 'Title_CTR_Predictor'
+  >('all');
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [lastRefreshedAt, setLastRefreshedAt] = useState<Date>(new Date());
+  const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const fetchData = useCallback(async (isManual = false) => {
     if (isManual) setIsRefreshing(true);
@@ -147,15 +72,24 @@ export const ModelPerformancePage: React.FC = () => {
         api.get('/ml/evaluations/recent?limit=50').catch(() => null),
       ]);
 
-      if (summaryRes?.data?.data && summaryRes.data.data.total_evaluations > 0) {
-        setSummary(summaryRes.data.data);
+      const summaryData = summaryRes?.data?.data;
+      if (summaryData && summaryData.total_evaluations > 0) {
+        setSummary(summaryData);
+      } else {
+        setSummary(null);
       }
-      if (recentRes?.data?.data && recentRes.data.data.length > 0) {
-        setEvaluations(recentRes.data.data);
-      }
+
+      const recentData = recentRes?.data?.data;
+      setEvaluations(Array.isArray(recentData) ? recentData : []);
+
       setLastRefreshedAt(new Date());
-    } catch (e) {
-      console.warn('Using baseline demonstration metrics:', e);
+      setLoadError(
+        !summaryData && !recentData
+          ? 'The evaluation audit service did not respond. Live metrics stay empty until it does.'
+          : null
+      );
+    } catch {
+      setLoadError('The evaluation audit service could not be reached.');
     } finally {
       setIsRefreshing(false);
     }
@@ -165,7 +99,7 @@ export const ModelPerformancePage: React.FC = () => {
     fetchData();
   }, [fetchData]);
 
-  // Auto-refresh timer every 15 seconds
+  /* Auto-refresh timer every 15 seconds */
   useEffect(() => {
     if (!autoRefresh) return;
     const interval = setInterval(() => {
@@ -185,52 +119,77 @@ export const ModelPerformancePage: React.FC = () => {
     });
   }, [evaluations, searchQuery, modelFilter]);
 
+  const qualityRows = useMemo(() => {
+    const breakdown = summary?.quality_breakdown ?? {};
+    const rows = [
+      {
+        key: 'high_accuracy',
+        label: 'High Accuracy (R² ≥ 0.85, CI ≥ 85%)',
+        count: breakdown.high_accuracy ?? 0,
+        color: '#167A59',
+        track: '#E8FBF4',
+      },
+      {
+        key: 'synthetic_calibrated',
+        label: 'Prior Calibrated (Sparse Fallback < 7d)',
+        count: breakdown.synthetic_calibrated ?? 0,
+        color: '#7C5CD6',
+        track: '#F1ECFF',
+      },
+      {
+        key: 'moderate',
+        label: 'Moderate / Broad Uncertainty Band',
+        count: breakdown.moderate ?? 0,
+        color: '#625D68',
+        track: '#F1EEF5',
+      },
+    ];
+    const total = rows.reduce((sum, row) => sum + row.count, 0);
+    return rows.map((row) => ({
+      ...row,
+      pct: total > 0 ? (row.count / total) * 100 : 0,
+    }));
+  }, [summary]);
+
   const getQualityBadge = (quality: string = '') => {
     if (quality === 'high_accuracy') {
       return (
-        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 border border-emerald-200">
+        <span className="inline-flex items-center gap-1 rounded-full bg-[#E8FBF4] px-2.5 py-0.5 text-xs font-semibold text-[#0F5C43] border border-[#B8EED8]">
           <CheckCircle2 className="h-3 w-3" /> High Accuracy
         </span>
       );
     }
     if (quality === 'synthetic_calibrated') {
       return (
-        <span className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-semibold text-indigo-700 border border-indigo-200">
+        <span className="inline-flex items-center gap-1 rounded-full bg-[#F1ECFF] px-2.5 py-0.5 text-xs font-semibold text-[#4A2E8F] border border-[#D9CEF5]">
           <Sparkles className="h-3 w-3" /> Prior Calibrated
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800 border border-amber-200">
+      <span className="inline-flex items-center gap-1 rounded-full bg-[#F1EEF5] px-2.5 py-0.5 text-xs font-semibold text-[#625D68] border border-[#E5E0E8]">
         <Activity className="h-3 w-3" /> Moderate
       </span>
     );
   };
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100 font-sans selection:bg-brand-600 selection:text-white">
+    <div className="min-h-screen bg-[#FBFAF8] font-sans text-[#171717]">
       {/* ─────────────────────────────────────────────────────────────────── */}
-      {/* Isolated Standalone Header */}
+      {/* Header                                                        */}
       {/* ─────────────────────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-30 border-b border-neutral-800/80 bg-neutral-950/80 backdrop-blur-md px-4 sm:px-8 py-3.5">
+      <header className="sticky top-0 z-30 border-b border-[#E5E0E8] bg-white/95 backdrop-blur-md px-4 sm:px-8 py-3.5">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <Link to="/" className="flex items-center gap-2.5 group">
-              <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg bg-white p-0.5 shadow-sm">
-                <img src={logo} alt="CreatorIQ" className="h-full w-full object-contain" />
-              </div>
-              <span className="font-sora text-base font-bold tracking-tight text-white">
-                Creator<span className="text-brand-500">IQ</span>
-              </span>
-            </Link>
-            <div className="h-4 w-px bg-neutral-800 mx-1 hidden sm:block" />
+            <BrandLogo to="/" size="md" />
+            <div className="hidden h-4 w-px bg-[#E5E0E8] mx-1 sm:block" />
             <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-neutral-400 hidden sm:inline">
-                ML Observability
+              <span className="hidden text-xs font-semibold uppercase tracking-wider text-[#77717F] sm:inline">
+                Model integrity
               </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-400 border border-emerald-500/20">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                LightGBM v4.3 Operational
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#E8FBF4] px-2.5 py-0.5 text-xs font-medium text-[#0F5C43] border border-[#B8EED8]">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#167A59]" />
+                LightGBM v4.3 operational
               </span>
             </div>
           </div>
@@ -240,13 +199,13 @@ export const ModelPerformancePage: React.FC = () => {
             <button
               type="button"
               onClick={() => setAutoRefresh(!autoRefresh)}
-              className={`hidden sm:inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all ${
+              className={`hidden sm:inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-all ${
                 autoRefresh
-                  ? 'bg-neutral-800 text-neutral-200 border border-neutral-700'
-                  : 'bg-neutral-900 text-neutral-500 border border-neutral-800'
+                  ? 'bg-[#F1ECFF] text-[#4A2E8F] border-[#D9CEF5]'
+                  : 'bg-white text-[#77717F] border-[#E5E0E8] hover:bg-[#FBFAF8]'
               }`}
             >
-              <Activity className={`h-3.5 w-3.5 ${autoRefresh ? 'text-emerald-400' : 'text-neutral-500'}`} />
+              <Activity className={`h-3.5 w-3.5 ${autoRefresh ? 'text-[#7C5CD6]' : 'text-[#A79FB0]'}`} />
               Auto-refresh {autoRefresh ? '15s' : 'off'}
             </button>
 
@@ -255,16 +214,16 @@ export const ModelPerformancePage: React.FC = () => {
               type="button"
               onClick={() => fetchData(true)}
               disabled={isRefreshing}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-1.5 text-xs font-medium text-neutral-300 hover:bg-neutral-800 hover:text-white transition-all disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[#E5E0E8] bg-white px-3 py-1.5 text-xs font-medium text-[#625D68] transition-all hover:bg-[#F6F3FF] hover:text-[#171717] disabled:opacity-50"
             >
-              <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin text-brand-400' : ''}`} />
+              <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin text-[#7C5CD6]' : ''}`} />
               Refresh
             </button>
 
             {/* Link back to app or login */}
             <Link
               to="/app/dashboard"
-              className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-500 transition-all shadow-sm"
+              className="inline-flex items-center gap-1.5 rounded-full bg-[#FF98C1] px-3 py-1.5 text-xs font-semibold text-[#171717] transition-all hover:bg-[#FF8AB8]"
             >
               <ArrowLeft className="h-3.5 w-3.5" />
               Creator App
@@ -274,41 +233,43 @@ export const ModelPerformancePage: React.FC = () => {
       </header>
 
       {/* ─────────────────────────────────────────────────────────────────── */}
-      {/* Main Container */}
+      {/* Main Container                                                 */}
       {/* ─────────────────────────────────────────────────────────────────── */}
       <main className="mx-auto max-w-7xl px-4 sm:px-8 py-8 space-y-8">
         {/* Banner & Intro */}
-        <div className="relative overflow-hidden rounded-2xl border border-neutral-800 bg-gradient-to-r from-neutral-900 via-neutral-900/90 to-neutral-950 p-6 sm:p-8">
-          <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-brand-600/10 blur-3xl" />
+        <div className="relative overflow-hidden rounded-2xl border border-[#E5E0E8] bg-white p-6 sm:p-8">
           <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             <div className="space-y-2 max-w-2xl">
               <div className="flex items-center gap-2">
-                <span className="rounded-md bg-brand-500/10 border border-brand-500/20 px-2 py-0.5 text-xs font-medium text-brand-400">
-                  Model Integrity & Drift Telemetry
+                <span className="rounded-md bg-[#F1ECFF] border border-[#D9CEF5] px-2 py-0.5 text-xs font-medium text-[#4A2E8F]">
+                  Model integrity & drift telemetry
                 </span>
-                <span className="text-xs text-neutral-500">
-                  Updated {lastRefreshedAt.toLocaleTimeString()}
-                </span>
+                {lastRefreshedAt && (
+                  <span className="text-xs text-[#77717F]">
+                    Updated {lastRefreshedAt.toLocaleTimeString()}
+                  </span>
+                )}
               </div>
-              <h1 className="text-2xl sm:text-3xl font-bold font-sora tracking-tight text-white">
-                ML Model Performance & Accuracy Audit
+              <h1 className="text-2xl sm:text-3xl font-bold font-cal-sans tracking-tight text-[#171717]">
+                Model performance & accuracy audit
               </h1>
-              <p className="text-sm text-neutral-400 leading-relaxed">
-                Empirical calibration, virality probability (`test_prob`), and execution latency logs for
-                CreatorIQ's 85-feature LightGBM ensemble (300 sequential trees @ lr=0.04) and PyTorch scoring models.
+              <p className="text-sm text-[#625D68] leading-relaxed">
+                Empirical calibration, virality probability and execution latency logs for
+                CreatorIQ&rsquo;s 85-feature LightGBM ensemble and PyTorch scoring models. Every
+                number below is read from the evaluation audit log &mdash; nothing is simulated.
               </p>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 shrink-0">
-              <div className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-3.5 text-center min-w-[140px]">
-                <p className="text-xs text-neutral-400">Storage Backend</p>
-                <p className="mt-1 text-sm font-semibold text-emerald-400 flex items-center justify-center gap-1">
+              <div className="rounded-xl border border-[#E5E0E8] bg-[#FBFAF8] p-3.5 text-center min-w-[140px]">
+                <p className="text-xs text-[#77717F]">Storage backend</p>
+                <p className="mt-1 text-sm font-semibold text-[#167A59] flex items-center justify-center gap-1">
                   <Database className="h-3.5 w-3.5" /> PostgreSQL + JSONL
                 </p>
               </div>
-              <div className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-3.5 text-center min-w-[140px]">
-                <p className="text-xs text-neutral-400">Model Engine</p>
-                <p className="mt-1 text-sm font-semibold text-brand-400 flex items-center justify-center gap-1">
+              <div className="rounded-xl border border-[#E5E0E8] bg-[#FBFAF8] p-3.5 text-center min-w-[140px]">
+                <p className="text-xs text-[#77717F]">Model engine</p>
+                <p className="mt-1 text-sm font-semibold text-[#4A2E8F] flex items-center justify-center gap-1">
                   <Cpu className="h-3.5 w-3.5" /> LightGBM 4.3 + PyTorch
                 </p>
               </div>
@@ -316,157 +277,159 @@ export const ModelPerformancePage: React.FC = () => {
           </div>
         </div>
 
-        {/* ───────────────────────────────────────────────────────────────── */}
-        {/* KPI Performance Metric Cards */}
-        {/* ───────────────────────────────────────────────────────────────── */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {/* Card 1: MAE */}
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/70 p-5 backdrop-blur-sm transition-all hover:border-neutral-700">
-            <div className="flex items-center justify-between text-xs text-neutral-400">
-              <span>Mean Absolute Error (MAE)</span>
-              <span className="rounded bg-emerald-500/10 px-1.5 py-0.5 font-medium text-emerald-400">
-                &lt; 5.0 Target
-              </span>
-            </div>
-            <p className="mt-3 text-3xl font-bold font-sora text-white">
-              {summary.avg_mae.toFixed(2)}
-            </p>
-            <p className="mt-1 text-xs text-neutral-500">
-              Average points deviation on ground-truth trajectory
-            </p>
+        {loadError && (
+          <div
+            role="alert"
+            className="rounded-xl border border-[#F3C9CE] bg-[#FDF1F2] px-4 py-3 text-[13px] leading-relaxed text-[#8A1B26]"
+          >
+            {loadError}
           </div>
-
-          {/* Card 2: CI Coverage */}
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/70 p-5 backdrop-blur-sm transition-all hover:border-neutral-700">
-            <div className="flex items-center justify-between text-xs text-neutral-400">
-              <span>95% CI Coverage</span>
-              <span className="rounded bg-brand-500/10 px-1.5 py-0.5 font-medium text-brand-400">
-                Well Calibrated
-              </span>
-            </div>
-            <p className="mt-3 text-3xl font-bold font-sora text-white">
-              {summary.avg_ci_coverage_pct.toFixed(1)}%
-            </p>
-            <p className="mt-1 text-xs text-neutral-500">
-              Empirical observations inside [yhat_lower, yhat_upper]
-            </p>
-          </div>
-
-          {/* Card 3: Latency */}
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/70 p-5 backdrop-blur-sm transition-all hover:border-neutral-700">
-            <div className="flex items-center justify-between text-xs text-neutral-400">
-              <span>Average Inference Latency</span>
-              <span className="rounded bg-indigo-500/10 px-1.5 py-0.5 font-medium text-indigo-400">
-                &lt; 200ms
-              </span>
-            </div>
-            <p className="mt-3 text-3xl font-bold font-sora text-white">
-              {summary.avg_latency_ms.toFixed(1)} <span className="text-sm font-normal text-neutral-400">ms</span>
-            </p>
-            <p className="mt-1 text-xs text-neutral-500">
-              Wall-clock 85-feature engineering &amp; 300-tree ensemble inference
-            </p>
-          </div>
-
-          {/* Card 4: Total Evaluations */}
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/70 p-5 backdrop-blur-sm transition-all hover:border-neutral-700">
-            <div className="flex items-center justify-between text-xs text-neutral-400">
-              <span>Total Predictions Logged</span>
-              <span className="rounded bg-neutral-800 px-1.5 py-0.5 font-medium text-neutral-300">
-                Audit Stream
-              </span>
-            </div>
-            <p className="mt-3 text-3xl font-bold font-sora text-white">
-              {summary.total_evaluations}
-            </p>
-            <p className="mt-1 text-xs text-neutral-500">
-              Persisted across PostgreSQL & rotating JSONL logs
-            </p>
-          </div>
-        </div>
+        )}
 
         {/* ───────────────────────────────────────────────────────────────── */}
-        {/* Model Architecture & Quality Breakdown */}
+        {/* KPI Performance Metric Cards                                     */}
+        {/* ───────────────────────────────────────────────────────────────── */}
+        {summary ? (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-xl border border-[#E5E0E8] bg-white p-5 transition-colors hover:border-[#C9BCF0]">
+              <div className="flex items-center justify-between gap-2 text-xs text-[#77717F]">
+                <span>Mean absolute error (MAE)</span>
+                <span className="rounded bg-[#E8FBF4] px-1.5 py-0.5 font-medium text-[#0F5C43]">
+                  &lt; 5.0 target
+                </span>
+              </div>
+              <p className="mt-3 text-3xl font-bold font-cal-sans text-[#171717]">
+                {summary.avg_mae.toFixed(2)}
+              </p>
+              <p className="mt-1 text-xs text-[#77717F]">
+                Average points deviation on ground-truth trajectory
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-[#E5E0E8] bg-white p-5 transition-colors hover:border-[#C9BCF0]">
+              <div className="flex items-center justify-between gap-2 text-xs text-[#77717F]">
+                <span>95% CI coverage</span>
+                <span className="rounded bg-[#F1ECFF] px-1.5 py-0.5 font-medium text-[#4A2E8F]">
+                  Calibrated
+                </span>
+              </div>
+              <p className="mt-3 text-3xl font-bold font-cal-sans text-[#171717]">
+                {summary.avg_ci_coverage_pct.toFixed(1)}%
+              </p>
+              <p className="mt-1 text-xs text-[#77717F]">
+                Empirical observations inside [yhat_lower, yhat_upper]
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-[#E5E0E8] bg-white p-5 transition-colors hover:border-[#C9BCF0]">
+              <div className="flex items-center justify-between gap-2 text-xs text-[#77717F]">
+                <span>Average inference latency</span>
+                <span className="rounded bg-[#F1ECFF] px-1.5 py-0.5 font-medium text-[#4A2E8F]">
+                  &lt; 200ms
+                </span>
+              </div>
+              <p className="mt-3 text-3xl font-bold font-cal-sans text-[#171717]">
+                {summary.avg_latency_ms.toFixed(1)}{' '}
+                <span className="text-sm font-normal text-[#77717F]">ms</span>
+              </p>
+              <p className="mt-1 text-xs text-[#77717F]">
+                Wall-clock 85-feature engineering &amp; 300-tree ensemble inference
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-[#E5E0E8] bg-white p-5 transition-colors hover:border-[#C9BCF0]">
+              <div className="flex items-center justify-between gap-2 text-xs text-[#77717F]">
+                <span>Total predictions logged</span>
+                <span className="rounded bg-[#F1EEF5] px-1.5 py-0.5 font-medium text-[#625D68]">
+                  Audit stream
+                </span>
+              </div>
+              <p className="mt-3 text-3xl font-bold font-cal-sans text-[#171717]">
+                {summary.total_evaluations}
+              </p>
+              <p className="mt-1 text-xs text-[#77717F]">
+                Persisted across PostgreSQL &amp; rotating JSONL logs
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-[#E5E0E8] bg-white p-8 text-center">
+            <ShieldCheck className="mx-auto h-6 w-6 text-[#A79FB0]" />
+            <h2 className="mt-2 text-sm font-bold text-[#171717]">No evaluation metrics yet</h2>
+            <p className="mx-auto mt-1.5 max-w-lg text-xs leading-relaxed text-[#625D68]">
+              The audit log is still empty. Accuracy, latency and calibration figures appear here
+              as soon as the scoring service records its first real evaluation.
+            </p>
+          </div>
+        )}
+
+        {/* ───────────────────────────────────────────────────────────────── */}
+        {/* Model Architecture & Quality Breakdown                          */}
         {/* ───────────────────────────────────────────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Quality Distribution */}
-          <div className="lg:col-span-6 rounded-xl border border-neutral-800 bg-neutral-900/60 p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-white flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-emerald-400" />
-                Goodness-of-Fit Quality Distribution
+          <div className="lg:col-span-6 rounded-xl border border-[#E5E0E8] bg-white p-6 space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-sm font-semibold text-[#171717] flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-[#167A59]" />
+                Goodness-of-fit quality distribution
               </h2>
-              <span className="text-xs text-neutral-400">R² &gt; 0.85 Benchmark</span>
+              <span className="text-xs text-[#77717F]">R² &gt; 0.85 benchmark</span>
             </div>
 
             <div className="space-y-3 pt-2">
-              <div>
-                <div className="flex justify-between text-xs mb-1.5">
-                  <span className="text-neutral-300 font-medium">High Accuracy (R² ≥ 0.85, CI ≥ 85%)</span>
-                  <span className="text-emerald-400 font-semibold">
-                    {summary.quality_breakdown?.high_accuracy ?? 84} runs
-                  </span>
+              {qualityRows.map((row) => (
+                <div key={row.key}>
+                  <div className="flex justify-between gap-3 text-xs mb-1.5">
+                    <span className="text-[#625D68] font-medium">{row.label}</span>
+                    <span className="font-semibold text-[#171717]">
+                      {summary ? `${row.count} runs` : '—'}
+                    </span>
+                  </div>
+                  <div className="h-2 rounded-full bg-[#F1EEF5] overflow-hidden">
+                    <div
+                      className="h-full rounded-full"
+                      style={{ width: `${row.pct}%`, backgroundColor: row.color }}
+                    />
+                  </div>
                 </div>
-                <div className="h-2 rounded-full bg-neutral-800 overflow-hidden">
-                  <div className="h-full bg-emerald-500 rounded-full" style={{ width: '68%' }} />
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between text-xs mb-1.5">
-                  <span className="text-neutral-300 font-medium">Prior Calibrated (Sparse Fallback &lt; 7d)</span>
-                  <span className="text-indigo-400 font-semibold">
-                    {summary.quality_breakdown?.synthetic_calibrated ?? 36} runs
-                  </span>
-                </div>
-                <div className="h-2 rounded-full bg-neutral-800 overflow-hidden">
-                  <div className="h-full bg-indigo-500 rounded-full" style={{ width: '26%' }} />
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between text-xs mb-1.5">
-                  <span className="text-neutral-300 font-medium">Moderate / Broad Uncertainty Band</span>
-                  <span className="text-amber-400 font-semibold">
-                    {summary.quality_breakdown?.moderate ?? 8} runs
-                  </span>
-                </div>
-                <div className="h-2 rounded-full bg-neutral-800 overflow-hidden">
-                  <div className="h-full bg-amber-500 rounded-full" style={{ width: '6%' }} />
-                </div>
-              </div>
+              ))}
             </div>
           </div>
 
           {/* Theoretical Calibration Specifications */}
-          <div className="lg:col-span-6 rounded-xl border border-neutral-800 bg-neutral-900/60 p-6 space-y-3">
-            <h2 className="text-sm font-semibold text-white flex items-center gap-2">
-              <Layers className="h-4 w-4 text-brand-400" />
-              LightGBM 85-Feature Architecture Specifications
+          <div className="lg:col-span-6 rounded-xl border border-[#E5E0E8] bg-white p-6 space-y-3">
+            <h2 className="text-sm font-semibold text-[#171717] flex items-center gap-2">
+              <Layers className="h-4 w-4 text-[#7C5CD6]" />
+              LightGBM 85-feature architecture specifications
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 text-xs">
-              <div className="rounded-lg border border-neutral-800/80 bg-neutral-950 p-3">
-                <p className="font-semibold text-neutral-200">1. SimpleImputer Preprocessing</p>
-                <p className="mt-1 text-neutral-400">
-                  Replaces missing numeric lags and rolling windows via median imputation before tree evaluation.
+              <div className="rounded-lg border border-[#E5E0E8] bg-[#FBFAF8] p-3">
+                <p className="font-semibold text-[#171717]">1. SimpleImputer preprocessing</p>
+                <p className="mt-1 text-[#625D68]">
+                  Replaces missing numeric lags and rolling windows via median imputation before
+                  tree evaluation.
                 </p>
               </div>
-              <div className="rounded-lg border border-neutral-800/80 bg-neutral-950 p-3">
-                <p className="font-semibold text-neutral-200">2. Imbalanced Class Weighting</p>
-                <p className="mt-1 text-neutral-400">
-                  Applies dynamic <code className="text-brand-400">scale_pos_weight</code> so minority viral breakouts are never ignored.
+              <div className="rounded-lg border border-[#E5E0E8] bg-[#FBFAF8] p-3">
+                <p className="font-semibold text-[#171717]">2. Imbalanced class weighting</p>
+                <p className="mt-1 text-[#625D68]">
+                  Applies dynamic <code className="text-[#4A2E8F]">scale_pos_weight</code> so
+                  minority viral breakouts are never ignored.
                 </p>
               </div>
-              <div className="rounded-lg border border-neutral-800/80 bg-neutral-950 p-3">
-                <p className="font-semibold text-neutral-200">3. 300 Sequential Trees (lr=0.04)</p>
-                <p className="mt-1 text-neutral-400">
-                  Gradient boosted decision trees trained sequentially at learning rate 0.04 over 85 features.
+              <div className="rounded-lg border border-[#E5E0E8] bg-[#FBFAF8] p-3">
+                <p className="font-semibold text-[#171717]">3. 300 sequential trees (lr=0.04)</p>
+                <p className="mt-1 text-[#625D68]">
+                  Gradient boosted decision trees trained sequentially at learning rate 0.04 over 85
+                  features.
                 </p>
               </div>
-              <div className="rounded-lg border border-neutral-800/80 bg-neutral-950 p-3">
-                <p className="font-semibold text-neutral-200">4. 85 Longitudinal Signals</p>
-                <p className="mt-1 text-neutral-400">
-                  Combines 9 base metrics, 25 lags (1–28d), 40 rolling stats, 8 momentum/accel, &amp; 3 tier shares.
+              <div className="rounded-lg border border-[#E5E0E8] bg-[#FBFAF8] p-3">
+                <p className="font-semibold text-[#171717]">4. 85 longitudinal signals</p>
+                <p className="mt-1 text-[#625D68]">
+                  Combines 9 base metrics, 25 lags (1&ndash;28d), 40 rolling stats, 8
+                  momentum/accel, &amp; 3 tier shares.
                 </p>
               </div>
             </div>
@@ -474,16 +437,16 @@ export const ModelPerformancePage: React.FC = () => {
         </div>
 
         {/* ───────────────────────────────────────────────────────────────── */}
-        {/* Live Prediction Audit Feed & Table */}
+        {/* Live Prediction Audit Feed & Table                              */}
         {/* ───────────────────────────────────────────────────────────────── */}
-        <div className="rounded-xl border border-neutral-800 bg-neutral-900/70 p-6 space-y-4">
+        <div className="rounded-xl border border-[#E5E0E8] bg-white p-6 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h2 className="text-base font-bold text-white flex items-center gap-2">
-                <Activity className="h-4 w-4 text-emerald-400" />
-                Live Model Evaluation Stream
+              <h2 className="text-base font-bold text-[#171717] flex items-center gap-2">
+                <Activity className="h-4 w-4 text-[#167A59]" />
+                Live model evaluation stream
               </h2>
-              <p className="text-xs text-neutral-400">
+              <p className="text-xs text-[#625D68]">
                 Audit log of recent inference runs, fitted error metrics, and operational latency.
               </p>
             </div>
@@ -491,35 +454,39 @@ export const ModelPerformancePage: React.FC = () => {
             {/* Filter Tabs & Search */}
             <div className="flex flex-wrap items-center gap-2">
               <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-neutral-500" />
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#A79FB0]" />
                 <input
                   type="text"
                   placeholder="Filter topic..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="h-8 w-44 sm:w-56 rounded-lg border border-neutral-800 bg-neutral-950 pl-8 pr-3 text-xs text-neutral-200 focus:border-brand-500 focus:outline-none"
+                  className="app-field h-8 w-44 sm:w-56 pl-8 pr-3 text-xs text-[#171717] placeholder-[#9B94A5] focus:outline-none"
                 />
               </div>
 
               <select
                 value={modelFilter}
                 onChange={(e) =>
-                  setModelFilter(e.target.value as 'all' | 'LightGBM_85Features_300Trees' | 'Idea_Evaluator' | 'Title_CTR_Predictor')
+                  setModelFilter(e.target.value as
+                    | 'all'
+                    | 'LightGBM_85Features_300Trees'
+                    | 'Idea_Evaluator'
+                    | 'Title_CTR_Predictor')
                 }
-                className="h-8 rounded-lg border border-neutral-800 bg-neutral-950 px-2 text-xs text-neutral-300 focus:border-brand-500 focus:outline-none"
+                className="app-field h-8 px-2 text-xs text-[#625D68] focus:outline-none"
               >
-                <option value="all">All Models</option>
-                <option value="LightGBM_85Features_300Trees">LightGBM (85 Features · 300 Trees)</option>
-                <option value="Idea_Evaluator">Idea Evaluator</option>
-                <option value="Title_CTR_Predictor">Title CTR Predictor</option>
+                <option value="all">All models</option>
+                <option value="LightGBM_85Features_300Trees">LightGBM trend model</option>
+                <option value="Idea_Evaluator">Idea evaluator</option>
+                <option value="Title_CTR_Predictor">Title CTR predictor</option>
               </select>
             </div>
           </div>
 
           {/* Table */}
-          <div className="overflow-x-auto rounded-lg border border-neutral-800">
+          <div className="overflow-x-auto rounded-lg border border-[#E5E0E8]">
             <table className="w-full text-left text-xs">
-              <thead className="bg-neutral-950/80 border-b border-neutral-800 text-neutral-400 uppercase tracking-wider">
+              <thead className="bg-[#FBFAF8] border-b border-[#E5E0E8] text-[#77717F] uppercase tracking-wider">
                 <tr>
                   <th className="py-3 px-4">Timestamp</th>
                   <th className="py-3 px-4">Topic / Entity</th>
@@ -533,61 +500,64 @@ export const ModelPerformancePage: React.FC = () => {
                   <th className="py-3 px-4 text-right">Details</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-neutral-800/60 bg-neutral-900/30">
+              <tbody className="divide-y divide-[#EFEBF2] bg-white">
                 {filteredEvaluations.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="py-8 text-center text-neutral-500">
-                      No model evaluation records match your filter.
+                    <td colSpan={10} className="py-8 text-center text-[#77717F]">
+                      {evaluations.length === 0
+                        ? 'No evaluation records have been logged yet.'
+                        : 'No model evaluation records match your filter.'}
                     </td>
                   </tr>
                 ) : (
                   filteredEvaluations.map((item) => (
                     <React.Fragment key={item.id}>
                       <tr
-                        className={`hover:bg-neutral-800/40 transition-colors cursor-pointer ${
-                          expandedId === item.id ? 'bg-neutral-800/30' : ''
+                        className={`hover:bg-[#FBFAF8] transition-colors cursor-pointer ${
+                          expandedId === item.id ? 'bg-[#F6F3FF]' : ''
                         }`}
                         onClick={() => setExpandedId(expandedId === item.id ? null : item.id)}
                       >
-                        <td className="py-3 px-4 font-mono text-neutral-400 whitespace-nowrap">
+                        <td className="py-3 px-4 font-mono text-[#77717F] whitespace-nowrap">
                           {new Date(item.timestamp).toLocaleTimeString()}
                         </td>
-                        <td className="py-3 px-4 font-medium text-white max-w-[220px] truncate">
-                          {item.topic || 'General Opportunity'}
+                        <td className="py-3 px-4 font-medium text-[#171717] max-w-[220px] truncate">
+                          {item.topic || 'General opportunity'}
                         </td>
-                        <td className="py-3 px-4 text-neutral-300 font-mono">
-                          {item.model_name}
-                        </td>
-                        <td className="py-3 px-4 text-neutral-400">
+                        <td className="py-3 px-4 text-[#625D68] font-mono">{item.model_name}</td>
+                        <td className="py-3 px-4 text-[#77717F]">
                           {item.data_source === 'real_history' ? (
-                            <span className="inline-flex items-center gap-1 text-emerald-400">
-                              <Database className="h-3 w-3" /> Real Signals ({item.observations_count}d)
+                            <span className="inline-flex items-center gap-1 text-[#167A59]">
+                              <Database className="h-3 w-3" /> Real signals ({item.observations_count}d)
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 text-indigo-400">
-                              <Sparkles className="h-3 w-3" /> Prior Calibrated
+                            <span className="inline-flex items-center gap-1 text-[#4A2E8F]">
+                              <Sparkles className="h-3 w-3" /> Prior calibrated
                             </span>
                           )}
                         </td>
-                        <td className="py-3 px-4 font-mono text-neutral-200">
+                        <td className="py-3 px-4 font-mono text-[#171717]">
                           {item.mae != null ? item.mae.toFixed(2) : '—'}
                         </td>
-                        <td className="py-3 px-4 font-mono text-neutral-200">
+                        <td className="py-3 px-4 font-mono text-[#171717]">
                           {item.rmse != null ? item.rmse.toFixed(2) : '—'}
                         </td>
-                        <td className="py-3 px-4 font-mono text-neutral-200">
+                        <td className="py-3 px-4 font-mono text-[#171717]">
                           {item.ci_coverage_pct != null ? `${item.ci_coverage_pct.toFixed(1)}%` : '—'}
                         </td>
-                        <td className="py-3 px-4 font-mono text-neutral-300">
+                        <td className="py-3 px-4 font-mono text-[#625D68]">
                           {item.latency_ms.toFixed(1)} ms
                         </td>
-                        <td className="py-3 px-4">
-                          {getQualityBadge(item.fit_quality)}
-                        </td>
+                        <td className="py-3 px-4">{getQualityBadge(item.fit_quality)}</td>
                         <td className="py-3 px-4 text-right">
                           <button
                             type="button"
-                            className="text-neutral-400 hover:text-white p-1 rounded transition-colors"
+                            className="text-[#77717F] hover:text-[#171717] p-1 rounded transition-colors"
+                            aria-label={
+                              expandedId === item.id
+                                ? 'Hide evaluation detail'
+                                : 'Show evaluation detail'
+                            }
                           >
                             {expandedId === item.id ? (
                               <ChevronDown className="h-4 w-4" />
@@ -600,18 +570,23 @@ export const ModelPerformancePage: React.FC = () => {
 
                       {/* Expandable JSON Detail Row */}
                       {expandedId === item.id && (
-                        <tr className="bg-neutral-950/90 border-b border-neutral-800">
+                        <tr className="bg-[#FBFAF8] border-b border-[#E5E0E8]">
                           <td colSpan={10} className="p-4">
-                            <div className="rounded-lg border border-neutral-800 bg-neutral-950 p-4 font-mono text-xs text-neutral-300">
-                              <div className="flex items-center justify-between pb-2 mb-2 border-b border-neutral-800">
-                                <span className="text-neutral-400 text-[11px]">
-                                  Evaluation Snapshot: ID {item.id}
+                            <div className="rounded-lg border border-[#E5E0E8] bg-white p-4 font-mono text-xs text-[#625D68]">
+                              <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#EFEBF2]">
+                                <span className="text-[#77717F] text-[11px]">
+                                  Evaluation snapshot: ID {item.id}
                                 </span>
-                                <span className="text-emerald-400 text-[11px]">
-                                  R² Score: {item.r2_score ?? '0.94'} · CI: {item.ci_coverage_pct ?? '96.4'}%
+                                <span className="text-[#167A59] text-[11px]">
+                                  R² score: {item.r2_score != null ? item.r2_score.toFixed(2) : '—'}
+                                  {' · '}
+                                  CI:{' '}
+                                  {item.ci_coverage_pct != null
+                                    ? `${item.ci_coverage_pct.toFixed(1)}%`
+                                    : '—'}
                                 </span>
                               </div>
-                              <pre className="overflow-x-auto text-[11px] text-neutral-300 leading-relaxed custom-scrollbar">
+                              <pre className="overflow-x-auto text-[11px] text-[#625D68] leading-relaxed custom-scrollbar">
                                 {JSON.stringify(
                                   {
                                     model_name: item.model_name,
@@ -646,15 +621,21 @@ export const ModelPerformancePage: React.FC = () => {
       </main>
 
       {/* ─────────────────────────────────────────────────────────────────── */}
-      {/* Standalone Footer */}
+      {/* Footer                                                           */}
       {/* ─────────────────────────────────────────────────────────────────── */}
-      <footer className="mt-16 border-t border-neutral-800/80 bg-neutral-950 py-8 px-4 sm:px-8 text-center text-xs text-neutral-500">
+      <footer className="mt-16 border-t border-[#E5E0E8] bg-white py-8 px-4 sm:px-8 text-center text-xs text-[#77717F]">
         <div className="mx-auto max-w-7xl flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p>© 2026 CreatorIQ ML Systems · Public Model Performance & Accuracy Telemetry</p>
-          <div className="flex items-center gap-4 text-neutral-400">
-            <Link to="/" className="hover:text-white transition-colors">Home</Link>
-            <Link to="/app/trends" className="hover:text-white transition-colors">Trends</Link>
-            <Link to="/app/dashboard" className="hover:text-white transition-colors">Dashboard</Link>
+          <p>© 2026 CreatorIQ ML Systems · Public model performance &amp; accuracy telemetry</p>
+          <div className="flex items-center gap-4 text-[#625D68]">
+            <Link to="/" className="hover:text-[#171717] transition-colors">
+              Home
+            </Link>
+            <Link to="/app/trends" className="hover:text-[#171717] transition-colors">
+              Trends
+            </Link>
+            <Link to="/app/dashboard" className="hover:text-[#171717] transition-colors">
+              Dashboard
+            </Link>
           </div>
         </div>
       </footer>

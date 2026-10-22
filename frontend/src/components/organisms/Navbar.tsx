@@ -23,7 +23,7 @@ export const Navbar: React.FC = () => {
           <div className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-lg bg-pure-white p-0.5">
             <img src={logo} className="h-full w-full object-contain" alt="CreatorIQ" />
           </div>
-          <span className="font-sora text-sm font-semibold text-white">
+          <span className="font-cal-sans text-sm font-semibold text-white">
             Creator<span className="text-neutral-400">IQ</span>
           </span>
         </Link>

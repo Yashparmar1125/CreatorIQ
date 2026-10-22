@@ -61,7 +61,7 @@ export const PrivacyPage: React.FC = () => {
         >
           <div className="space-y-4 text-center md:text-left">
             <h1 className="text-4xl md:text-5xl font-black tracking-tight leading-tight">
-              Privacy <span className="text-neutral-400">First.</span>
+              Privacy <span className="text-neutral-600">First.</span>
             </h1>
             <p className="text-neutral-500 text-base md:text-lg leading-relaxed font-bold opacity-80 max-w-xl">
               Last updated: April 5, 2026. Your trust is our most valuable asset. CreatorIQ is committed to protecting your data and being transparent about our practices.
@@ -91,7 +91,7 @@ export const PrivacyPage: React.FC = () => {
           </div>
 
           <div className="pt-12">
-            <p className="text-sm text-neutral-400 leading-relaxed text-center font-bold italic">
+            <p className="text-sm text-neutral-600 leading-relaxed text-center font-bold italic">
               If you have questions about our privacy practices, please contact us at yashparmar11y@gmail.com
             </p>
           </div>

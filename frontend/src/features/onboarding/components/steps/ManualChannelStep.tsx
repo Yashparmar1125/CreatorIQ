@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
-import { Youtube, Users, AtSign, Tv, Check } from 'lucide-react';
+import { Youtube, Users, Check } from 'lucide-react';
 import { OnboardingStepShell } from '../OnboardingStepShell';
-import { Input } from '../../../../components/ui/Input';
 import { cn } from '../../../../lib/utils';
+import { useState } from 'react';
 
 interface ManualChannelStepProps {
   channelName: string;
@@ -46,60 +45,64 @@ export const ManualChannelStep: React.FC<ManualChannelStepProps> = ({
       onBack={onBack}
       onNext={onNext}
       nextDisabled={!isValid}
-      cardClassName="space-y-4 text-left"
+      cardClassName="space-y-6 text-left"
     >
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
         {/* Channel Name */}
-        <div className="space-y-1.5">
-          <label className="block text-xs font-semibold text-neutral-200">
-            Channel Name <span className="text-red-400">*</span>
+        <div className="space-y-2">
+          <label className="block text-xs sm:text-[13px] font-bold text-[#181719]">
+            Channel Name <span className="text-red-500">*</span>
           </label>
-          <Input
-            value={channelName}
-            onChange={(e) => onChannelNameChange(e.target.value)}
-            placeholder="e.g. Tech With Alex"
-            icon={<Tv className="h-4 w-4 text-neutral-400" />}
-            className="h-10"
-            autoFocus
-          />
+          <div className="relative">
+            {/* <Tv className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#716c7a]" /> */}
+            <input
+              value={channelName}
+              onChange={(e) => onChannelNameChange(e.target.value)}
+              placeholder="e.g. Tech With Alex"
+              className="onboarding-input pl-10"
+              autoFocus
+            />
+          </div>
         </div>
 
         {/* Channel Handle */}
-        <div className="space-y-1.5">
-          <label className="block text-xs font-semibold text-neutral-200">
-            YouTube Handle <span className="font-normal text-neutral-500">(optional)</span>
+        <div className="space-y-2">
+          <label className="block text-xs sm:text-[13px] font-bold text-[#181719]">
+            YouTube Handle <span className="font-normal text-[#716c7a]">(optional)</span>
           </label>
-          <Input
-            value={channelHandle}
-            onChange={(e) => {
-              const raw = e.target.value.trim();
-              const val = raw.startsWith('@') ? raw : `@${raw}`;
-              onChannelHandleChange(raw ? val : '');
-            }}
-            placeholder="@techwithalex"
-            icon={<AtSign className="h-4 w-4 text-neutral-400" />}
-            className="h-10"
-          />
+          <div className="relative">
+            {/* <AtSign className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#716c7a]" /> */}
+            <input
+              value={channelHandle}
+              onChange={(e) => {
+                const raw = e.target.value.trim();
+                const val = raw.startsWith('@') ? raw : `@${raw}`;
+                onChannelHandleChange(raw ? val : '');
+              }}
+              placeholder="@techwithalex"
+              className="onboarding-input pl-10"
+            />
+          </div>
         </div>
       </div>
 
-      {/* Subscriber Tier Selection (5-Column Single Row) */}
-      <div className="space-y-2.5 pt-1">
+      {/* Subscriber Tier Selection */}
+      <div className="space-y-3 pt-1">
         <div className="flex items-center justify-between">
-          <label className="block text-xs font-semibold text-neutral-200">
+          <label className="block text-xs sm:text-[13px] font-bold text-[#181719]">
             Subscriber Audience Size
           </label>
           <button
             type="button"
             onClick={() => setUseExactCount(!useExactCount)}
-            className="text-xs font-medium text-brand-400 transition-colors hover:text-brand-300 cursor-pointer"
+            className="text-xs font-semibold text-[#8b5cf6] hover:text-[#7033ea] transition-colors cursor-pointer"
           >
             {useExactCount ? 'Choose from tiers' : 'Enter exact count'}
           </button>
         </div>
 
         {!useExactCount ? (
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-5">
             {SUBSCRIBER_TIERS.map((tier) => {
               const isSelected = selectedTier?.value === tier.value;
               return (
@@ -108,17 +111,17 @@ export const ManualChannelStep: React.FC<ManualChannelStepProps> = ({
                   type="button"
                   onClick={() => onSubscriberCountChange(tier.value)}
                   className={cn(
-                    'flex flex-col justify-between rounded-xl border p-3 text-left transition-all cursor-pointer',
+                    'flex flex-col justify-between rounded-xl border p-3.5 text-left transition-all cursor-pointer',
                     isSelected
-                      ? 'border-brand-500 bg-brand-950/40 text-white ring-1 ring-brand-500/40'
-                      : 'border-[#262626] bg-[#161616] text-neutral-300 hover:border-[#383838] hover:bg-[#1c1c1c]'
+                      ? 'onboarding-tile-active'
+                      : 'onboarding-tile'
                   )}
                 >
                   <div className="flex items-center justify-between gap-1">
-                    <span className="text-xs font-semibold text-white">{tier.label}</span>
-                    {isSelected && <Check className="h-3.5 w-3.5 shrink-0 text-brand-400" />}
+                    <span className="text-xs sm:text-[13px] font-bold text-[#14121a]">{tier.label}</span>
+                    {isSelected && <Check className="h-4 w-4 shrink-0 text-[#8b5cf6] stroke-[2.5]" />}
                   </div>
-                  <span className="mt-1.5 text-[10px] text-neutral-400">
+                  <span className="mt-1 text-[11px] text-[#6b6775]">
                     {tier.sub} · {tier.tier}
                   </span>
                 </button>
@@ -126,47 +129,46 @@ export const ManualChannelStep: React.FC<ManualChannelStepProps> = ({
             })}
           </div>
         ) : (
-          <div className="max-w-xs">
-            <Input
+          <div className="max-w-xs relative">
+            <Users className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#716c7a]" />
+            <input
               type="number"
               value={subscriberCount || ''}
               onChange={(e) => onSubscriberCountChange(Math.max(0, parseInt(e.target.value, 10) || 0))}
               placeholder="e.g. 15400"
-              icon={<Users className="h-4 w-4 text-neutral-400" />}
-              className="h-10"
+              className="onboarding-input pl-10"
             />
           </div>
         )}
       </div>
 
-      {/* Compact Live Channel Preview Card */}
-      <div className="flex items-center justify-between gap-4 rounded-xl border border-[#242424] bg-[#151515] px-4 py-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-red-600 to-red-700 text-white">
-            <Youtube className="h-4 w-4" />
+      {/* Live Channel Preview Card */}
+      <div className="flex items-center justify-between gap-4 rounded-2xl border-[1.5px] border-[#181719] bg-[#fdfcff] p-4 shadow-[4px_4px_0px_#f0ebff]">
+        <div className="flex min-w-0 items-center gap-3.5">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-600 text-white shadow-sm">
+            <Youtube className="h-5 w-5" />
           </div>
           <div className="min-w-0">
-            <p className="truncate text-xs font-semibold text-white sm:text-sm">
+            <p className="truncate text-sm sm:text-base font-bold text-[#14121a]">
               {channelName.trim() || 'Your Channel Name'}
             </p>
-            <p className="truncate text-[11px] text-neutral-400">
+            <p className="truncate text-xs sm:text-[12.5px] text-[#6b6775]">
               {channelHandle ||
                 (channelName.trim()
                   ? `@${channelName.toLowerCase().replace(/\s+/g, '')}`
                   : '@channelhandle')}{' '}
               •{' '}
-              <span className="font-mono font-medium text-neutral-200">
+              <span className="font-bold text-[#14121a]">
                 {(subscriberCount || 0).toLocaleString()}
               </span>{' '}
               subscribers
             </p>
           </div>
         </div>
-        <span className="hidden shrink-0 rounded border border-[#2a2a2a] bg-[#1c1c1c] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-neutral-400 sm:inline-block">
-          Preview
+        <span className="hidden shrink-0 rounded-full border border-[#a7f3d0] bg-[#e8faf3] px-3 py-1 text-xs font-bold text-[#059669] sm:inline-block">
+          Live Preview
         </span>
       </div>
     </OnboardingStepShell>
   );
 };
-

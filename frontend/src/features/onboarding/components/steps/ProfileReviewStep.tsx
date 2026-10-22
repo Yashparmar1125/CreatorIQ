@@ -44,20 +44,20 @@ export const ProfileReviewStep: React.FC<ProfileReviewStepProps> = ({
       nextLabel={isLoading ? 'Calibrating Engine...' : 'Complete Setup'}
       nextDisabled={isLoading}
       isLoading={isLoading}
-      cardClassName="space-y-4 text-left"
+      cardClassName="space-y-6 text-left"
     >
-      {/* Channel Banner & Niches in a 2-column row */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-12">
-        <div className="flex items-center justify-between gap-3 rounded-xl border border-[#262626] bg-[#161616] p-3.5 sm:col-span-7">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-red-600 to-red-700 text-white shadow-sm">
+      {/* Channel Banner & Niches */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-12">
+        <div className="flex items-center justify-between gap-3 rounded-2xl border-[1.5px] border-[#181719] bg-[#fdfcff] p-4 shadow-[4px_4px_0px_#f0ebff] sm:col-span-7">
+          <div className="flex min-w-0 items-center gap-3.5">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-600 text-white shadow-sm">
               <Youtube className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-white">{channelName || 'Your Channel'}</p>
-              <p className="mt-0.5 truncate text-xs text-neutral-400">
+              <p className="truncate text-base font-bold text-[#14121a]">{channelName || 'Your Channel'}</p>
+              <p className="mt-0.5 truncate text-xs text-[#6b6775]">
                 {channelHandle ? `${channelHandle} • ` : ''}
-                <span className="font-mono font-medium text-neutral-200">
+                <span className="font-bold text-[#14121a]">
                   {subscriberCount.toLocaleString()}
                 </span>{' '}
                 subs
@@ -68,23 +68,23 @@ export const ProfileReviewStep: React.FC<ProfileReviewStepProps> = ({
         </div>
 
         {/* Selected Niches Box */}
-        <div className="flex flex-col justify-center rounded-xl border border-[#222222] bg-[#151515] p-3.5 sm:col-span-5">
-          <div className="flex items-center gap-1.5 text-[11px] font-medium text-neutral-400">
-            <Sparkles className="h-3.5 w-3.5 text-brand-400" />
+        <div className="flex flex-col justify-center rounded-2xl border border-[#ede9f2] bg-[#fbf9fe] p-4 sm:col-span-5">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-[#14121a]">
+            <Sparkles className="h-3.5 w-3.5 text-[#8b5cf6]" />
             <span>Selected Niches</span>
           </div>
-          <div className="mt-1.5 flex flex-wrap gap-1.5">
+          <div className="mt-2 flex flex-wrap gap-1.5">
             {niche.length > 0 ? (
               niche.map((item) => (
                 <span
                   key={item}
-                  className="inline-flex items-center rounded-md border border-brand-500/30 bg-brand-950/40 px-2 py-0.5 text-xs font-semibold text-brand-300"
+                  className="inline-flex items-center rounded-full border border-[#8b5cf6]/30 bg-[#f0ebff] px-2.5 py-0.5 text-xs font-bold text-[#6035c0]"
                 >
                   {item}
                 </span>
               ))
             ) : (
-              <span className="text-xs text-neutral-500">None selected</span>
+              <span className="text-xs text-[#716c7d]">None selected</span>
             )}
           </div>
         </div>
@@ -92,55 +92,54 @@ export const ProfileReviewStep: React.FC<ProfileReviewStepProps> = ({
 
       {/* 4-Column Strategy Summary Grid */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="rounded-xl border border-[#222222] bg-[#151515] p-3">
-          <div className="flex items-center gap-1.5 text-[11px] font-medium text-neutral-400">
-            <Film className="h-3.5 w-3.5 text-neutral-500" />
+        <div className="rounded-2xl border border-[#ede9f2] bg-[#fbf9fe] p-4">
+          <div className="flex items-center gap-1.5 text-xs font-medium text-[#716c7d]">
+            <Film className="h-3.5 w-3.5 text-[#8b5cf6]" />
             <span>Format</span>
           </div>
-          <p className="mt-1 text-xs font-semibold capitalize text-white sm:text-sm">
+          <p className="mt-1.5 text-sm font-bold capitalize text-[#14121a]">
             {format?.replace('-', ' ') || '—'}
           </p>
         </div>
 
-        <div className="rounded-xl border border-[#222222] bg-[#151515] p-3">
-          <div className="flex items-center gap-1.5 text-[11px] font-medium text-neutral-400">
-            <Calendar className="h-3.5 w-3.5 text-neutral-500" />
+        <div className="rounded-2xl border border-[#ede9f2] bg-[#fbf9fe] p-4">
+          <div className="flex items-center gap-1.5 text-xs font-medium text-[#716c7d]">
+            <Calendar className="h-3.5 w-3.5 text-[#8b5cf6]" />
             <span>Cadence</span>
           </div>
-          <p className="mt-1 text-xs font-semibold capitalize text-white sm:text-sm">
+          <p className="mt-1.5 text-sm font-bold capitalize text-[#14121a]">
             {frequency?.replace('_', ' ') || '—'}
           </p>
         </div>
 
-        <div className="rounded-xl border border-[#222222] bg-[#151515] p-3">
-          <div className="flex items-center gap-1.5 text-[11px] font-medium text-neutral-400">
-            <Mic className="h-3.5 w-3.5 text-neutral-500" />
+        <div className="rounded-2xl border border-[#ede9f2] bg-[#fbf9fe] p-4">
+          <div className="flex items-center gap-1.5 text-xs font-medium text-[#716c7d]">
+            <Mic className="h-3.5 w-3.5 text-[#8b5cf6]" />
             <span>Tone</span>
           </div>
-          <p className="mt-1 text-xs font-semibold text-white sm:text-sm">{tone || '—'}</p>
+          <p className="mt-1.5 text-sm font-bold text-[#14121a]">{tone || '—'}</p>
         </div>
 
-        <div className="rounded-xl border border-[#222222] bg-[#151515] p-3">
-          <div className="flex items-center gap-1.5 text-[11px] font-medium text-neutral-400">
-            <Globe className="h-3.5 w-3.5 text-neutral-500" />
+        <div className="rounded-2xl border border-[#ede9f2] bg-[#fbf9fe] p-4">
+          <div className="flex items-center gap-1.5 text-xs font-medium text-[#716c7d]">
+            <Globe className="h-3.5 w-3.5 text-[#8b5cf6]" />
             <span>Audience</span>
           </div>
-          <p className="mt-1 truncate text-xs font-semibold text-white sm:text-sm">{country || '—'}</p>
+          <p className="mt-1.5 truncate text-sm font-bold text-[#14121a]">{country || '—'}</p>
         </div>
       </div>
 
-      {/* Info Callout */}
-      <div className="rounded-xl border border-[#222222] bg-[#141414] px-3.5 py-2.5 text-xs leading-relaxed text-neutral-400">
-        Your 85-feature LightGBM breakout probability, cosine niche relevance, and expected view ranges will be calibrated to this profile.
+      {/* Calibration Notice Callout */}
+      <div className="rounded-2xl border border-[#a7f3d0]/80 bg-[#e8faf3] p-4 text-xs sm:text-[13px] leading-relaxed text-[#065f46] font-medium flex items-center gap-3">
+        <Sparkles className="h-5 w-5 text-[#059669] shrink-0" />
+        <span>Your 85-feature LightGBM breakout probability, cosine niche relevance, and expected view ranges will be calibrated to this profile.</span>
       </div>
 
       {error && (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3.5 py-2 text-xs text-red-400">
+        <div className="rounded-xl border border-red-200 bg-red-50 p-3.5 text-xs text-red-600">
           {error}
         </div>
       )}
     </OnboardingStepShell>
   );
 };
-
-

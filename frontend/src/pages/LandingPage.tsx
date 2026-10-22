@@ -1,299 +1,192 @@
 import React from 'react';
 import { Link } from 'react-router';
-import {
-  ArrowRight,
-  TrendingUp,
-  BarChart2,
-  Calendar,
-  Lightbulb,
-  Check,
-  Sparkles,
-  Youtube,
-  Layers,
-  Rocket,
-  PlayCircle,
-  Activity,
-  Target,
-  Zap,
-} from 'lucide-react';
+import { ArrowRight, ChevronRight, Lightbulb, Sparkles, Youtube } from 'lucide-react';
 import { useAuthStore } from '../stores/useAuthStore';
 import { PublicLayout } from '../components/organisms/PublicLayout';
-import { MarketingHero, MarketingSection, MarketingCta } from '../components/marketing/MarketingSections';
-import { Button } from '../components/ui/Button';
-import { Card } from '../components/ui/Card';
-import { Badge } from '../components/ui/Badge';
 
-const features = [
+const featureCards = [
   {
-    icon: TrendingUp,
-    title: 'Trend opportunities',
+    icon: Youtube,
+    step: '01',
+    title: 'YouTube data',
     description:
-      'Personalized Top 5 feed ranked by niche fit, YouTube momentum, and audience geography.',
-    points: ['Real YouTube video signals', 'AI-curated angles', 'Feed history'],
-    accent: 'border-brand-600',
+      'Public views, engagement and publishing patterns for the videos already winning in a topic. Connect your channel to align recommendations with your own audience.',
+  },
+  {
+    icon: Sparkles,
+    step: '02',
+    title: 'AI trend analysis',
+    description:
+      'Related questions are grouped into concepts, acceleration is measured from real uploads, and forecasts are shown with their uncertainty range.',
   },
   {
     icon: Lightbulb,
-    title: 'Strategy briefs',
+    step: '03',
+    title: 'Content opportunities',
     description:
-      'Turn a topic into titles, hooks, and a script outline grounded in your channel profile.',
-    points: ['Optimized titles', 'Retention outline', 'SEO tags'],
-    accent: 'border-violet-500',
+      'See what is rising in your niche, inspect the evidence behind it, and turn the strongest signal into a concrete content plan.',
   },
+];
+
+const opportunities = [
   {
-    icon: BarChart2,
-    title: 'Channel analytics',
+    tag: 'AI tools',
+    tone: 'mint' as const,
+    title: 'AI budgeting tools',
     description:
-      'Retention, traffic sources, and audience breakdowns to understand what is working.',
-    points: ['Retention metrics', 'Traffic sources', 'Audience geo'],
-    accent: 'border-cyan-500',
+      'A practical finance topic with clear search intent. Viewers want step-by-step guidance, not another list of apps.',
+    path: '2,34 18,33 26,30 38,31 50,28 58,25 72,26 84,21 92,16 108,14 122,12 138,11',
   },
   {
-    icon: Calendar,
-    title: 'Content planner',
-    description: 'Schedule drafts and coordinate your production calendar in one view.',
-    points: ['Monthly calendar', 'Draft tracking', 'Publishing rhythm'],
-    accent: 'border-emerald-500',
+    tag: 'Expected to rise',
+    tone: 'lilac' as const,
+    title: 'How to get a job in 2026',
+    description:
+      'A recurring career question with fresh demand each hiring cycle. A strong fit for explainer and personal-experience formats.',
+    path: '2,30 16,31 24,26 36,27 48,26 56,30 70,24 80,22 90,22 102,18 114,17 122,16 138,9',
   },
 ];
 
-const steps = [
-  {
-    icon: Youtube,
-    title: 'Connect YouTube',
-    body: 'Link your channel and complete a short onboarding profile.',
-  },
-  {
-    icon: Layers,
-    title: 'Get your Top 5',
-    body: 'Receive a personalized trend feed on day one — free.',
-  },
-  {
-    icon: Rocket,
-    title: 'Plan and publish',
-    body: 'Use Strategy and Planner to ship content with confidence.',
-  },
-];
-
-const trustMetrics = [
-  { icon: Target, label: 'Niche-fit scoring', value: 'Per channel' },
-  { icon: Activity, label: 'Signal sources', value: 'YouTube + Trends' },
-  { icon: Zap, label: 'First feed', value: 'Free on signup' },
-];
-
-function HeroPreview() {
+function OpportunitySparkline({ path, tone }: { path: string; tone: 'mint' | 'lilac' }) {
+  const stroke = tone === 'mint' ? '#167A59' : '#7C5CD6';
   return (
-    <div className="relative">
-      <div className="absolute -inset-4 rounded-2xl bg-gradient-to-br from-brand-100/60 to-transparent blur-2xl" />
-      <Card variant="elevated" className="relative overflow-hidden shadow-xl shadow-neutral-900/8">
-        <div className="flex items-center justify-between border-b border-neutral-200 bg-neutral-50 px-4 py-3">
-          <div className="flex items-center gap-2">
-            <div className="h-2.5 w-2.5 rounded-full bg-red-400" />
-            <div className="h-2.5 w-2.5 rounded-full bg-amber-400" />
-            <div className="h-2.5 w-2.5 rounded-full bg-green-400" />
-          </div>
-          <Badge variant="brand">
-            <Sparkles className="h-3 w-3" />
-            Live feed
-          </Badge>
-        </div>
-        <div className="grid lg:grid-cols-5">
-          <div className="space-y-3 border-b border-neutral-200 bg-[#fafafa] p-4 lg:col-span-3 lg:border-b-0 lg:border-r">
-            <p className="text-xs font-medium !text-[#666666]">Top opportunities · Entertainment</p>
-            {[
-              { title: 'Phir Har Gaya comedy short', meta: '18.8M views · Score 76', hot: true },
-              { title: 'Indian Dad New Car', meta: '214K/hr velocity', hot: false },
-              { title: 'Meme format spike', meta: 'Rising in IN', hot: false },
-            ].map((item) => (
-              <div
-                key={item.title}
-                className="flex items-start gap-3 rounded-lg border border-neutral-200 bg-white p-3 transition-colors hover:border-brand-300 shadow-xs"
-              >
-                <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
-                  <TrendingUp className="h-4 w-4" />
-                </div>
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold !text-[#0a0a0a]">{item.title}</p>
-                  <p className="text-xs !text-[#666666] font-medium">{item.meta}</p>
-                </div>
-                {item.hot && (
-                  <Badge variant="brand" className="ml-auto shrink-0 !bg-brand-600 !text-white">
-                    Hot
-                  </Badge>
-                )}
-              </div>
-            ))}
-          </div>
-          <div className="bg-neutral-900 p-4 text-white lg:col-span-2">
-            <div className="flex items-center gap-2 text-brand-300">
-              <Sparkles className="h-4 w-4" />
-              <p className="text-xs font-medium">AI insight</p>
-            </div>
-            <p className="mt-3 text-sm leading-relaxed text-neutral-200">
-              Test this trend with a 15-second Short using the same audio within 24 hours.
-            </p>
-            <div className="mt-5 grid grid-cols-2 gap-3 border-t border-white/10 pt-4">
-              <div>
-                <p className="text-[10px] uppercase tracking-wide text-neutral-500">Velocity</p>
-                <p className="mt-1 text-lg font-semibold">214K/hr</p>
-              </div>
-              <div>
-                <p className="text-[10px] uppercase tracking-wide text-neutral-500">Niche fit</p>
-                <p className="mt-1 text-lg font-semibold">98%</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Card>
-    </div>
+    <svg
+      className="opportunity-sparkline"
+      viewBox="0 0 140 44"
+      preserveAspectRatio="none"
+      role="img"
+      aria-label="Illustrative trend shape for this example opportunity"
+    >
+      <polyline
+        points={path}
+        fill="none"
+        stroke={stroke}
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        vectorEffect="non-scaling-stroke"
+      />
+    </svg>
+  );
+}
+
+function OpportunityCard({ opportunity }: { opportunity: (typeof opportunities)[number] }) {
+  return (
+    <article className="opportunity-card">
+      <div className="opportunity-card-top">
+        <span className={`status-badge ${opportunity.tone}`}>
+          <span className="status-dot" />
+          {opportunity.tag}
+        </span>
+      </div>
+
+      <h3>{opportunity.title}</h3>
+      <p>{opportunity.description}</p>
+
+      <div className="opportunity-chart">
+        <OpportunitySparkline path={opportunity.path} tone={opportunity.tone} />
+        <span className="opportunity-chart-label">Illustrative trend shape</span>
+      </div>
+
+      <div className="opportunity-footer">
+        <span>Illustrative example, not live results</span>
+        <Link to="/login" className="opportunity-link">
+          View details <ChevronRight size={14} aria-hidden="true" />
+        </Link>
+      </div>
+    </article>
   );
 }
 
 export const LandingPage: React.FC = () => {
   const { isAuthenticated } = useAuthStore();
+  const primaryPath = isAuthenticated ? '/app/trends' : '/signup';
 
   return (
     <PublicLayout>
-      <MarketingHero
-        badge="Built for YouTube creators"
-        badgeIcon={<Youtube className="h-3.5 w-3.5" />}
-        title={
-          <>
-            Grow your channel with{' '}
-            <span className="text-gradient-brand">clear signals</span>, not guesswork.
-          </>
-        }
-        description="CreatorIQ combines trend discovery, AI strategy, analytics, and planning — so you spend less time researching and more time creating."
-        actions={
-          <>
-            <Link to={isAuthenticated ? '/app/dashboard' : '/signup'}>
-              <Button variant='secondary' size="lg">
-                {isAuthenticated ? 'Go to dashboard' : 'Start free'}
-                <ArrowRight className="h-4 w-4" />
-              </Button>
+      <section className="landing-hero" aria-labelledby="hero-title">
+        <div className="hero-decoration" aria-hidden="true">
+          <div className="hero-shape hero-shape-mint" />
+          <div className="hero-shape hero-shape-pink" />
+        </div>
+
+        <div className="landing-container hero-content">
+          <h1 id="hero-title">Find your next YouTube content based on trends</h1>
+          <p className="hero-subtitle">
+            CreatorIQ turns public YouTube signals into a ranked shortlist for your niche — then
+            shows the evidence behind every opportunity.
+          </p>
+          <div className="hero-actions">
+            <Link to={primaryPath} className="pink-button">
+              Explore CreatorIQ
+              <ArrowRight size={17} aria-hidden="true" />
             </Link>
-            <Link to="/product">
-              <Button variant="secondary" size="lg">
-                <PlayCircle className="h-4 w-4" />
-                See how it works
-              </Button>
-            </Link>
-          </>
-        }
-        footer={
-          <div className="mt-10 grid gap-4 border-t border-[#222222] pt-8 sm:grid-cols-3">
-            {trustMetrics.map((m) => (
-              <div key={m.label} className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-950/40 text-brand-400 border border-brand-800/40 shadow-sm">
-                  <m.icon className="h-4 w-4" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-white">{m.value}</p>
-                  <p className="text-xs text-neutral-400">{m.label}</p>
-                </div>
-              </div>
+            <a href="#how" className="outline-button">
+              How it works
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <section className="landing-section value-section" id="how" aria-labelledby="value-title">
+        <div className="landing-container">
+          <div className="section-heading">
+            <h2 id="value-title">Less noise. A traceable path to insight.</h2>
+            <p className="section-lead">
+              Three connected steps take you from raw channel activity to a decision you can act on.
+            </p>
+          </div>
+
+          <div className="feature-grid">
+            {featureCards.map((feature) => {
+              const Icon = feature.icon;
+              return (
+                <article className="feature-card" key={feature.title}>
+                  <div className="feature-topline">
+                    <span className="feature-icon">
+                      <Icon size={18} aria-hidden="true" />
+                    </span>
+                    <span className="feature-step">{feature.step}</span>
+                  </div>
+                  <h3>{feature.title}</h3>
+                  <p>{feature.description}</p>
+                </article>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      <section className="landing-section opportunities-section" aria-labelledby="opportunities-title">
+        <div className="landing-container">
+          <div className="section-heading section-heading-row">
+            <div>
+              <h2 id="opportunities-title">See what&apos;s gathering momentum.</h2>
+            </div>
+            <p className="section-note">
+              Examples of the CreatorIQ format. Sign in to see live opportunities ranked for your
+              niche.
+            </p>
+          </div>
+
+          <div className="opportunity-grid">
+            {opportunities.map((opportunity) => (
+              <OpportunityCard key={opportunity.title} opportunity={opportunity} />
             ))}
           </div>
-        }
-        visual={<HeroPreview />}
-      />
-
-      <MarketingSection
-        title="Everything you need in one workspace"
-        description="Four connected tools — from spotting a trend to publishing the video."
-        className="bg-[#0a0a0a]"
-        align="center"
-      >
-        <div className="grid gap-5 sm:grid-cols-2">
-          {features.map((feature) => (
-            <Card
-              key={feature.title}
-              variant="elevated"
-              hover
-              className={`h-full border-l-4 bg-[#121212] border-[#222222] ${feature.accent}`}
-            >
-              <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-brand-950/40 text-brand-400 border border-brand-800/40">
-                <feature.icon className="h-5 w-5" />
-              </div>
-              <h3 className="text-lg font-semibold text-white">{feature.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-neutral-400">{feature.description}</p>
-              <ul className="mt-5 space-y-2.5">
-                {feature.points.map((point) => (
-                  <li key={point} className="flex items-center gap-2.5 text-sm text-neutral-300">
-                    <Check className="h-4 w-4 shrink-0 text-emerald-400" />
-                    {point}
-                  </li>
-                ))}
-              </ul>
-            </Card>
-          ))}
         </div>
-      </MarketingSection>
+      </section>
 
-      <MarketingSection
-        title="How it works"
-        description="From signup to your first personalized feed in minutes."
-        className="border-t border-[#222222] bg-[#0d0d0d]"
-      >
-        <div className="grid gap-6 md:grid-cols-3">
-          {steps.map((item, i) => (
-            <div
-              key={item.title}
-              className="bg-[#121212] border border-[#222222] relative rounded-xl p-6 transition-transform duration-200 hover:-translate-y-1"
-            >
-              {i < steps.length - 1 && (
-                <div className="absolute -right-3 top-1/2 hidden h-px w-6 bg-[#282828] md:block" />
-              )}
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#1a1a1a] border border-[#2e2e2e] text-white shadow-lg">
-                <item.icon className="h-5 w-5" />
-              </div>
-              <h3 className="mt-5 text-base font-semibold text-white">{item.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-neutral-400">{item.body}</p>
-            </div>
-          ))}
+      <section className="landing-cta" aria-labelledby="cta-title">
+        <div className="landing-container">
+          <h2 id="cta-title">Your next content plan starts with the right ideas.</h2>
+          <p>Bring an idea. Follow the signals. Decide what deserves a deeper look.</p>
+          <Link to={primaryPath} className="pink-button">
+            Start exploring
+            <ArrowRight size={17} aria-hidden="true" />
+          </Link>
         </div>
-      </MarketingSection>
-
-      <MarketingSection
-        title="Built for creators who publish consistently"
-        description="Actionable signals tied to your niche — not generic viral noise."
-        className="bg-[#0a0a0a]"
-        align="center"
-      >
-        <div className="grid gap-5 sm:grid-cols-3">
-          {[
-            { icon: Layers, stat: 'Top 5', label: 'Curated opportunities per feed' },
-            { icon: Youtube, stat: 'YouTube', label: 'Real video velocity signals' },
-            { icon: Sparkles, stat: 'AI', label: 'Personalized angles & titles' },
-          ].map((item) => (
-            <Card key={item.label} variant="elevated" hover className="text-center bg-[#121212] border-[#222222]">
-              <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-brand-950/40 text-brand-400 border border-brand-800/40">
-                <item.icon className="h-5 w-5" />
-              </div>
-              <p className="mt-4 text-2xl font-semibold text-white font-mono">{item.stat}</p>
-              <p className="mt-1 text-sm text-neutral-400">{item.label}</p>
-            </Card>
-          ))}
-        </div>
-      </MarketingSection>
-
-      <MarketingCta
-        variant="dark"
-        title="Ready to find your next video idea?"
-        description="Create a free account and get your first personalized trend feed on onboarding."
-      >
-        <Link to={isAuthenticated ? '/app/trends' : '/signup'}>
-          <Button size="lg" className='bg-white/10 text-white'>
-            {isAuthenticated ? 'View my trends' : 'Get started free'}
-            <ArrowRight className="h-4 w-4" />
-          </Button>
-        </Link>
-        <Link to="/pricing">
-          <Button variant="secondary" size="lg" className="bg-white/10 text-white border-white/20 hover:bg-white/20">
-            View pricing
-          </Button>
-        </Link>
-      </MarketingCta>
+      </section>
     </PublicLayout>
   );
 };

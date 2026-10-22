@@ -3,8 +3,6 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Check, Plus } from 'lucide-react';
 import { cn } from '../../../../lib/utils';
 import { OnboardingStepShell } from '../OnboardingStepShell';
-import { Input } from '../../../../components/ui/Input';
-import { Badge } from '../../../../components/ui/Badge';
 
 interface NicheStepProps {
   selectedNiches: string[];
@@ -54,19 +52,19 @@ export const NicheStep: React.FC<NicheStepProps> = ({
       onNext={onNext}
       nextLabel="Continue"
       nextDisabled={isNextDisabled}
-      cardClassName="space-y-4 text-left"
+      cardClassName="space-y-5 text-left"
     >
       {/* Selection Header Bar */}
-      <div className="flex items-center justify-between rounded-xl border border-[#222222] bg-[#161616] px-3.5 py-2">
-        <span className="text-xs font-medium text-neutral-300">
+      <div className="flex items-center justify-between rounded-xl border border-[#ede9f2] bg-[#fbf9fe] px-4 py-2.5">
+        <span className="text-xs sm:text-[13px] font-semibold text-[#2c2834]">
           Select 1 to 3 primary categories
         </span>
         <span
           className={cn(
-            'rounded-md border px-2 py-0.5 font-mono text-xs font-semibold',
+            'rounded-full px-3 py-0.5 text-xs font-bold border',
             selectedNiches.length > 0
-              ? 'border-brand-500/40 bg-brand-500/15 text-brand-300'
-              : 'border-[#2a2a2a] bg-[#1c1c1c] text-neutral-400'
+              ? 'border-[#8b5cf6] bg-[#f0ebff] text-[#7033ea]'
+              : 'border-[#dcd7e3] bg-white text-[#716c7a]'
           )}
         >
           {selectedNiches.length} / 3 selected
@@ -74,7 +72,7 @@ export const NicheStep: React.FC<NicheStepProps> = ({
       </div>
 
       {/* Structured 4-Column Niche Grid */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
         {NICHES.map((n) => {
           const isDetected = detectedNiches.includes(n);
           const isSelected = selectedNiches.includes(n);
@@ -87,27 +85,24 @@ export const NicheStep: React.FC<NicheStepProps> = ({
               disabled={isMaxReached}
               onClick={() => onToggleNiche(n)}
               className={cn(
-                'relative flex items-center justify-between rounded-xl border px-3 py-2.5 text-left text-xs font-semibold transition-all cursor-pointer',
+                'relative flex items-center justify-between rounded-xl px-3.5 py-3 text-left text-xs sm:text-[13px] font-bold transition-all cursor-pointer',
                 isSelected
-                  ? 'border-brand-500 bg-brand-950/40 text-white shadow-xs ring-1 ring-brand-500/40'
+                  ? 'onboarding-tile-active'
                   : isMaxReached
-                    ? 'border-[#1f1f1f] bg-[#121212] text-neutral-600 opacity-50 cursor-not-allowed'
-                    : 'border-[#262626] bg-[#161616] text-neutral-300 hover:border-[#383838] hover:bg-[#1d1d1d] hover:text-white'
+                    ? 'border border-[#ede9f2] bg-neutral-100/60 text-[#a39fa9] opacity-60 cursor-not-allowed'
+                    : 'onboarding-tile'
               )}
             >
               <span className="truncate">{n}</span>
               {isSelected ? (
-                <Check className="h-3.5 w-3.5 shrink-0 text-brand-400" />
+                <Check className="h-4 w-4 shrink-0 text-[#8b5cf6] stroke-[2.5]" />
               ) : (
-                <Plus className="h-3.5 w-3.5 shrink-0 text-neutral-500" />
+                <Plus className="h-4 w-4 shrink-0 text-[#9ca3af]" />
               )}
               {isDetected && (
-                <Badge
-                  variant="brand"
-                  className="absolute -right-2 -top-2 border border-brand-700/50 bg-brand-950/90 px-1.5 py-0 text-[9px] text-brand-300"
-                >
+                <span className="absolute -right-1 -top-1.5 rounded-full border border-[#a7f3d0] bg-[#e8faf3] px-1.5 py-0.5 text-[9px] font-bold text-[#059669]">
                   Detected
-                </Badge>
+                </span>
               )}
             </button>
           );
@@ -121,16 +116,16 @@ export const NicheStep: React.FC<NicheStepProps> = ({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="space-y-1.5 overflow-hidden pt-1"
+            className="space-y-2 overflow-hidden pt-1"
           >
-            <label className="block text-xs font-semibold text-neutral-200">
-              Custom Niche Topic <span className="text-red-400">*</span>
+            <label className="block text-xs sm:text-[13px] font-bold text-[#181719]">
+              Custom Niche Topic <span className="text-red-500">*</span>
             </label>
-            <Input
+            <input
               value={customNiche || ''}
               onChange={(e) => onCustomNicheChange(e.target.value)}
               placeholder="e.g. AI Coding Agents, Sim Racing, Indie Game Dev..."
-              className="h-9"
+              className="onboarding-input"
               autoFocus
             />
           </motion.div>
@@ -139,5 +134,3 @@ export const NicheStep: React.FC<NicheStepProps> = ({
     </OnboardingStepShell>
   );
 };
-
-

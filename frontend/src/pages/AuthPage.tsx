@@ -1,41 +1,30 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useNotificationStore } from '../stores/useNotificationStore';
+import { BrandLogo } from '../components/brand/BrandLogo';
 import {
-  Mail,
-  User,
-  Lock,
-  Loader2,
-  Sparkles,
-  CheckCircle2,
+  ArrowRight,
+  ArrowUpRight,
+  Eye,
+  EyeOff,
+  ShieldCheck,
+  Check,
   AlertCircle,
-  TrendingUp,
-  BarChart2,
+  Loader2,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import logo from '../assets/logo.png';
-import { Card } from '../components/ui/Card';
-import { Button } from '../components/ui/Button';
-import { Input } from '../components/ui/Input';
-import { Alert } from '../components/ui/Alert';
+import './AuthPage.css';
 
 const authSchema = z.object({
   name: z.string().optional(),
-  email: z.string().email('Please enter a valid email'),
+  email: z.string().email('Please enter a valid email address'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
 });
 
 type AuthFormValues = z.infer<typeof authSchema>;
-
-const benefits = [
-  { icon: TrendingUp, text: 'Personalized Top 15 trend feed on day one' },
-  { icon: Sparkles, text: 'Prophet time-series forecasting & view estimation' },
-  { icon: BarChart2, text: 'AI-curated topics calibrated to your channel' },
-];
 
 export const AuthPage: React.FC = () => {
   const location = useLocation();
@@ -44,6 +33,9 @@ export const AuthPage: React.FC = () => {
 
   const isLoginPage = location.pathname === '/login';
   const mode = isLoginPage ? 'login' : 'signup';
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
 
   const loginWithPassword = useAuthStore((s) => s.loginWithPassword);
   const register = useAuthStore((s) => s.register);
@@ -66,8 +58,9 @@ export const AuthPage: React.FC = () => {
     clearError();
     reset();
   }, [mode, clearError, reset]);
+
   const onFormSubmit = async (data: AuthFormValues) => {
-    if (mode === 'signup' && (!data.name || data.name.length < 2)) {
+    if (mode === 'signup' && (!data.name || data.name.trim().length < 2)) {
       setError('name', { type: 'manual', message: 'Full name must be at least 2 characters' });
       return;
     }
@@ -88,221 +81,232 @@ export const AuthPage: React.FC = () => {
     }
   };
 
-
   return (
-    <div className="flex min-h-screen">
-      {/* Brand panel */}
-      <div className="surface-dark relative hidden w-1/2 flex-col justify-between overflow-hidden p-10 lg:flex xl:p-12">
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -left-20 -top-20 h-72 w-72 rounded-full bg-brand-600/20 blur-3xl animate-breathe" />
-          <div className="absolute -bottom-20 -right-20 h-72 w-72 rounded-full bg-cyan-500/10 blur-3xl" />
-        </div>
+    <div className="auth-page min-h-screen flex flex-col justify-between bg-white text-[#181719]">
+      {/* Top Header */}
+      <header className="w-full max-w-[1340px] mx-auto px-6 sm:px-10 lg:px-12 pt-6 sm:pt-8 pb-4 flex items-center justify-between">
+        <BrandLogo to="/" size="md" />
 
-        <div className="relative z-10">
-          <Link to="/" className="inline-flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-white p-1">
-              <img src={logo} className="h-full w-full object-contain" alt="CreatorIQ" />
-            </div>
-            <span className="font-sora text-lg font-semibold text-white">
-              Creator<span className="text-neutral-500">IQ</span>
-            </span>
-          </Link>
-
-          <motion.h1
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="mt-16 max-w-md font-sora text-3xl font-semibold leading-tight tracking-tight text-white xl:text-4xl"
-          >
-            Grow your channel with{' '}
-            <span className="text-gradient-brand">clear signals</span>, not guesswork.
-          </motion.h1>
-
-          <div className="mt-10 space-y-4">
-            {benefits.map((benefit, i) => (
-              <motion.div
-                key={benefit.text}
-                initial={{ opacity: 0, x: -12 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.15 + i * 0.08 }}
-                className="flex items-center gap-4"
-              >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-brand-300">
-                  <benefit.icon className="h-4 w-4" />
-                </div>
-                <p className="text-sm text-neutral-300">{benefit.text}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="relative z-10 glass-dark rounded-2xl p-6"
+        <Link
+          to="/"
+          className="text-xs sm:text-[13px] font-medium text-[#23202a] hover:text-black transition-colors"
         >
-          <p className="text-sm leading-relaxed text-neutral-300">
-            &ldquo;CreatorIQ cut my research time in half. The trend feed actually matches my niche.&rdquo;
-          </p>
-          <div className="mt-4 flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-600/20 text-sm font-semibold text-brand-300">
-              JC
-            </div>
-            <div>
-              <p className="text-sm font-medium text-white">James C.</p>
-              <p className="text-xs text-neutral-500">Tech creator · 1.2M subs</p>
-            </div>
-          </div>
-        </motion.div>
-      </div>
+          — Back to Home
+        </Link>
+      </header>
 
-      {/* Form panel */}
-      <div className="flex w-full flex-col items-center justify-center bg-[#0a0a0a] px-4 py-10 sm:px-6 lg:w-1/2">
-        <div className="mb-8 flex items-center gap-3 lg:hidden">
-          <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg bg-white p-0.5 shadow-sm">
-            <img src={logo} alt="CreatorIQ" className="h-full w-full object-contain" />
-          </div>
-          <span className="font-sora text-base font-semibold text-white">CreatorIQ</span>
-        </div>
+      {/* Main Content Area */}
+      <main className="flex-1 flex items-center justify-center w-full max-w-[1340px] mx-auto px-6 sm:px-10 lg:px-12 py-6 sm:py-10">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 xl:gap-20 items-center w-full">
+          {/* Left Column: Lavender Visual Card */}
+          <div className="lg:col-span-7 flex justify-center lg:justify-start w-full">
+            <div className="auth-lavender-box w-full max-w-[580px] p-8 sm:p-11 lg:p-12 flex flex-col justify-between">
+              <div>
+                <p className="text-[10px] sm:text-[10.5px] font-bold tracking-[0.14em] text-[#716c7d] uppercase mb-4 sm:mb-5">
+                  YOUR PLANNING, A LITTLE CLEARER.
+                </p>
+                <h1 className="text-3xl sm:text-4xl lg:text-[42px] font-extrabold font-cal-sans text-[#14121a] leading-[1.14] tracking-[-0.03em] mb-8 sm:mb-10">
+                  Find your trending content,
+                  <br />
+                  Then we plan it
+                </h1>
+              </div>
 
-        <Card variant="elevated" className="w-full max-w-md bg-[#121212] border-[#222222] p-8 shadow-2xl">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={mode}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.2 }}
-            >
-              <div className="mb-6">
-                <h2 className="font-sora text-2xl font-semibold tracking-tight text-white">
-                  {mode === 'login' ? 'Welcome back' : 'Create your account'}
+              {/* Floating White Trend Metric Card with Neobrutalist Mint Drop Shadow */}
+              <div className="auth-metric-card p-6 sm:p-7">
+                {/* Booming pill tag */}
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#e8faf3] text-[#059669] text-xs font-bold border border-[#a7f3d0]/60">
+                  <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
+                  <span>Booming</span>
+                </div>
+
+                {/* Card Title */}
+                <h2 className="text-xl sm:text-[22px] font-bold text-[#14121a] font-cal-sans mt-3.5 mb-1.5">
+                  AI budgeting tools
                 </h2>
-                <p className="mt-1.5 text-sm text-neutral-400">
+
+                {/* Card Description */}
+                <p className="text-xs sm:text-[13px] text-[#6b6775] leading-relaxed">
+                  Audience attention is building across 42 sampled channels.
+                </p>
+
+                {/* Card Bottom Row */}
+                <div className="mt-8 flex items-baseline justify-between">
+                  <div className="text-[28px] sm:text-[32px] font-extrabold text-[#14121a] font-cal-sans tracking-tight flex items-center gap-1">
+                    +28% <ArrowUpRight className="w-6 h-6 stroke-[3]" />
+                  </div>
+                  <div className="text-[11px] sm:text-[11.5px] text-[#716c7a] font-medium text-right leading-tight">
+                    <div>Next 30d attention</div>
+                    <div className="mt-0.5">81% model confidence</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column: Auth Form */}
+          <div className="lg:col-span-5 flex justify-center lg:justify-start w-full">
+            <div className="w-full max-w-[390px]">
+              {/* Title & Subtitle */}
+              <div className="mb-6 sm:mb-7">
+                <h2 className="text-3xl sm:text-[38px] font-extrabold text-[#14121a] font-cal-sans tracking-[-0.025em] leading-tight">
+                  {mode === 'login' ? 'Welcome back.' : 'Create an account.'}
+                </h2>
+                <p className="text-[13px] sm:text-[13.5px] text-[#6b6775] mt-2">
                   {mode === 'login'
-                    ? 'Sign in to continue to your workspace.'
-                    : 'Start free — your first trend feed is on us.'}
+                    ? 'Sign in to pick up your next investigation.'
+                    : 'Start finding high-impact trending content today.'}
                 </p>
               </div>
 
+              {/* Server / Store Error Alert */}
               {storeError && (
-                <Alert variant="error" className="mb-5 flex items-start gap-2">
-                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                  {storeError}
-                </Alert>
+                <div className="mb-5 p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{storeError}</span>
+                </div>
               )}
 
+              {/* Form */}
               <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-4">
-                <AnimatePresence>
-                  {mode === 'signup' && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="space-y-1.5 overflow-hidden"
-                    >
-                      <label className="text-xs font-medium text-neutral-400">Full name</label>
-                      <Input
-                        {...registerField('name')}
-                        icon={<User className="h-4 w-4" />}
-                        placeholder="Your name"
-                        className={errors.name ? 'border-red-500/60' : ''}
-                      />
-                      {errors.name && (
-                        <p className="text-xs text-red-400">{errors.name.message}</p>
-                      )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-neutral-400">Email</label>
-                  <Input
-                    {...registerField('email')}
-                    type="email"
-                    icon={<Mail className="h-4 w-4" />}
-                    placeholder="you@example.com"
-                    className={errors.email ? 'border-red-500/60' : ''}
-                  />
-                  {errors.email && (
-                    <p className="text-xs text-red-400">{errors.email.message}</p>
-                  )}
-                </div>
-
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-medium text-neutral-400">Password</label>
-                    {mode === 'login' && (
-                      <button type="button" className="text-xs font-medium text-brand-400 hover:text-brand-300">
-                        Forgot password?
-                      </button>
+                {mode === 'signup' && (
+                  <div>
+                    <label className="block text-xs sm:text-[13px] font-bold text-[#181719] mb-1.5">
+                      Full name
+                    </label>
+                    <input
+                      {...registerField('name')}
+                      placeholder="Asha Sharma"
+                      className="auth-page-input"
+                    />
+                    {errors.name && (
+                      <p className="text-xs text-red-500 mt-1">{errors.name.message}</p>
                     )}
                   </div>
-                  <Input
-                    {...registerField('password')}
-                    type="password"
-                    icon={<Lock className="h-4 w-4" />}
-                    placeholder="At least 8 characters"
-                    className={errors.password ? 'border-red-500/60' : ''}
+                )}
+
+                <div>
+                  <label className="block text-xs sm:text-[13px] font-bold text-[#181719] mb-1.5">
+                    Email address
+                  </label>
+                  <input
+                    {...registerField('email')}
+                    type="email"
+                    placeholder="asha@example.com"
+                    className="auth-page-input"
                   />
-                  {errors.password && (
-                    <p className="text-xs text-red-400">{errors.password.message}</p>
+                  {errors.email && (
+                    <p className="text-xs text-red-500 mt-1">{errors.email.message}</p>
                   )}
                 </div>
 
-                <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
-                  {isLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : mode === 'login' ? (
-                    'Sign in'
-                  ) : (
-                    'Create account'
+                <div>
+                  <label className="block text-xs sm:text-[13px] font-bold text-[#181719] mb-1.5">
+                    Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      {...registerField('password')}
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••••••••"
+                      className="auth-page-input pr-11"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#716c7a] hover:text-[#181719] transition-colors cursor-pointer"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  {errors.password && (
+                    <p className="text-xs text-red-500 mt-1">{errors.password.message}</p>
                   )}
-                </Button>
+                </div>
 
+                {/* Remember Me Checkbox */}
+                {mode === 'login' && (
+                  <div className="flex items-center gap-2.5 pt-1 select-none">
+                    <button
+                      type="button"
+                      onClick={() => setRememberMe(!rememberMe)}
+                      className={`w-[18px] h-[18px] rounded-[5px] flex items-center justify-center transition-all cursor-pointer ${
+                        rememberMe
+                          ? 'bg-[#8b5cf6] border border-[#8b5cf6]'
+                          : 'bg-white border-[1.5px] border-[#dcd7e3]'
+                      }`}
+                      aria-checked={rememberMe}
+                      role="checkbox"
+                    >
+                      {rememberMe && <Check className="w-3.5 h-3.5 text-white stroke-[3]" />}
+                    </button>
+                    <span
+                      onClick={() => setRememberMe(!rememberMe)}
+                      className="text-xs sm:text-[13px] font-medium text-[#181719] cursor-pointer"
+                    >
+                      Remember me
+                    </span>
+                  </div>
+                )}
 
+                {/* Pink CTA Button */}
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="auth-cta-btn mt-5"
+                >
+                  {isLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-[#181719]" />
+                  ) : (
+                    <>
+                      <span>{mode === 'login' ? 'Sign in' : 'Create account'}</span>
+                      <ArrowRight className="w-4 h-4 stroke-[2.5]" />
+                    </>
+                  )}
+                </button>
               </form>
 
-              <p className="mt-6 text-center text-sm text-neutral-400">
-                {mode === 'login' ? "Don't have an account?" : 'Already have an account?'}{' '}
+              {/* Switch Auth Mode Link */}
+              <div className="text-center mt-5 mb-5">
                 <button
                   type="button"
                   onClick={() => navigate(mode === 'login' ? '/signup' : '/login')}
-                  className="font-medium text-brand-400 hover:text-brand-300"
+                  className="text-xs sm:text-[13px] font-semibold text-[#181719] hover:underline cursor-pointer"
                 >
-                  {mode === 'login' ? 'Sign up' : 'Sign in'}
+                  {mode === 'login'
+                    ? 'New to Orbit? Create an account →'
+                    : 'Already have an account? Sign in →'}
                 </button>
-              </p>
+              </div>
 
-              {mode === 'signup' && (
-                <p className="mt-6 text-center text-xs leading-relaxed text-neutral-500">
-                  By signing up, you agree to our{' '}
-                  <Link to="/terms" className="text-neutral-400 hover:text-white">
-                    Terms
-                  </Link>{' '}
-                  and{' '}
-                  <Link to="/privacy" className="text-neutral-400 hover:text-white">
-                    Privacy Policy
-                  </Link>
-                  .
+              {/* Privacy Badge */}
+              <div className="auth-privacy-box p-3.5 flex items-center gap-2.5">
+                <ShieldCheck className="w-4 h-4 text-[#059669] shrink-0" />
+                <p className="text-[11.5px] sm:text-xs text-[#4b5563] leading-snug">
+                  Your activity is private. You control which channel analytics you connect.
                 </p>
-              )}
-            </motion.div>
-          </AnimatePresence>
-        </Card>
+              </div>
 
-        <div className="mt-6 hidden items-center gap-6 text-xs text-neutral-500 lg:flex">
-          <span className="flex items-center gap-1.5">
-            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
-            Free first feed
-          </span>
-          <span className="flex items-center gap-1.5">
-            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
-            No credit card
-          </span>
+              {/* Bottom Legal Notice */}
+              <p className="text-[11px] sm:text-[11.5px] text-[#8e8995] text-center mt-6">
+                By {mode === 'login' ? 'signing in' : 'signing up'}, you agree to the{' '}
+                <Link to="/terms" className="underline hover:text-[#181719]">
+                  Terms
+                </Link>{' '}
+                and{' '}
+                <Link to="/privacy" className="underline hover:text-[#181719]">
+                  Privacy Policy
+                </Link>
+                .
+              </p>
+            </div>
+          </div>
         </div>
-      </div>
+      </main>
+
+      {/* Bottom spacer / aesthetic breathing room */}
+      <footer className="w-full py-2"></footer>
     </div>
   );
 };

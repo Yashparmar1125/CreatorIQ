@@ -1,11 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Save, Check, Plus, X, Globe } from 'lucide-react';
+import { Check, Globe, Plus, Save, X } from 'lucide-react';
 import { api } from '../../../lib/api';
 import { MaturityBadge, type ProfileMaturity } from '../../onboarding/components/MaturityBadge';
-import { PageHeader } from '../../../components/ui/PageHeader';
-import { Card } from '../../../components/ui/Card';
-import { Button } from '../../../components/ui/Button';
-import { Alert } from '../../../components/ui/Alert';
 
 interface CreatorProfile {
   profile_maturity: ProfileMaturity;
@@ -65,28 +61,54 @@ const COUNTRIES = [
 ];
 
 const FORMAT_OPTIONS = [
-  { id: 'both', label: 'Hybrid (Shorts & Long-form)', desc: 'Surface all content formats' },
-  { id: 'shorts', label: 'Shorts Only', desc: 'Focus on vertical short videos (<60s)' },
-  { id: 'long-form', label: 'Long-form Only', desc: 'Focus on horizontal deep-dive videos' },
+  { id: 'both', label: 'Hybrid', desc: 'Shorts and long-form' },
+  { id: 'shorts', label: 'Shorts only', desc: 'Vertical videos under 60s' },
+  { id: 'long-form', label: 'Long-form only', desc: 'Horizontal deep dives' },
 ];
 
 const TONE_OPTIONS = [
-  { id: 'conversational', label: 'Conversational', desc: 'Friendly, relatable, casual' },
-  { id: 'energetic', label: 'Energetic', desc: 'High energy, hyped, fast-paced' },
-  { id: 'informative', label: 'Informative', desc: 'Educational, clear, structured' },
-  { id: 'storytelling', label: 'Storytelling', desc: 'Narrative-driven, immersive' },
-  { id: 'humorous', label: 'Humorous', desc: 'Funny, satirical, comedic' },
-  { id: 'professional', label: 'Professional', desc: 'Polished, authoritative, expert' },
+  { id: 'conversational', label: 'Conversational', desc: 'Friendly and casual' },
+  { id: 'energetic', label: 'Energetic', desc: 'Fast and high energy' },
+  { id: 'informative', label: 'Informative', desc: 'Clear and structured' },
+  { id: 'storytelling', label: 'Storytelling', desc: 'Narrative driven' },
+  { id: 'humorous', label: 'Humorous', desc: 'Funny and satirical' },
+  { id: 'professional', label: 'Professional', desc: 'Polished and expert' },
 ];
+
+function formatCount(value?: number): string {
+  if (value == null) return '—';
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(value >= 10_000_000 ? 0 : 1)}M`;
+  if (value >= 1_000) return `${(value / 1_000).toFixed(value >= 10_000 ? 0 : 1)}K`;
+  return value.toLocaleString();
+}
+
+function formatDate(value: string | null): string {
+  if (!value) return 'Not yet';
+  const parsed = Date.parse(value);
+  if (Number.isNaN(parsed)) return 'Not yet';
+  return new Date(parsed).toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
+function humanize(value: string): string {
+  if (value === 'essential_complete') return 'Core profile complete';
+  return value.replace(/_/g, ' ');
+}
+
+const chipBase =
+  'inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors';
 
 export const SettingsPage: React.FC = () => {
   const [profile, setProfile] = useState<CreatorProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [savingManual, setSavingManual] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // Manual Form State
   const [selectedNiches, setSelectedNiches] = useState<string[]>([]);
   const [customNicheInput, setCustomNicheInput] = useState('');
   const [selectedCountry, setSelectedCountry] = useState('India');
@@ -95,48 +117,21 @@ export const SettingsPage: React.FC = () => {
 
   const loadProfile = useCallback(async () => {
     setLoading(true);
-    setError(null);
+    setLoadError(null);
     try {
       const { data } = await api.get('/channels/profile');
       const p = data.data as CreatorProfile;
       setProfile(p);
-
-      // Populate Manual Form with current effective values
-      setSelectedNiches(p.niches?.effective || p.niches?.onboarding_selected || ['Tech', 'Entertainment']);
+      setSelectedNiches(p.niches?.effective || p.niches?.onboarding_selected || []);
       setSelectedCountry(p.geo?.target_country || 'India');
       setSelectedFormat(p.content_format || 'both');
       setSelectedTone(p.tone || 'conversational');
     } catch {
-      // Graceful fallback profile for manual customization
-      const defaultProfile: CreatorProfile = {
-        profile_maturity: 'new',
-        profile_mode: 'manual',
-        niches: {
-          effective: ['Tech', 'Entertainment'],
-          onboarding_selected: ['Tech', 'Entertainment'],
-          inferred: [],
-          source: 'manual',
-        },
-        content_format: 'both',
-        posting_frequency: 'weekly',
-        tone: 'conversational',
-        geo: {
-          source: 'manual',
-          target_country: 'India',
-          audience_weights: { IN: 1.0 },
-        },
-        channel_stats: {
-          subscriber_count: 0,
-          video_count: 0,
-          view_count: 0,
-          channel_name: 'Creator Profile',
-        },
-        sync_status: 'essential_complete',
-        last_analyzed_at: null,
-        last_reconfigured_at: null,
-      };
-      setProfile(defaultProfile);
-      setSelectedNiches(['Tech', 'Entertainment']);
+      setProfile(null);
+      setLoadError(
+        'We could not load your saved profile. You can still set preferences below; saving will create them.',
+      );
+      setSelectedNiches([]);
       setSelectedCountry('India');
       setSelectedFormat('both');
       setSelectedTone('conversational');
@@ -149,10 +144,9 @@ export const SettingsPage: React.FC = () => {
     void loadProfile();
   }, [loadProfile]);
 
-
   const handleSaveManual = async () => {
     if (selectedNiches.length === 0) {
-      setError('Please select at least 1 Category / Niche.');
+      setError('Select at least one category or niche.');
       return;
     }
 
@@ -167,17 +161,18 @@ export const SettingsPage: React.FC = () => {
         target_country: selectedCountry,
       });
 
-      const updated = data.data as CreatorProfile;
-      setProfile(updated);
-      // Trigger trend feed re-scoring in background so new niches/country apply immediately
+      setProfile(data.data as CreatorProfile);
+      setLoadError(null);
       void api.post('/trends/refresh').catch(() => null);
-      setSuccess('Manual profile settings saved! Your personalized trend feed has been refreshed.');
+      setSuccess('Preferences saved. Your personalized trend feed has been refreshed.');
     } catch (e: unknown) {
-      const err = e as { response?: { data?: { error?: { message?: string }; detail?: { message?: string } } } };
+      const err = e as {
+        response?: { data?: { error?: { message?: string }; detail?: { message?: string } } };
+      };
       setError(
         err.response?.data?.error?.message ||
           err.response?.data?.detail?.message ||
-          'Failed to save manual settings. Try again.'
+          'Failed to save settings. Try again.',
       );
     } finally {
       setSavingManual(false);
@@ -185,222 +180,323 @@ export const SettingsPage: React.FC = () => {
   };
 
   const toggleNiche = (niche: string) => {
-    if (selectedNiches.includes(niche)) {
-      setSelectedNiches(selectedNiches.filter((n) => n !== niche));
-    } else {
-      setSelectedNiches([...selectedNiches, niche]);
-    }
+    setSelectedNiches((prev) =>
+      prev.includes(niche) ? prev.filter((n) => n !== niche) : [...prev, niche],
+    );
   };
 
   const handleAddCustomNiche = () => {
     const trimmed = customNicheInput.trim();
-    if (trimmed && !selectedNiches.includes(trimmed)) {
-      setSelectedNiches([...selectedNiches, trimmed]);
-      setCustomNicheInput('');
-    }
+    if (!trimmed) return;
+    setSelectedNiches((prev) => (prev.includes(trimmed) ? prev : [...prev, trimmed]));
+    setCustomNicheInput('');
   };
 
   if (loading) {
-    return <div className="h-48 animate-pulse rounded-xl border border-[#222222] bg-[#121212]" />;
+    return (
+      <div className="mx-auto max-w-4xl space-y-4">
+        <div className="h-20 animate-pulse rounded-2xl border border-[#E5E0E8] bg-white" />
+        <div className="h-64 animate-pulse rounded-2xl border border-[#E5E0E8] bg-white" />
+      </div>
+    );
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 animate-in">
-      <PageHeader
-        title={<span className="text-white font-semibold">Creator Profile & Preferences</span>}
-        description="Configure how CreatorIQ and Qdrant Vector AI personalize your trend recommendations and opportunity scoring."
-      />
+    <div className="mx-auto max-w-4xl space-y-6">
+      <div>
+        <h1 className="font-cal-sans text-2xl font-bold tracking-tight text-[#171717]">
+          Creator profile
+        </h1>
+        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#625D68]">
+          These preferences filter and rank every trend recommendation. Change them whenever your
+          channel direction changes.
+        </p>
+      </div>
 
-      {error && <Alert variant="error">{error}</Alert>}
-      {success && <Alert variant="success">{success}</Alert>}
-
-      {profile && (
-        <div className="space-y-6">
-          {/* Channel Overview Card */}
-          <Card className="bg-[#121212] border-[#222222] p-5">
-            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-              <div>
-                <h3 className="text-base font-bold text-[#ededed]">
-                  {profile.channel_stats.channel_name || 'Channel Profile'}
-                </h3>
-                <p className="mt-1 text-xs text-neutral-400">
-                  <span className="font-mono text-neutral-300">{(profile.channel_stats.subscriber_count ?? 0).toLocaleString()}</span> Subscribers
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <MaturityBadge maturity={profile.profile_maturity} />
-              </div>
-            </div>
-          </Card>
-
-          {/* MANUAL CUSTOM PROFILE SETTINGS */}
-          <Card variant="elevated" className="space-y-6 bg-[#121212] border-[#222222] p-6">
-            <div>
-              <h3 className="text-sm font-bold text-[#ededed]">Manual Profile Preferences</h3>
-              <p className="text-xs text-neutral-500">
-                Customize your niche, audience geography, content format, and channel tone manually.
-              </p>
-            </div>
-
-            {/* 1. Category / Niche Selection */}
-            <div className="space-y-3 border-t border-[#222222] pt-4">
-              <label className="block text-xs font-semibold text-[#ededed]">
-                1. Category / Niche (Select all that apply)
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {PRESET_NICHES.map((niche) => {
-                  const isSelected = selectedNiches.includes(niche);
-                  return (
-                    <button
-                      key={niche}
-                      type="button"
-                      onClick={() => toggleNiche(niche)}
-                      className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
-                        isSelected
-                          ? 'border-brand-500/50 bg-brand-950/40 text-brand-300 ring-1 ring-brand-500/30'
-                          : 'border-[#262626] bg-[#161616] text-neutral-400 hover:bg-[#1e1e1e] hover:text-neutral-200'
-                      }`}
-                    >
-                      {isSelected ? <Check className="h-3 w-3 text-brand-400" /> : <Plus className="h-3 w-3 text-neutral-500" />}
-                      {niche}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Custom Niche Add Input */}
-              <div className="flex gap-2 pt-2 sm:max-w-md">
-                <input
-                  type="text"
-                  placeholder="Add custom niche (e.g. AI Automation)..."
-                  value={customNicheInput}
-                  onChange={(e) => setCustomNicheInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleAddCustomNiche();
-                    }
-                  }}
-                  className="flex-1 rounded-lg border border-[#2a2a2a] bg-[#161616] px-3 py-1.5 text-xs text-[#ededed] placeholder:text-neutral-600 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-                />
-                <Button size="sm" variant="secondary" type="button" onClick={handleAddCustomNiche} className="bg-[#1a1a1a] border-[#2e2e2e] text-[#ededed]">
-                  <Plus className="h-3.5 w-3.5" />
-                  Add
-                </Button>
-              </div>
-
-              {/* Currently Selected Badges */}
-              <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                <span className="text-[11px] text-neutral-500">Selected ({selectedNiches.length}):</span>
-                {selectedNiches.map((n) => (
-                  <span
-                    key={n}
-                    className="inline-flex items-center gap-1 rounded-md bg-[#1c1c1c] border border-[#2c2c2c] px-2 py-0.5 text-xs font-medium text-brand-300"
-                  >
-                    {n}
-                    <button
-                      type="button"
-                      onClick={() => toggleNiche(n)}
-                      className="text-neutral-500 hover:text-neutral-200"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            {/* 2. Target Audience Geography */}
-            <div className="space-y-3 border-t border-[#222222] pt-4">
-              <label className="block text-xs font-semibold text-[#ededed]">
-                2. Target Audience Country
-              </label>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {COUNTRIES.map((c) => (
-                  <button
-                    key={c.code}
-                    type="button"
-                    onClick={() => setSelectedCountry(c.code)}
-                    className={`flex items-center justify-between rounded-lg border p-2.5 text-xs font-medium transition-all ${
-                      selectedCountry === c.code
-                        ? 'border-brand-500/50 bg-brand-950/40 text-white ring-1 ring-brand-500/30'
-                        : 'border-[#262626] bg-[#161616] text-neutral-400 hover:bg-[#1e1e1e] hover:text-neutral-200'
-                    }`}
-                  >
-                    <span className="flex items-center gap-1.5">
-                      <Globe className="h-3.5 w-3.5 text-neutral-500" />
-                      <span>{c.label}</span>
-                    </span>
-                    {selectedCountry === c.code && <Check className="h-3.5 w-3.5 text-brand-400" />}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* 3. Primary Content Format */}
-            <div className="space-y-3 border-t border-[#222222] pt-4">
-              <label className="block text-xs font-semibold text-[#ededed]">
-                3. Primary Content Format
-              </label>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                {FORMAT_OPTIONS.map((f) => (
-                  <button
-                    key={f.id}
-                    type="button"
-                    onClick={() => setSelectedFormat(f.id)}
-                    className={`rounded-xl border p-3.5 text-left transition-all ${
-                      selectedFormat === f.id
-                        ? 'border-brand-500/50 bg-brand-950/30 ring-1 ring-brand-500/30'
-                        : 'border-[#262626] bg-[#161616] hover:bg-[#1e1e1e]'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-[#ededed]">{f.label}</span>
-                      {selectedFormat === f.id && <Check className="h-4 w-4 text-brand-400" />}
-                    </div>
-                    <p className="mt-1 text-[11px] text-neutral-500">{f.desc}</p>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* 4. Channel Tone */}
-            <div className="space-y-3 border-t border-[#222222] pt-4">
-              <label className="block text-xs font-semibold text-[#ededed]">
-                4. Channel Tone & Voice
-              </label>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {TONE_OPTIONS.map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => setSelectedTone(t.id)}
-                    className={`rounded-lg border p-2.5 text-left transition-all ${
-                      selectedTone === t.id
-                        ? 'border-brand-500/50 bg-brand-950/30 text-white ring-1 ring-brand-500/30'
-                        : 'border-[#262626] bg-[#161616] text-neutral-400 hover:bg-[#1e1e1e] hover:text-neutral-200'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold capitalize">{t.label}</span>
-                      {selectedTone === t.id && <Check className="h-3.5 w-3.5 text-brand-400" />}
-                    </div>
-                    <p className="mt-0.5 text-[10px] text-neutral-500">{t.desc}</p>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Submit Button */}
-            <div className="border-t border-[#222222] pt-4">
-              <Button onClick={() => void handleSaveManual()} disabled={savingManual} className="w-full sm:w-auto">
-                <Save className={`h-4 w-4 ${savingManual ? 'animate-spin' : ''}`} />
-                {savingManual ? 'Saving Preferences...' : 'Save Profile Settings'}
-              </Button>
-            </div>
-          </Card>
+      {loadError && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#F3C9CE] bg-[#FDF1F2] px-4 py-3">
+          <p className="text-[13px] leading-relaxed text-[#8A1B26]">{loadError}</p>
+          <button
+            type="button"
+            onClick={() => void loadProfile()}
+            className="rounded-full border border-[#E7B6BD] bg-white px-3 py-1.5 text-xs font-semibold text-[#8A1B26] transition-colors hover:bg-[#FFF4F5]"
+          >
+            Retry
+          </button>
         </div>
       )}
+
+      {error && (
+        <div className="rounded-xl border border-[#F3C9CE] bg-[#FDF1F2] px-4 py-3 text-[13px] leading-relaxed text-[#8A1B26]">
+          {error}
+        </div>
+      )}
+
+      {success && (
+        <div className="rounded-xl border border-[#BDEBD8] bg-[#EFFBF6] px-4 py-3 text-[13px] leading-relaxed text-[#0F5C43]">
+          {success}
+        </div>
+      )}
+
+      {profile && (
+        <section
+          aria-labelledby="channel-overview-title"
+          className="rounded-2xl border border-[#E5E0E8] bg-white p-5"
+        >
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2
+                id="channel-overview-title"
+                className="font-cal-sans text-base font-bold text-[#171717]"
+              >
+                {profile.channel_stats.channel_name || 'Connected channel'}
+              </h2>
+              <p className="mt-1 text-xs text-[#77717F]">
+                Profile mode: {profile.profile_mode.replace(/_/g, ' ')} ·{' '}
+                {humanize(profile.sync_status)}
+              </p>
+            </div>
+            <MaturityBadge maturity={profile.profile_maturity} />
+          </div>
+
+          <dl className="mt-5 grid grid-cols-2 gap-4 border-t border-[#EFEBF2] pt-4 sm:grid-cols-4">
+            {[
+              { label: 'Subscribers', value: formatCount(profile.channel_stats.subscriber_count) },
+              { label: 'Videos', value: formatCount(profile.channel_stats.video_count) },
+              { label: 'Views', value: formatCount(profile.channel_stats.view_count) },
+              { label: 'Last analyzed', value: formatDate(profile.last_analyzed_at) },
+            ].map((stat) => (
+              <div key={stat.label}>
+                <dt className="text-[10px] font-bold uppercase tracking-wider text-[#9B94A5]">
+                  {stat.label}
+                </dt>
+                <dd className="mt-1 font-mono text-sm font-bold text-[#171717]">{stat.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      )}
+
+      <section
+        aria-labelledby="preferences-title"
+        className="rounded-2xl border border-[#E5E0E8] bg-white p-6"
+      >
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 id="preferences-title" className="font-cal-sans text-base font-bold text-[#171717]">
+              Manual preferences
+            </h2>
+            <p className="mt-1 text-xs leading-relaxed text-[#77717F]">
+              Saving updates your profile and requests a fresh trend feed.
+            </p>
+          </div>
+          <span className="rounded-full border border-[#E5E0E8] bg-[#FBFAF8] px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-[#77717F]">
+            {selectedNiches.length} niche{selectedNiches.length === 1 ? '' : 's'}
+          </span>
+        </div>
+
+        <fieldset className="mt-6 border-t border-[#EFEBF2] pt-5">
+          <legend className="text-xs font-bold uppercase tracking-wider text-[#625D68]">
+            1. Categories and niches
+          </legend>
+          <p className="mt-1 text-[13px] text-[#77717F]">
+            Choose everything that fits your channel. These drive trend filtering.
+          </p>
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            {PRESET_NICHES.map((niche) => {
+              const isSelected = selectedNiches.includes(niche);
+              return (
+                <button
+                  key={niche}
+                  type="button"
+                  onClick={() => toggleNiche(niche)}
+                  aria-pressed={isSelected}
+                  className={`${chipBase} ${
+                    isSelected
+                      ? 'border-[#C9B8EE] bg-[#F1ECFF] text-[#4A2E8F]'
+                      : 'border-[#E5E0E8] bg-white text-[#625D68] hover:border-[#D5C9E8] hover:bg-[#FBFAF8] hover:text-[#171717]'
+                  }`}
+                >
+                  {isSelected ? (
+                    <Check size={13} aria-hidden="true" />
+                  ) : (
+                    <Plus size={13} aria-hidden="true" />
+                  )}
+                  {niche}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="mt-3 flex flex-col gap-2 sm:max-w-md sm:flex-row">
+            <label htmlFor="custom-niche" className="sr-only">
+              Add a custom niche
+            </label>
+            <input
+              id="custom-niche"
+              type="text"
+              placeholder="Add a niche (e.g. AI automation)"
+              value={customNicheInput}
+              onChange={(e) => setCustomNicheInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleAddCustomNiche();
+                }
+              }}
+              className="app-field w-full px-3 py-2 text-sm text-[#171717] placeholder:text-[#9B94A5] focus:outline-none"
+            />
+            <button
+              type="button"
+              onClick={handleAddCustomNiche}
+              className="inline-flex h-10 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-[#D8CBF0] bg-[#F6F3FF] px-4 text-xs font-bold text-[#4A2E8F] transition-colors hover:bg-[#EFE8FF]"
+            >
+              <Plus size={14} aria-hidden="true" />
+              Add
+            </button>
+          </div>
+
+          {selectedNiches.length > 0 && (
+            <div className="mt-3 flex flex-wrap items-center gap-1.5">
+              <span className="text-[11px] font-semibold text-[#9B94A5]">Selected</span>
+              {selectedNiches.map((n) => (
+                <span
+                  key={n}
+                  className="inline-flex items-center gap-1 rounded-full border border-[#D9CEF5] bg-white px-2.5 py-1 text-[11px] font-semibold text-[#4A2E8F]"
+                >
+                  {n}
+                  <button
+                    type="button"
+                    onClick={() => toggleNiche(n)}
+                    aria-label={`Remove ${n}`}
+                    className="cursor-pointer text-[#9B8FB0] transition-colors hover:text-[#8A1B26]"
+                  >
+                    <X size={12} aria-hidden="true" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+        </fieldset>
+
+        <fieldset className="mt-6 border-t border-[#EFEBF2] pt-5">
+          <legend className="text-xs font-bold uppercase tracking-wider text-[#625D68]">
+            2. Target audience country
+          </legend>
+          <p className="mt-1 text-[13px] text-[#77717F]">
+            Used for geographic relevance. Choose where your audience actually is.
+          </p>
+
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {COUNTRIES.map((c) => {
+              const isSelected = selectedCountry === c.code;
+              return (
+                <button
+                  key={c.code}
+                  type="button"
+                  onClick={() => setSelectedCountry(c.code)}
+                  aria-pressed={isSelected}
+                  className={`flex cursor-pointer items-center justify-between gap-2 rounded-lg border px-3 py-2.5 text-xs font-semibold transition-colors ${
+                    isSelected
+                      ? 'border-[#C9B8EE] bg-[#F1ECFF] text-[#4A2E8F]'
+                      : 'border-[#E5E0E8] bg-white text-[#625D68] hover:bg-[#FBFAF8] hover:text-[#171717]'
+                  }`}
+                >
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    <Globe
+                      size={14}
+                      aria-hidden="true"
+                      className={isSelected ? 'text-[#7C5CD6]' : 'text-[#9B94A5]'}
+                    />
+                    <span className="truncate">{c.label}</span>
+                  </span>
+                  {isSelected && <Check size={14} className="shrink-0" aria-hidden="true" />}
+                </button>
+              );
+            })}
+          </div>
+        </fieldset>
+
+        <fieldset className="mt-6 border-t border-[#EFEBF2] pt-5">
+          <legend className="text-xs font-bold uppercase tracking-wider text-[#625D68]">
+            3. Primary content format
+          </legend>
+          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+            {FORMAT_OPTIONS.map((f) => {
+              const isSelected = selectedFormat === f.id;
+              return (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => setSelectedFormat(f.id)}
+                  aria-pressed={isSelected}
+                  className={`cursor-pointer rounded-xl border p-3.5 text-left transition-colors ${
+                    isSelected
+                      ? 'border-[#C9B8EE] bg-[#F1ECFF]'
+                      : 'border-[#E5E0E8] bg-white hover:bg-[#FBFAF8]'
+                  }`}
+                >
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-bold text-[#171717]">{f.label}</span>
+                    {isSelected && (
+                      <Check size={15} className="shrink-0 text-[#167A59]" aria-hidden="true" />
+                    )}
+                  </span>
+                  <span className="mt-0.5 block text-[11px] text-[#77717F]">{f.desc}</span>
+                </button>
+              );
+            })}
+          </div>
+        </fieldset>
+
+        <fieldset className="mt-6 border-t border-[#EFEBF2] pt-5">
+          <legend className="text-xs font-bold uppercase tracking-wider text-[#625D68]">
+            4. Channel tone
+          </legend>
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {TONE_OPTIONS.map((t) => {
+              const isSelected = selectedTone === t.id;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setSelectedTone(t.id)}
+                  aria-pressed={isSelected}
+                  className={`cursor-pointer rounded-lg border px-3 py-2.5 text-left transition-colors ${
+                    isSelected
+                      ? 'border-[#C9B8EE] bg-[#F1ECFF]'
+                      : 'border-[#E5E0E8] bg-white hover:bg-[#FBFAF8]'
+                  }`}
+                >
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-bold text-[#171717]">{t.label}</span>
+                    {isSelected && (
+                      <Check size={14} className="shrink-0 text-[#167A59]" aria-hidden="true" />
+                    )}
+                  </span>
+                  <span className="mt-0.5 block text-[10px] text-[#77717F]">{t.desc}</span>
+                </button>
+              );
+            })}
+          </div>
+        </fieldset>
+
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-[#EFEBF2] pt-5">
+          <p className="text-[11px] text-[#77717F]">
+            Saving requests a new trend feed, which uses one refresh credit.
+          </p>
+          <button
+            type="button"
+            onClick={() => void handleSaveManual()}
+            disabled={savingManual}
+            className="app-btn-pink h-10 px-5 text-[13px] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <Save size={15} aria-hidden="true" className={savingManual ? 'animate-spin' : ''} />
+            {savingManual ? 'Saving…' : 'Save preferences'}
+          </button>
+        </div>
+      </section>
     </div>
   );
 };

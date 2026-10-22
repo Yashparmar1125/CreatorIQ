@@ -17,9 +17,22 @@ export interface DashboardInsight {
   trendId?: string;
 }
 
+/** The creator's real connected channel — no placeholder values. */
+export interface ConnectedChannel {
+  id: string;
+  name: string;
+  handle: string | null;
+  thumbnail_url: string | null;
+  subscriber_count: number;
+  view_count: number;
+  video_count: number;
+  niches: string[];
+}
+
 interface DashboardState {
   stats: DashboardStat[];
   insights: DashboardInsight[];
+  primaryChannel: ConnectedChannel | null;
   isLoading: boolean;
   error: string | null;
   fetchDashboard: () => Promise<void>;
@@ -28,6 +41,7 @@ interface DashboardState {
 export const useDashboardStore = create<DashboardState>((set) => ({
   stats: [],
   insights: [],
+  primaryChannel: null,
   isLoading: false,
   error: null,
   fetchDashboard: async () => {
@@ -43,6 +57,19 @@ export const useDashboardStore = create<DashboardState>((set) => ({
       const primary = channels.find((c: any) => c.is_primary) || channels[0];
       const profile = profileRes?.data?.data;
       const trends: any[] = trendsRes?.data?.data?.trends || [];
+
+      const primaryChannel: ConnectedChannel | null = primary
+        ? {
+            id: primary.id,
+            name: primary.name ?? 'Connected channel',
+            handle: primary.handle ?? null,
+            thumbnail_url: primary.thumbnail_url ?? null,
+            subscriber_count: Number(primary.subscriber_count ?? 0),
+            view_count: Number(primary.view_count ?? 0),
+            video_count: Number(primary.video_count ?? 0),
+            niches: Array.isArray(primary.niches) ? primary.niches : [],
+          }
+        : null;
 
       // Build dynamic AI Priority Insights from top predicted trends
       const dynamicInsights: DashboardInsight[] = trends.slice(0, 3).map((t: any, idx: number) => {
@@ -86,16 +113,15 @@ export const useDashboardStore = create<DashboardState>((set) => ({
             icon: 'trending',
           },
         ];
-        set({ stats, insights: dynamicInsights, isLoading: false });
+        set({ stats, insights: dynamicInsights, primaryChannel, isLoading: false });
       } else {
         // Derive live intelligence stats from CreatorProfile + live Trends feed
         const effectiveNiches: string[] =
-          profile?.niches?.effective || profile?.niches?.onboarding_selected || ['Tech', 'Fitness'];
-        const targetCountry = profile?.geo?.target_country || 'India';
-        const topScore =
-          trends.length > 0
-            ? Math.max(...trends.map((t) => Math.round(t.opportunity_score ?? t.tvs_score ?? 75)))
-            : 88;
+          profile?.niches?.effective || profile?.niches?.onboarding_selected || [];
+        const targetCountry = profile?.geo?.target_country || '';
+        const topScore = trends.length
+          ? Math.max(...trends.map((t) => Math.round(t.opportunity_score ?? t.tvs_score ?? 0)))
+          : 0;
         const outlierCount = trends.filter(
           (t) => Boolean(t.is_momentum_outlier) || (t.outlier_streak && t.outlier_streak > 0)
         ).length;
@@ -103,30 +129,30 @@ export const useDashboardStore = create<DashboardState>((set) => ({
         const stats: DashboardStat[] = [
           {
             label: 'Active Opportunities',
-            value: String(trends.length || 12),
-            trend: `${effectiveNiches.slice(0, 2).join(' · ')}`,
+            value: String(trends.length),
+            trend: effectiveNiches.slice(0, 2).join(' · '),
             icon: 'trending',
           },
           {
             label: 'Peak Opportunity Fit',
-            value: `${topScore}/100`,
-            trend: 'LightGBM + Vector',
+            value: topScore ? `${topScore}/100` : 'No data',
+            trend: trends.length ? 'Live ranking' : 'Feed empty',
             icon: 'eye',
           },
           {
             label: 'Breakout Signals',
-            value: String(outlierCount || Math.max(1, Math.ceil(trends.length / 3))),
-            trend: 'μ + 1.65σ Outliers',
+            value: String(outlierCount),
+            trend: trends.length ? 'Outlier flagged' : 'Feed empty',
             icon: 'video',
           },
           {
             label: 'Target Audience',
-            value: targetCountry,
-            trend: `${effectiveNiches.length} Niches Active`,
+            value: targetCountry || 'Not set',
+            trend: effectiveNiches.length ? `${effectiveNiches.length} niches active` : 'No niches set',
             icon: 'users',
           },
         ];
-        set({ stats, insights: dynamicInsights, isLoading: false });
+        set({ stats, insights: dynamicInsights, primaryChannel, isLoading: false });
       }
     } catch (err: any) {
       console.error('Dashboard fetch failed:', err);

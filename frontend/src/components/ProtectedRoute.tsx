@@ -27,8 +27,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
   if (!hydrated) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-neutral-950 text-white">
-        <Loader2 className="w-8 h-8 animate-spin text-brand-400" />
+      <div className="min-h-screen flex items-center justify-center bg-[#FBFAF8] text-[#171717]">
+        <Loader2 className="w-8 h-8 animate-spin text-[#7C5CD6]" />
       </div>
     );
   }

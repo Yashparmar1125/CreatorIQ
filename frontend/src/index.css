@@ -1,9 +1,10 @@
+@import "cal-sans/index.css";
 @import "tailwindcss";
 
 @theme {
-  /* Fonts */
-  --font-sora: "Sora", sans-serif;
-  --font-dm-sans: "DM Sans", sans-serif;
+  /* Fonts — Cal Sans is the single family across the whole app. */
+  --font-cal-sans: "Cal Sans", "DM Sans", sans-serif;
+  --font-sans: "Cal Sans", "DM Sans", sans-serif;
   --font-mono: "JetBrains Mono", monospace;
 
   /* Brand Accents (Restrained) */
@@ -29,34 +30,43 @@
   --radius-xl: 14px;
 }
 
+/* ==========================================================================
+   CreatorIQ — light-only base theme.
+   Warm off-white canvas, white surfaces, near-black typography.
+   ========================================================================== */
+
 :root {
-  color-scheme: dark;
-  background-color: #0a0a0a;
-  color: #ededed;
-  font-family: var(--font-dm-sans);
+  color-scheme: light;
+  background-color: #fbfaf8;
+  color: #171717;
+  font-family: var(--font-cal-sans);
+  /* Cal Sans v2 is a variable font: let the drawing adapt to the text size
+     and keep the classic geometric geometry across the whole product. */
+  font-optical-sizing: auto;
+  font-variation-settings: "GEOM" 50;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
   /* Semantic Design Tokens */
-  --bg-app: #0a0a0a;
-  --bg-sidebar: #0d0d0d;
-  --bg-card: #121212;
-  --bg-card-elevated: #181818;
-  --border-subtle: #222222;
-  --border-elevated: #2c2c2c;
-  --text-primary: #ededed;
-  --text-secondary: #a1a1aa;
-  --text-muted: #71717a;
+  --bg-app: #fbfaf8;
+  --bg-sidebar: #f6f3ff;
+  --bg-card: #ffffff;
+  --bg-card-elevated: #ffffff;
+  --border-subtle: #e5e0e8;
+  --border-elevated: #d9cef5;
+  --text-primary: #171717;
+  --text-secondary: #625d68;
+  --text-muted: #77717f;
 }
 
 html, body, #root {
-  background-color: #0a0a0a !important;
-  color: #ededed !important;
+  background-color: #fbfaf8 !important;
+  color: #171717 !important;
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-sora);
-  color: #f4f4f5 !important;
+  font-family: var(--font-cal-sans);
+  color: #171717 !important;
 }
 
 .metric {
@@ -70,15 +80,15 @@ h1, h2, h3, h4, h5, h6 {
 body {
   margin: 0;
   min-height: 100vh;
-  background-color: #0a0a0a !important;
-  color: #ededed !important;
+  background-color: #fbfaf8 !important;
+  color: #171717 !important;
   overflow-x: hidden;
 }
 
 /* ==========================================================================
-   PURE DARK MODE THEME OVERRIDES
-   Guarantees high-contrast text, sleek dark boxes, and dark backgrounds
-   across every single page, form, and modal.
+   LIGHT THEME UTILITY OVERRIDES
+   Guarantees readable text, clean surfaces and clear separation across
+   every page, form, table and modal.
    ========================================================================== */
 
 /* Typography Utilities */
@@ -88,36 +98,87 @@ body {
 
 /* Input Fields & Textareas */
 input, select, textarea {
-  color: #ededed !important;
+  color: #171717 !important;
 }
 
 input::placeholder,
 textarea::placeholder {
-  color: #52525b !important;
+  color: #9b94a5 !important;
 }
 
-/* Surface Background Dark Overrides */
+/* ==========================================================================
+   Shaded form fields
+   Every text field in the product gets the same recessed treatment used by
+   the "AI budgeting tools" card on the auth page: a white surface, a hard
+   outline and a solid offset shade. The auth card uses mint, the product
+   surfaces use the brand purple.
+   ========================================================================== */
+
+:root {
+  --field-shade: #b197fc;
+  --field-shade-hover: #a78bfa;
+  --field-ink: #181719;
+  --field-shadow-offset: 4px;
+  --field-radius: 14px;
+}
+
+.app-field {
+  background-color: #ffffff;
+  border: 1.5px solid var(--field-ink);
+  border-radius: var(--field-radius, 14px);
+  box-shadow: var(--field-shadow-offset, 4px) var(--field-shadow-offset, 4px) 0
+    var(--field-shade);
+  color: var(--text-primary);
+  transition: transform 0.15s ease, box-shadow 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.app-field::placeholder {
+  color: var(--text-muted);
+}
+
+.app-field:hover {
+  box-shadow: calc(var(--field-shadow-offset, 4px) + 1px)
+    calc(var(--field-shadow-offset, 4px) + 1px) 0 var(--field-shade-hover);
+}
+
+.app-field:focus,
+.app-field:focus-within {
+  outline: none;
+  border-color: var(--field-ink);
+  box-shadow: calc(var(--field-shadow-offset, 4px) + 1px)
+      calc(var(--field-shadow-offset, 4px) + 1px) 0 var(--field-shade),
+    0 0 0 3px rgba(124, 92, 214, 0.18);
+}
+
+/* Large composer surfaces — same language, larger offset */
+.app-field-lg {
+  --field-shadow-offset: 7px;
+  --field-radius: 22px;
+}
+
+/* Surface Background Overrides */
 .bg-neutral-50 {
-  background-color: #141414 !important;
+  background-color: #fbfaf8 !important;
 }
 
 .bg-neutral-50\/80,
 .bg-neutral-50\/50,
 .bg-neutral-50\/30 {
-  background-color: rgba(20, 20, 20, 0.8) !important;
+  background-color: rgba(251, 250, 248, 0.9) !important;
 }
 
 .bg-neutral-100 {
-  background-color: #181818 !important;
+  background-color: #ffffff !important;
 }
 
 .bg-neutral-100\/80,
 .bg-neutral-100\/60 {
-  background-color: rgba(24, 24, 24, 0.8) !important;
+  background-color: rgba(255, 255, 255, 0.9) !important;
 }
 
 .bg-neutral-200 {
-  background-color: #222222 !important;
+  background-color: #efebf2 !important;
 }
 
 /* Pure White Utility for Brand Logo Container */
@@ -125,47 +186,47 @@ textarea::placeholder {
   background-color: #ffffff !important;
 }
 
-/* Borders in Dark Theme */
+/* Borders */
 .border-neutral-100,
 .border-neutral-200,
 .border-neutral-300 {
-  border-color: #262626 !important;
+  border-color: #e5e0e8 !important;
 }
 
 .border-neutral-200\/80,
 .border-neutral-200\/60 {
-  border-color: rgba(38, 38, 38, 0.8) !important;
+  border-color: rgba(229, 224, 232, 0.85) !important;
 }
 
 .divide-neutral-200 > :not([hidden]) ~ :not([hidden]),
 .divide-neutral-100 > :not([hidden]) ~ :not([hidden]) {
-  border-color: #262626 !important;
+  border-color: #e5e0e8 !important;
 }
 
-/* Mesh Gradient Dark Background */
+/* Soft lavender background wash */
 .mesh-gradient {
-  background-color: #0a0a0a !important;
-  background-image: 
-    radial-gradient(at 15% 15%, rgba(99, 102, 241, 0.08) 0px, transparent 50%),
-    radial-gradient(at 85% 85%, rgba(6, 182, 212, 0.05) 0px, transparent 50%) !important;
-  color: #ededed !important;
+  background-color: #fbfaf8 !important;
+  background-image:
+    radial-gradient(at 15% 15%, rgba(241, 236, 255, 0.9) 0px, transparent 50%),
+    radial-gradient(at 85% 85%, rgba(145, 245, 211, 0.22) 0px, transparent 50%) !important;
+  color: #171717 !important;
 }
 
 /* App shell */
 .app-shell {
   min-height: 100vh;
-  background-color: #0a0a0a !important;
+  background-color: #fbfaf8 !important;
 }
 
 .app-main {
   min-height: 100vh;
-  background-color: #0a0a0a !important;
+  background-color: #fbfaf8 !important;
 }
 
-/* Dark Minimal Scrollbar */
+/* Scrollbars */
 .custom-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: #262626 transparent;
+  scrollbar-color: #ddd6e2 transparent;
 }
 
 .custom-scrollbar::-webkit-scrollbar {
@@ -174,7 +235,7 @@ textarea::placeholder {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: #262626;
+  background-color: #ddd6e2;
   border-radius: 999px;
 }
 
@@ -182,75 +243,79 @@ textarea::placeholder {
   background: transparent;
 }
 
-/* Dark surfaces */
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #c9bcc9;
+}
+
+/* Surfaces */
 .surface-app {
-  background-color: #0a0a0a !important;
+  background-color: #fbfaf8 !important;
 }
 
 .surface-glass {
-  background: rgba(13, 13, 13, 0.88) !important;
+  background: rgba(255, 255, 255, 0.92) !important;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid #1f1f1f !important;
+  border-bottom: 1px solid #e5e0e8 !important;
 }
 
 .surface-card {
-  background-color: #121212 !important;
-  border: 1px solid #222222 !important;
-  color: #ededed !important;
+  background-color: #ffffff !important;
+  border: 1px solid #e5e0e8 !important;
+  color: #171717 !important;
 }
 
 .surface-card-elevated {
-  background-color: #161616 !important;
-  border: 1px solid #262626 !important;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.45);
-  color: #ededed !important;
+  background-color: #ffffff !important;
+  border: 1px solid #e5e0e8 !important;
+  box-shadow: 0 4px 24px rgba(23, 23, 23, 0.06);
+  color: #171717 !important;
   transition: border-color 0.2s ease, background-color 0.2s ease;
 }
 
 .surface-card-elevated:hover {
-  border-color: #383838 !important;
+  border-color: #c9bcf0 !important;
 }
 
 .surface-dark {
-  background-color: #141414 !important;
-  border: 1px solid #262626 !important;
-  color: #ededed !important;
+  background-color: #f6f3ff !important;
+  border: 1px solid #e5e0e8 !important;
+  color: #171717 !important;
 }
 
 .text-gradient-brand {
-  color: #f4f4f5 !important;
+  color: #171717 !important;
 }
 
 .btn-primary-glow {
-  background-color: #4f46e5;
-  color: #ffffff;
-  border: 1px solid #6366f1;
+  background-color: #ff98c1;
+  color: #171717;
+  border: 1px solid #f27da8;
   transition: background-color 0.15s ease;
 }
 
 .btn-primary-glow:hover {
-  background-color: #4338ca;
+  background-color: #ff8ab8;
 }
 
 .chart-bar {
-  background: #6366f1;
+  background: #7c5cd6;
   border-radius: 3px 3px 0 0;
 }
 
 .chart-bar-muted {
-  background: #262626;
+  background: #e5e0e8;
   border-radius: 3px 3px 0 0;
 }
 
 .glass {
-  background: #141414 !important;
-  border: 1px solid #262626 !important;
+  background: rgba(255, 255, 255, 0.88) !important;
+  border: 1px solid #e5e0e8 !important;
 }
 
 .glass-dark {
-  background: #121212 !important;
-  border: 1px solid #222222 !important;
+  background: #f6f3ff !important;
+  border: 1px solid #e5e0e8 !important;
 }
 
 .premium-shadow-hover {
@@ -258,7 +323,7 @@ textarea::placeholder {
 }
 
 .premium-shadow-hover:hover {
-  border-color: #333333 !important;
+  border-color: #c9bcf0 !important;
 }
 
 @keyframes shimmer {
@@ -267,7 +332,7 @@ textarea::placeholder {
 }
 
 .skeleton-shimmer {
-  background: linear-gradient(90deg, #161616 25%, #222222 50%, #161616 75%);
+  background: linear-gradient(90deg, #f6f3ff 25%, #efebf2 50%, #f6f3ff 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
@@ -294,29 +359,3 @@ textarea::placeholder {
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
-
-/* Ultra-subtle dark scrollbar for standard containers */
-.custom-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: #262626 transparent;
-}
-
-.custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: #262626;
-  border-radius: 9999px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: #3a3a3a;
-}
-
-

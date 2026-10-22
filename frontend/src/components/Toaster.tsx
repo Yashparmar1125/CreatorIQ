@@ -7,14 +7,14 @@ const icons = {
   success: <CheckCircle2 className="w-5 h-5 text-emerald-500" />,
   error: <AlertCircle className="w-5 h-5 text-rose-500" />,
   info: <Info className="w-5 h-5 text-blue-500" />,
-  warning: <AlertTriangle className="w-5 h-5 text-amber-500" />,
+  warning: <AlertTriangle className="w-5 h-5 text-violet-600" />,
 };
 
 const bgColors = {
   success: 'bg-emerald-50 border-emerald-100',
   error: 'bg-rose-50 border-rose-100',
   info: 'bg-blue-50 border-blue-100',
-  warning: 'bg-amber-50 border-amber-100',
+  warning: 'bg-violet-50 border-violet-100',
 };
 
 export const Toaster: React.FC = () => {

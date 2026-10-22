@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check, Loader2, Globe } from 'lucide-react';
+import { Check, Loader2, Globe, Film, Calendar, Sparkles } from 'lucide-react';
 import { cn } from '../../../../lib/utils';
 import { OnboardingStepShell } from '../OnboardingStepShell';
 
@@ -71,20 +71,23 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
     <OnboardingStepShell
       badge="Step 3 of 4 • Strategy"
       title="Content strategy & audience"
-      description="Customize your format, cadence, tone, and regional audience so trend velocity matches your style."
+      description="Customize your format, cadence, tone, and regional audience so trend recommendations match your production style."
       onBack={onBack}
       onNext={onComplete}
       nextDisabled={isCompleteDisabled}
       isLoading={isLoading}
-      cardClassName="space-y-4 text-left"
+      cardClassName="space-y-6 text-left"
     >
-      {/* Row 1: Primary Format & Posting Frequency side-by-side */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      {/* Row 1: Primary Format & Posting Frequency */}
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
         {/* 1. Primary Format */}
-        <div className="space-y-2 rounded-xl border border-[#202020] bg-[#151515] p-3.5">
-          <label className="block text-xs font-semibold text-neutral-200">
-            1. Primary Format
-          </label>
+        <div className="space-y-2.5 rounded-2xl border border-[#ede9f2] bg-[#fbf9fe] p-4">
+          <div className="flex items-center gap-2">
+            <Film className="h-4 w-4 text-[#8b5cf6]" />
+            <label className="block text-xs sm:text-[13px] font-bold text-[#14121a]">
+              1. Primary Format
+            </label>
+          </div>
           <div className="grid grid-cols-3 gap-2">
             {FORMATS.map((f) => {
               const active = format === f.value;
@@ -94,13 +97,13 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
                   type="button"
                   onClick={() => setFormat(f.value)}
                   className={cn(
-                    'flex flex-col items-center justify-center rounded-lg border px-2 py-2.5 text-center transition-all cursor-pointer',
+                    'flex flex-col items-center justify-center rounded-xl p-2.5 text-center transition-all cursor-pointer',
                     active
-                      ? 'border-brand-500 bg-brand-950/45 text-white ring-1 ring-brand-500/40'
-                      : 'border-[#262626] bg-[#181818] text-neutral-300 hover:border-[#383838] hover:text-white'
+                      ? 'onboarding-tile-active'
+                      : 'onboarding-tile'
                   )}
                 >
-                  <span className="text-xs font-semibold">{f.label}</span>
+                  <span className="text-xs font-bold text-[#14121a]">{f.label}</span>
                 </button>
               );
             })}
@@ -108,10 +111,13 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
         </div>
 
         {/* 2. Posting Frequency */}
-        <div className="space-y-2 rounded-xl border border-[#202020] bg-[#151515] p-3.5">
-          <label className="block text-xs font-semibold text-neutral-200">
-            2. Posting Frequency
-          </label>
+        <div className="space-y-2.5 rounded-2xl border border-[#ede9f2] bg-[#fbf9fe] p-4">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-[#8b5cf6]" />
+            <label className="block text-xs sm:text-[13px] font-bold text-[#14121a]">
+              2. Upload Cadence
+            </label>
+          </div>
           <div className="grid grid-cols-3 gap-2">
             {FREQUENCIES.map((freq) => {
               const active = frequency === freq.value;
@@ -121,13 +127,13 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
                   type="button"
                   onClick={() => setFrequency(freq.value)}
                   className={cn(
-                    'flex flex-col items-center justify-center rounded-lg border px-2 py-2.5 text-center transition-all cursor-pointer',
+                    'flex flex-col items-center justify-center rounded-xl p-2.5 text-center transition-all cursor-pointer',
                     active
-                      ? 'border-brand-500 bg-brand-950/45 text-white ring-1 ring-brand-500/40'
-                      : 'border-[#262626] bg-[#181818] text-neutral-300 hover:border-[#383838] hover:text-white'
+                      ? 'onboarding-tile-active'
+                      : 'onboarding-tile'
                   )}
                 >
-                  <span className="text-xs font-semibold">{freq.label}</span>
+                  <span className="text-xs font-bold text-[#14121a]">{freq.label}</span>
                 </button>
               );
             })}
@@ -136,12 +142,15 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
       </div>
 
       {/* Row 2: Channel Tone & Target Audience Location */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-12">
-        {/* 3. Channel Tone (5 cols) */}
-        <div className="space-y-2 rounded-xl border border-[#202020] bg-[#151515] p-3.5 sm:col-span-5">
-          <label className="block text-xs font-semibold text-neutral-200">
-            3. Channel Tone
-          </label>
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-12">
+        {/* 3. Channel Tone */}
+        <div className="space-y-2.5 rounded-2xl border border-[#ede9f2] bg-[#fbf9fe] p-4 sm:col-span-5">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-[#8b5cf6]" />
+            <label className="block text-xs sm:text-[13px] font-bold text-[#14121a]">
+              3. Channel Tone
+            </label>
+          </div>
           <div className="grid grid-cols-2 gap-2">
             {TONES.map((t) => {
               const active = tone === t.label;
@@ -151,26 +160,29 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
                   type="button"
                   onClick={() => setTone(t.label)}
                   className={cn(
-                    'flex items-center justify-between rounded-lg border px-3 py-2 text-left text-xs font-medium transition-all cursor-pointer',
+                    'flex items-center justify-between rounded-xl px-3 py-2.5 text-left text-xs font-bold transition-all cursor-pointer',
                     active
-                      ? 'border-brand-500 bg-brand-950/45 text-white ring-1 ring-brand-500/40'
-                      : 'border-[#262626] bg-[#181818] text-neutral-300 hover:border-[#383838] hover:text-white'
+                      ? 'onboarding-tile-active'
+                      : 'onboarding-tile'
                   )}
                 >
                   <span className="truncate">{t.label}</span>
-                  {active && <Check className="h-3 w-3 shrink-0 text-brand-400" />}
+                  {active && <Check className="h-3.5 w-3.5 shrink-0 text-[#8b5cf6] stroke-[2.5]" />}
                 </button>
               );
             })}
           </div>
         </div>
 
-        {/* 4. Target Audience Geography (7 cols) */}
-        <div className="space-y-2 rounded-xl border border-[#202020] bg-[#151515] p-3.5 sm:col-span-7">
-          <label className="block text-xs font-semibold text-neutral-200">
-            4. Target Audience Location
-          </label>
-          <div className="grid grid-cols-3 gap-1.5">
+        {/* 4. Target Audience Location */}
+        <div className="space-y-2.5 rounded-2xl border border-[#ede9f2] bg-[#fbf9fe] p-4 sm:col-span-7">
+          <div className="flex items-center gap-2">
+            <Globe className="h-4 w-4 text-[#8b5cf6]" />
+            <label className="block text-xs sm:text-[13px] font-bold text-[#14121a]">
+              4. Target Audience Location
+            </label>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
             {COUNTRIES.map((c) => {
               const active = country === c.code;
               return (
@@ -179,17 +191,14 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
                   type="button"
                   onClick={() => setCountry(c.code)}
                   className={cn(
-                    'flex items-center justify-between rounded-lg border px-2.5 py-2 text-left text-[11px] font-medium transition-all cursor-pointer',
+                    'flex items-center justify-between rounded-xl px-2.5 py-2.5 text-left text-xs font-bold transition-all cursor-pointer',
                     active
-                      ? 'border-brand-500 bg-brand-950/45 text-white ring-1 ring-brand-500/40'
-                      : 'border-[#262626] bg-[#181818] text-neutral-300 hover:border-[#383838] hover:text-white'
+                      ? 'onboarding-tile-active'
+                      : 'onboarding-tile'
                   )}
                 >
-                  <span className="flex min-w-0 items-center gap-1.5">
-                    <Globe className="h-3 w-3 shrink-0 text-neutral-500" />
-                    <span className="truncate">{c.label}</span>
-                  </span>
-                  {active && <Check className="h-3 w-3 shrink-0 text-brand-400" />}
+                  <span className="truncate">{c.label}</span>
+                  {active && <Check className="h-3.5 w-3.5 shrink-0 text-[#8b5cf6] stroke-[2.5]" />}
                 </button>
               );
             })}
@@ -198,18 +207,16 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
       </div>
 
       {error && (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-400">
+        <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-600">
           {error}
         </div>
       )}
       {isLoading && (
-        <div className="flex items-center gap-2 text-xs text-neutral-400">
-          <Loader2 className="h-4 w-4 animate-spin text-brand-400" />
+        <div className="flex items-center gap-2 text-xs text-[#6b6775]">
+          <Loader2 className="h-4 w-4 animate-spin text-[#8b5cf6]" />
           Saving preferences...
         </div>
       )}
     </OnboardingStepShell>
   );
 };
-
-

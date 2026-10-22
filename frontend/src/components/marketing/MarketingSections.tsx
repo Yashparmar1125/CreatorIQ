@@ -27,39 +27,44 @@ export const MarketingHero: React.FC<MarketingHeroProps> = ({
 }) => (
   <section
     className={cn(
-      'relative overflow-hidden border-b border-[#222222] bg-[#0a0a0a]',
-      'bg-[linear-gradient(to_right,#1a1a1a_1px,transparent_1px),linear-gradient(to_bottom,#1a1a1a_1px,transparent_1px)] bg-[size:40px_40px]',
-      className
+      'relative overflow-hidden border-b border-[#EFEAF2] bg-[#FBF8FF]',
+      className,
     )}
   >
-    <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-brand-950/20 via-[#0a0a0a]/90 to-[#0a0a0a]" />
-    <div className="pointer-events-none absolute -right-32 top-0 h-96 w-96 rounded-full bg-brand-500/10 blur-3xl" />
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0 opacity-70"
+      style={{
+        background:
+          'radial-gradient(ellipse 55% 60% at 12% 0%, rgba(145,245,211,0.22), transparent 62%), radial-gradient(ellipse 55% 60% at 88% 10%, rgba(255,152,193,0.18), transparent 60%)',
+      }}
+    />
     <div
       className={cn(
-        'relative mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20 lg:py-24',
+        'relative mx-auto w-full max-w-[1180px] px-8 py-24',
         visual ? 'grid items-center gap-12 lg:grid-cols-2 lg:gap-16' : '',
-        centered && !visual && 'text-center'
+        centered && !visual && 'text-center',
       )}
     >
       <div className={cn(centered && !visual && 'mx-auto max-w-3xl')}>
         {badge && (
-          <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-brand-500/30 bg-brand-950/40 px-3 py-1.5 text-xs font-medium text-brand-300 shadow-sm backdrop-blur-sm">
+          <p className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#DED4F2] bg-white/80 px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-[#4A2E8F]">
             {badgeIcon}
             {badge}
           </p>
         )}
         <h1
           className={cn(
-            'font-sora text-3xl font-semibold tracking-tight text-white sm:text-4xl lg:text-[2.75rem] lg:leading-[1.15]',
-            centered && !visual && 'mx-auto max-w-3xl'
+            'font-cal-sans text-[2.1rem] font-bold leading-[1.1] tracking-[-0.03em] text-[#171717] sm:text-[2.7rem] lg:text-[3.1rem]',
+            centered && !visual && 'mx-auto max-w-[20ch]',
           )}
         >
           {title}
         </h1>
         <p
           className={cn(
-            'mt-5 max-w-xl text-base leading-relaxed text-neutral-400 sm:text-lg',
-            centered && !visual && 'mx-auto'
+            'mt-5 max-w-2xl text-base leading-relaxed text-[#625D68] sm:text-lg',
+            centered && !visual && 'mx-auto',
           )}
         >
           {description}
@@ -93,22 +98,19 @@ export const MarketingSection: React.FC<MarketingSectionProps> = ({
   id,
   align = 'left',
 }) => (
-  <section id={id} className={cn('py-16 sm:py-20 bg-[#0a0a0a]', className)}>
-    <div className="mx-auto max-w-6xl px-4 sm:px-6">
+  <section id={id} className={cn('bg-[#FBFAF8] py-20', className)}>
+    <div className="mx-auto w-full max-w-[1180px] px-8">
       {(title || description) && (
         <div
-          className={cn(
-            'mb-10 max-w-2xl',
-            align === 'center' && 'mx-auto text-center'
-          )}
+          className={cn('mb-12 max-w-2xl', align === 'center' && 'mx-auto text-center')}
         >
           {title && (
-            <h2 className="font-sora text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+            <h2 className="font-cal-sans text-[1.8rem] font-bold leading-tight tracking-[-0.025em] text-[#171717] sm:text-[2.1rem]">
               {title}
             </h2>
           )}
           {description && (
-            <p className="mt-3 text-sm leading-relaxed text-neutral-400 sm:text-base">{description}</p>
+            <p className="mt-3 text-base leading-relaxed text-[#625D68]">{description}</p>
           )}
         </div>
       )}
@@ -121,14 +123,13 @@ export const MarketingCta: React.FC<{
   title: string;
   description: string;
   children: React.ReactNode;
-  variant?: 'light' | 'dark';
 }> = ({ title, description, children }) => (
-  <section className="border-t border-[#222222] py-16 sm:py-20 bg-[#0d0d0d] text-white">
-    <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6">
-      <h2 className="font-sora text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+  <section className="bg-[#91F5D3] py-20">
+    <div className="mx-auto w-full max-w-4xl px-8 text-center">
+      <h2 className="font-cal-sans text-[1.8rem] font-bold leading-tight tracking-[-0.02em] text-[#171717] sm:text-[2.2rem]">
         {title}
       </h2>
-      <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-neutral-400 sm:text-base">
+      <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-[#17453A]">
         {description}
       </p>
       <div className="mt-8 flex flex-wrap justify-center gap-3">{children}</div>
@@ -136,8 +137,11 @@ export const MarketingCta: React.FC<{
   </section>
 );
 
-export const MarketingLink: React.FC<{ to: string; children: React.ReactNode }> = ({ to, children }) => (
-  <Link to={to} className="text-sm font-medium text-brand-600 hover:underline">
+export const MarketingLink: React.FC<{ to: string; children: React.ReactNode }> = ({
+  to,
+  children,
+}) => (
+  <Link to={to} className="text-sm font-semibold text-[#4A2E8F] hover:underline">
     {children}
   </Link>
 );
