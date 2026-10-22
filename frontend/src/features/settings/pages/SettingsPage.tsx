@@ -76,7 +76,7 @@ const TONE_OPTIONS = [
 ];
 
 function formatCount(value?: number): string {
-  if (value == null) return 'â€”';
+  if (value == null) return '—';
   if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(value >= 10_000_000 ? 0 : 1)}M`;
   if (value >= 1_000) return `${(value / 1_000).toFixed(value >= 10_000 ? 0 : 1)}K`;
   return value.toLocaleString();
@@ -252,7 +252,7 @@ export const SettingsPage: React.FC = () => {
                 {profile.channel_stats.channel_name || 'Connected channel'}
               </h2>
               <p className="mt-1 text-xs text-[#77717F]">
-                Profile mode: {profile.profile_mode.replace(/_/g, ' ')} Â·{' '}
+                Profile mode: {profile.profile_mode.replace(/_/g, ' ')} ·{' '}
                 {humanize(profile.sync_status)}
               </p>
             </div>
@@ -493,7 +493,7 @@ export const SettingsPage: React.FC = () => {
             className="app-btn-pink h-10 px-5 text-[13px] disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Save size={15} aria-hidden="true" className={savingManual ? 'animate-spin' : ''} />
-            {savingManual ? 'Savingâ€¦' : 'Save preferences'}
+            {savingManual ? 'Saving…' : 'Save preferences'}
           </button>
         </div>
       </section>

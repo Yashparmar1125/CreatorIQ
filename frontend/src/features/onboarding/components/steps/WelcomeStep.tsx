@@ -77,7 +77,7 @@ export const WelcomeStep: React.FC<WelcomeStepProps> = ({ onNext }) => (
       {/* Bottom Action Bar */}
       <div className="flex flex-col items-stretch justify-between gap-4 border-t border-[#f0ebff] pt-6 sm:flex-row sm:items-center">
         <p className="text-xs text-[#716c7d]">
-          No YouTube OAuth required â€” update or connect channels anytime in Settings.
+          No YouTube OAuth required — update or connect channels anytime in Settings.
         </p>
         <button
           type="button"

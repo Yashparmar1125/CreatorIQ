@@ -91,7 +91,7 @@ export const AuthPage: React.FC = () => {
           to="/"
           className="text-xs sm:text-[13px] font-medium text-[#23202a] hover:text-black transition-colors"
         >
-          â€” Back to Home
+          — Back to Home
         </Link>
       </header>
 
@@ -208,7 +208,7 @@ export const AuthPage: React.FC = () => {
                     <input
                       {...registerField('password')}
                       type={showPassword ? 'text' : 'password'}
-                      placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+                      placeholder="••••••••••••"
                       className="auth-page-input pr-11"
                     />
                     <button
@@ -275,8 +275,8 @@ export const AuthPage: React.FC = () => {
                   className="text-xs sm:text-[13px] font-semibold text-[#181719] hover:underline cursor-pointer"
                 >
                   {mode === 'login'
-                    ? 'New to Orbit? Create an account â†’'
-                    : 'Already have an account? Sign in â†’'}
+                    ? 'New to Orbit? Create an account →'
+                    : 'Already have an account? Sign in →'}
                 </button>
               </div>
 

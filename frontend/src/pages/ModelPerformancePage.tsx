@@ -124,7 +124,7 @@ export const ModelPerformancePage: React.FC = () => {
     const rows = [
       {
         key: 'high_accuracy',
-        label: 'High Accuracy (RÂ² â‰¥ 0.85, CI â‰¥ 85%)',
+        label: 'High Accuracy (R² ≥ 0.85, CI ≥ 85%)',
         count: breakdown.high_accuracy ?? 0,
         color: '#167A59',
         track: '#E8FBF4',
@@ -175,9 +175,9 @@ export const ModelPerformancePage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#FBFAF8] font-sans text-[#171717]">
-      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ─────────────────────────────────────────────────────────────────── */}
       {/* Header                                                        */}
-      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ─────────────────────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-30 border-b border-[#E5E0E8] bg-white/95 backdrop-blur-md px-4 sm:px-8 py-3.5">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -232,9 +232,9 @@ export const ModelPerformancePage: React.FC = () => {
         </div>
       </header>
 
-      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ─────────────────────────────────────────────────────────────────── */}
       {/* Main Container                                                 */}
-      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ─────────────────────────────────────────────────────────────────── */}
       <main className="mx-auto max-w-7xl px-4 sm:px-8 py-8 space-y-8">
         {/* Banner & Intro */}
         <div className="relative overflow-hidden rounded-2xl border border-[#E5E0E8] bg-white p-6 sm:p-8">
@@ -286,9 +286,9 @@ export const ModelPerformancePage: React.FC = () => {
           </div>
         )}
 
-        {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ───────────────────────────────────────────────────────────────── */}
         {/* KPI Performance Metric Cards                                     */}
-        {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ───────────────────────────────────────────────────────────────── */}
         {summary ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-xl border border-[#E5E0E8] bg-white p-5 transition-colors hover:border-[#C9BCF0]">
@@ -363,9 +363,9 @@ export const ModelPerformancePage: React.FC = () => {
           </div>
         )}
 
-        {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ───────────────────────────────────────────────────────────────── */}
         {/* Model Architecture & Quality Breakdown                          */}
-        {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ───────────────────────────────────────────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Quality Distribution */}
           <div className="lg:col-span-6 rounded-xl border border-[#E5E0E8] bg-white p-6 space-y-4">
@@ -374,7 +374,7 @@ export const ModelPerformancePage: React.FC = () => {
                 <ShieldCheck className="h-4 w-4 text-[#167A59]" />
                 Goodness-of-fit quality distribution
               </h2>
-              <span className="text-xs text-[#77717F]">RÂ² &gt; 0.85 benchmark</span>
+              <span className="text-xs text-[#77717F]">R² &gt; 0.85 benchmark</span>
             </div>
 
             <div className="space-y-3 pt-2">
@@ -383,7 +383,7 @@ export const ModelPerformancePage: React.FC = () => {
                   <div className="flex justify-between gap-3 text-xs mb-1.5">
                     <span className="text-[#625D68] font-medium">{row.label}</span>
                     <span className="font-semibold text-[#171717]">
-                      {summary ? `${row.count} runs` : 'â€”'}
+                      {summary ? `${row.count} runs` : '—'}
                     </span>
                   </div>
                   <div className="h-2 rounded-full bg-[#F1EEF5] overflow-hidden">
@@ -436,9 +436,9 @@ export const ModelPerformancePage: React.FC = () => {
           </div>
         </div>
 
-        {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ───────────────────────────────────────────────────────────────── */}
         {/* Live Prediction Audit Feed & Table                              */}
-        {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ───────────────────────────────────────────────────────────────── */}
         <div className="rounded-xl border border-[#E5E0E8] bg-white p-6 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
@@ -537,13 +537,13 @@ export const ModelPerformancePage: React.FC = () => {
                           )}
                         </td>
                         <td className="py-3 px-4 font-mono text-[#171717]">
-                          {item.mae != null ? item.mae.toFixed(2) : 'â€”'}
+                          {item.mae != null ? item.mae.toFixed(2) : '—'}
                         </td>
                         <td className="py-3 px-4 font-mono text-[#171717]">
-                          {item.rmse != null ? item.rmse.toFixed(2) : 'â€”'}
+                          {item.rmse != null ? item.rmse.toFixed(2) : '—'}
                         </td>
                         <td className="py-3 px-4 font-mono text-[#171717]">
-                          {item.ci_coverage_pct != null ? `${item.ci_coverage_pct.toFixed(1)}%` : 'â€”'}
+                          {item.ci_coverage_pct != null ? `${item.ci_coverage_pct.toFixed(1)}%` : '—'}
                         </td>
                         <td className="py-3 px-4 font-mono text-[#625D68]">
                           {item.latency_ms.toFixed(1)} ms
@@ -578,12 +578,12 @@ export const ModelPerformancePage: React.FC = () => {
                                   Evaluation snapshot: ID {item.id}
                                 </span>
                                 <span className="text-[#167A59] text-[11px]">
-                                  RÂ² score: {item.r2_score != null ? item.r2_score.toFixed(2) : 'â€”'}
-                                  {' Â· '}
+                                  R² score: {item.r2_score != null ? item.r2_score.toFixed(2) : '—'}
+                                  {' · '}
                                   CI:{' '}
                                   {item.ci_coverage_pct != null
                                     ? `${item.ci_coverage_pct.toFixed(1)}%`
-                                    : 'â€”'}
+                                    : '—'}
                                 </span>
                               </div>
                               <pre className="overflow-x-auto text-[11px] text-[#625D68] leading-relaxed custom-scrollbar">
@@ -620,12 +620,12 @@ export const ModelPerformancePage: React.FC = () => {
         </div>
       </main>
 
-      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ─────────────────────────────────────────────────────────────────── */}
       {/* Footer                                                           */}
-      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ─────────────────────────────────────────────────────────────────── */}
       <footer className="mt-16 border-t border-[#E5E0E8] bg-white py-8 px-4 sm:px-8 text-center text-xs text-[#77717F]">
         <div className="mx-auto max-w-7xl flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p>Â© 2026 CreatorIQ ML Systems Â· Public model performance &amp; accuracy telemetry</p>
+          <p>© 2026 CreatorIQ ML Systems · Public model performance &amp; accuracy telemetry</p>
           <div className="flex items-center gap-4 text-[#625D68]">
             <Link to="/" className="hover:text-[#171717] transition-colors">
               Home

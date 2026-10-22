@@ -73,7 +73,7 @@ export const ConceptGraph: React.FC<ConceptGraphProps> = ({ trend, className }) 
 
   const marketDensityStr =
     totalChannels > 0
-      ? `S:${trend.small_channel_count ?? 0} Â· M:${trend.medium_channel_count ?? 0} Â· B:${trend.big_channel_count ?? 0}`
+      ? `S:${trend.small_channel_count ?? 0} · M:${trend.medium_channel_count ?? 0} · B:${trend.big_channel_count ?? 0}`
       : trend.saturation_index != null && trend.saturation_index > 0
         ? `${Math.round(trend.saturation_index)}/100 saturation`
         : 'Not measured';
@@ -110,7 +110,7 @@ export const ConceptGraph: React.FC<ConceptGraphProps> = ({ trend, className }) 
       id: 'niche',
       label: 'Category cluster',
       category: 'Semantic niche',
-      value: trend.niches?.slice(0, 2).join(' Â· ') || 'Not measured',
+      value: trend.niches?.slice(0, 2).join(' · ') || 'Not measured',
       status: 'optimal',
       x: 180,
       y: 335,
@@ -163,7 +163,7 @@ export const ConceptGraph: React.FC<ConceptGraphProps> = ({ trend, className }) 
               </span>
             </div>
             <p className="mt-0.5 text-[11px] text-[#77717F]">
-              Relationship map of measured signals Â· select a node to inspect it
+              Relationship map of measured signals · select a node to inspect it
             </p>
           </div>
         </div>
