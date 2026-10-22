@@ -6,6 +6,7 @@ import * as z from 'zod';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useNotificationStore } from '../stores/useNotificationStore';
 import {
+  ArrowRight,
   Mail,
   User,
   Lock,
@@ -15,6 +16,7 @@ import {
   AlertCircle,
   TrendingUp,
   BarChart2,
+  ShieldCheck,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import logo from '../assets/logo.png';
@@ -22,6 +24,7 @@ import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Alert } from '../components/ui/Alert';
+import './AuthPage.css';
 
 const authSchema = z.object({
   name: z.string().optional(),
@@ -90,9 +93,9 @@ export const AuthPage: React.FC = () => {
 
 
   return (
-    <div className="flex min-h-screen">
+    <div className={`auth-page flex min-h-screen ${mode === 'login' ? 'auth-login-page' : 'auth-signup-page'}`}>
       {/* Brand panel */}
-      <div className="surface-dark relative hidden w-1/2 flex-col justify-between overflow-hidden p-10 lg:flex xl:p-12">
+      <div className="auth-brand-panel surface-dark relative hidden w-1/2 flex-col justify-between overflow-hidden p-10 lg:flex xl:p-12">
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute -left-20 -top-20 h-72 w-72 rounded-full bg-brand-600/20 blur-3xl animate-breathe" />
           <div className="absolute -bottom-20 -right-20 h-72 w-72 rounded-full bg-cyan-500/10 blur-3xl" />
@@ -108,6 +111,21 @@ export const AuthPage: React.FC = () => {
             </span>
           </Link>
 
+          {mode === 'login' ? (
+            <div className="auth-login-promo">
+              <p className="auth-promo-eyebrow">YOUR PLANNING, A LITTLE CLEARER.</p>
+              <h1>Find your trending content,<br />Then we plan it</h1>
+              <div className="auth-trend-card">
+                <div className="auth-trend-label"><span /> Booming</div>
+                <h2>AI budgeting tools</h2>
+                <p>Audience attention is building across 42 sampled channels.</p>
+                <div className="auth-trend-metrics">
+                  <strong>+28% ↗</strong>
+                  <span>Next 30d attention<br />vs current baseline</span>
+                </div>
+              </div>
+            </div>
+          ) : (
           <motion.h1
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
@@ -117,8 +135,9 @@ export const AuthPage: React.FC = () => {
             Grow your channel with{' '}
             <span className="text-gradient-brand">clear signals</span>, not guesswork.
           </motion.h1>
+          )}
 
-          <div className="mt-10 space-y-4">
+          <div className="mt-10 space-y-4 auth-benefits">
             {benefits.map((benefit, i) => (
               <motion.div
                 key={benefit.text}
@@ -166,7 +185,7 @@ export const AuthPage: React.FC = () => {
           <span className="font-sora text-base font-semibold text-white">CreatorIQ</span>
         </div>
 
-        <Card variant="elevated" className="w-full max-w-md bg-[#121212] border-[#222222] p-8 shadow-2xl">
+        <Card variant="elevated" className="auth-form-card w-full max-w-md bg-[#121212] border-[#222222] p-8 shadow-2xl">
           <AnimatePresence mode="wait">
             <motion.div
               key={mode}
@@ -176,10 +195,10 @@ export const AuthPage: React.FC = () => {
               transition={{ duration: 0.2 }}
             >
               <div className="mb-6">
-                <h2 className="font-sora text-2xl font-semibold tracking-tight text-white">
+                <h2 className="auth-form-title font-sora text-2xl font-semibold tracking-tight text-white">
                   {mode === 'login' ? 'Welcome back' : 'Create your account'}
                 </h2>
-                <p className="mt-1.5 text-sm text-neutral-400">
+                <p className="auth-form-subtitle mt-1.5 text-sm text-neutral-400">
                   {mode === 'login'
                     ? 'Sign in to continue to your workspace.'
                     : 'Start free — your first trend feed is on us.'}
@@ -233,11 +252,6 @@ export const AuthPage: React.FC = () => {
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-medium text-neutral-400">Password</label>
-                    {mode === 'login' && (
-                      <button type="button" className="text-xs font-medium text-brand-400 hover:text-brand-300">
-                        Forgot password?
-                      </button>
-                    )}
                   </div>
                   <Input
                     {...registerField('password')}
@@ -251,11 +265,18 @@ export const AuthPage: React.FC = () => {
                   )}
                 </div>
 
+                {mode === 'login' && (
+                  <label className="auth-remember">
+                    <input type="checkbox" />
+                    <span>Remember me</span>
+                  </label>
+                )}
+
                 <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
                   {isLoading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : mode === 'login' ? (
-                    'Sign in'
+                    <>Sign in <ArrowRight className="h-3 w-3" /></>
                   ) : (
                     'Create account'
                   )}
@@ -264,7 +285,7 @@ export const AuthPage: React.FC = () => {
 
               </form>
 
-              <p className="mt-6 text-center text-sm text-neutral-400">
+              <p className="auth-switch mt-6 text-center text-sm text-neutral-400">
                 {mode === 'login' ? "Don't have an account?" : 'Already have an account?'}{' '}
                 <button
                   type="button"
@@ -288,9 +309,19 @@ export const AuthPage: React.FC = () => {
                   .
                 </p>
               )}
+              {mode === 'login' && (
+                <div className="auth-privacy-note">
+                  <ShieldCheck size={13} />
+                  <span>Your activity is private. You control which analytics<br />you connect.</span>
+                </div>
+              )}
             </motion.div>
           </AnimatePresence>
         </Card>
+
+        {mode === 'login' && (
+          <p className="auth-legal">By signing in, you agree to the Terms and Privacy Policy.</p>
+        )}
 
         <div className="mt-6 hidden items-center gap-6 text-xs text-neutral-500 lg:flex">
           <span className="flex items-center gap-1.5">
