@@ -62,6 +62,10 @@ class RedisKeyPool:
             self._reload_keys()
         return list(self._keys)
 
+    def get_keys(self) -> list[str]:
+        """Alias for backward-compatibility with callers expecting get_keys()."""
+        return self.get_all_keys()
+
     def _hash_key(self, key: str) -> str:
         return hashlib.sha256(key.encode("utf-8")).hexdigest()[:12]
 

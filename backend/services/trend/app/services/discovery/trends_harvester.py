@@ -35,7 +35,7 @@ class GoogleTrendsHarvester:
         categories: list[str] | None = None,
         geo: str = "IN",
     ) -> list[dict[str, Any]]:
-        if not serpapi_pool.get_keys() or not settings.enable_serpapi_collector:
+        if not serpapi_pool.get_all_keys() or not settings.enable_serpapi_collector:
             logger.info("SerpApi collector disabled or API key missing.")
             return []
 
