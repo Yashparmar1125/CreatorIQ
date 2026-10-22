@@ -72,10 +72,7 @@ export const PublicLayout: React.FC<PublicLayoutProps> = ({ children }) => {
       <footer className="landing-footer">
         <div className="landing-container landing-footer-top">
           <div>
-            <Link to="/" className="landing-brand" aria-label="CreatorIQ home">
-              <img src={logo} alt="" width={28} height={28} />
-              <span>CreatorIQ</span>
-            </Link>
+            <BrandLogo to="/" size="sm" />
             <p className="landing-footer-tagline">
               Evidence-backed content intelligence for YouTube creators.
             </p>
