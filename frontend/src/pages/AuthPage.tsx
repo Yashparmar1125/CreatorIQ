@@ -69,7 +69,11 @@ export const AuthPage: React.FC = () => {
       if (mode === 'login') {
         await loginWithPassword(data.email, data.password);
         addNotification('success', 'Welcome Back!', 'Redirecting to your dashboard...');
-        const from = (location.state as { from?: { pathname?: string } })?.from?.pathname || '/app/dashboard';
+        const searchParams = new URLSearchParams(location.search);
+        const from =
+          searchParams.get('from') ||
+          (location.state as { from?: { pathname?: string } })?.from?.pathname ||
+          '/app/dashboard';
         navigate(from, { replace: true });
       } else {
         await register(data.name || '', data.email, data.password);
