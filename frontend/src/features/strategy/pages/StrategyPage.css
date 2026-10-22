@@ -67,9 +67,10 @@ body:has(.strategy-page) {
 /* --------------------------------------------------------------------------
    3. Surfaces
    -------------------------------------------------------------------------- */
+/* Lavender sidebar — matches the application shell width and tone */
 .strategy-sidebar {
   width: 256px;
-  background-color: #fbfaf8;
+  background-color: #f6f3ff;
   border-right: 1px solid #e5e0e8;
 }
 

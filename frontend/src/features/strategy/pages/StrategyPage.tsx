@@ -2,12 +2,13 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams, Link } from 'react-router';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { useStrategyStore, type ChatMessage, type AgentStep, type AgentCard } from '../../../stores/useStrategyStore';
+import { useStrategyStore, type AgentStep, type AgentCard } from '../../../stores/useStrategyStore';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { TopicStrategyCard, type TopicStrategyItem } from '../components/TopicStrategyCard';
 import { ScriptStudioModal } from '../components/ScriptStudioModal';
 import { StrategyResearchLoader } from '../components/StrategyResearchLoader';
 import { parseStrategyTopics } from '../utils/parseStrategyTopics';
+import { ALL_CONNECTORS, CONNECTOR_OPTIONS } from '../../../lib/connectors';
 import {
   Sparkles,
   Plus,
@@ -18,10 +19,8 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronUp,
-  Globe,
-  Flame,
-  Database,
   ExternalLink,
+  Flame,
   Copy,
   Lightbulb,
   Target,
@@ -250,6 +249,28 @@ const StrategyMessageContent: React.FC<{
     strong: ({ children }: any) => (
       <strong className="text-[#171717] font-bold">{children}</strong>
     ),
+    table: ({ children }: any) => (
+      <div className="my-4 w-full overflow-x-auto rounded-xl border border-[#E5E0E8] bg-white custom-scrollbar">
+        <table className="w-full border-collapse text-left text-sm">{children}</table>
+      </div>
+    ),
+    thead: ({ children }: any) => (
+      <thead className="bg-[#F6F3FF]">{children}</thead>
+    ),
+    tbody: ({ children }: any) => <tbody>{children}</tbody>,
+    tr: ({ children }: any) => (
+      <tr className="border-b border-[#EFEBF2] last:border-b-0">{children}</tr>
+    ),
+    th: ({ children }: any) => (
+      <th className="whitespace-nowrap px-3.5 py-2.5 text-[11px] font-bold uppercase tracking-wide text-[#4A2E8F]">
+        {children}
+      </th>
+    ),
+    td: ({ children }: any) => (
+      <td className="px-3.5 py-2.5 align-top text-[13px] leading-relaxed text-[#2C2834]">
+        {children}
+      </td>
+    ),
   };
 
   if (!parsed.hasTopics) {
@@ -303,14 +324,6 @@ const SCOPE_PROMPTS: Record<string, string> = {
   channel:
     'Start from my channel: analyse what has worked for me and propose the next 3 videos to make.',
 };
-
-const CONNECTOR_OPTIONS = [
-  { id: 'trends', label: 'CreatorIQ Concept Radar', icon: Database },
-  { id: 'youtube', label: 'Live YouTube Outliers', icon: Flame },
-  { id: 'web', label: 'Live Web Search', icon: Globe },
-];
-
-const ALL_CONNECTORS = CONNECTOR_OPTIONS.map((c) => c.id);
 
 const STARTER_PROMPTS = [
   'What should I publish in the next 14 days?',
@@ -746,8 +759,8 @@ export const StrategyPage: React.FC = () => {
                   </div>
 
                   <p className="text-[11px] text-[#77717F] pt-1">
-                    Scope applies to this request only. Connectors are optional — switch them off
-                    before sending if you want a narrower search.
+                    This request runs with live research on. Use the Live research control in the
+                    composer to narrow or turn the sources off.
                   </p>
                 </div>
               </div>
@@ -758,7 +771,7 @@ export const StrategyPage: React.FC = () => {
                 const steps = m.metadata?.steps || [];
                 const cards = m.metadata?.cards || [];
                 const cleanContent = m.content.replace(
-                  /[\p{Extended_Pictographic}\u{1F300}-\u{1FAFF}\uFE0F\u20E3]/gu,
+                  /[\p{Extended_Pictographic}\u{1F300}-\u{1FAFF}]|\u{20E3}|\uFE0F/gu,
                   ''
                 );
 

@@ -126,8 +126,8 @@ export const TopicStrategyCard: React.FC<TopicStrategyCardProps> = ({
             )}
 
             {topic.metrics.reachMultiplier && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-[#FFF4E0] border border-[#F5DCB0] px-2 py-0.5 font-bold text-[#8A5B00]">
-                <Flame className="h-3.5 w-3.5 text-[#8A5B00]" />
+              <span className="inline-flex items-center gap-1 rounded-full bg-[#F6F3FF] border border-[#E5E0E8] px-2 py-0.5 font-bold text-[#625D68]">
+                <Flame className="h-3.5 w-3.5" />
                 {topic.metrics.reachMultiplier} Reach
               </span>
             )}
@@ -179,7 +179,7 @@ export const TopicStrategyCard: React.FC<TopicStrategyCardProps> = ({
           onClick={() => setActiveTab('proof')}
           className={`${tabBase} ${activeTab === 'proof' ? tabActive : tabIdle}`}
         >
-          <BarChart3 className="h-3.5 w-3.5 text-[#8A5B00]" />
+          <BarChart3 className="h-3.5 w-3.5 text-[#625D68]" />
           <span>Proof &amp; Strategy</span>
         </button>
       </div>
@@ -331,7 +331,7 @@ export const TopicStrategyCard: React.FC<TopicStrategyCardProps> = ({
           <div className="space-y-3.5 animate-in">
             {/* Algorithmic Evidence */}
             <div className="rounded-xl border border-[#E5E0E8] bg-[#FBFAF8] p-3.5 space-y-2">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[#8A5B00] flex items-center gap-1 font-mono">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#625D68] flex items-center gap-1 font-mono">
                 <BarChart3 className="h-3 w-3" />
                 Algorithmic Signal &amp; Benchmark Proof
               </span>

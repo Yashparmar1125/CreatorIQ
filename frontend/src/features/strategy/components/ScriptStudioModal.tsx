@@ -312,7 +312,7 @@ ${shortScriptBlocks
                         : 'border-[#E5E0E8] bg-[#FBFAF8] text-[#625D68]'
                     }`}
                   >
-                    <Zap className="h-4 w-4 mx-auto mb-1 text-[#8A5B00]" />
+                    <Zap className="h-4 w-4 mx-auto mb-1 text-[#625D68]" />
                     <div className="text-xs font-bold">YouTube Short</div>
                     <div className="text-[10px] text-[#77717F] font-mono">0:55 Sec</div>
                   </button>
@@ -359,7 +359,7 @@ ${shortScriptBlocks
                           {b.section}
                         </span>
                         {!b.sourced && (
-                          <span className="rounded bg-[#FFF4E0] border border-[#F5DCB0] px-1.5 py-0.5 text-[9px] font-bold text-[#8A5B00] uppercase">
+                          <span className="rounded bg-[#F6F3FF] border border-[#E5E0E8] px-1.5 py-0.5 text-[9px] font-bold text-[#625D68] uppercase">
                             Template
                           </span>
                         )}
@@ -410,8 +410,8 @@ ${shortScriptBlocks
                   onClick={() => setIsPlaying(!isPlaying)}
                   className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs transition-all cursor-pointer ${
                     isPlaying
-                      ? 'bg-[#FFF4E0] border border-[#F5DCB0] text-[#8A5B00] hover:bg-[#FFEBCC]'
-                      : 'bg-[#E4FBF2] border border-[#B9EFDD] text-[#167A59] hover:bg-[#D6F7EA]'
+                      ? 'border border-[#E5E0E8] bg-white text-[#171717] hover:bg-[#F6F3FF]'
+                      : 'bg-[#171717] text-white hover:bg-[#2C2834]'
                   }`}
                 >
                   {isPlaying ? (

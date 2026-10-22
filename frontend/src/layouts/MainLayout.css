@@ -1,0 +1,140 @@
+/* ==========================================================================
+   CreatorIQ authenticated shell — light SaaS theme
+   The global stylesheet paints the app dark (#0a0a0a) with !important rules.
+   Everything here is scoped to .app-shell-light so the marketing pages keep
+   their own look, while every authenticated page sits on warm off-white.
+   ========================================================================== */
+
+html:has(.app-shell-light),
+body:has(.app-shell-light),
+#root:has(.app-shell-light) {
+  background-color: #fbfaf8 !important;
+  color: #171717 !important;
+}
+
+.app-shell-light {
+  background-color: #fbfaf8 !important;
+  color: #171717 !important;
+}
+
+.app-shell-light .app-main,
+.app-shell-light .surface-app {
+  background-color: #fbfaf8 !important;
+}
+
+/* Global heading rule forces near-white headings — unreadable on white. */
+.app-shell-light h1,
+.app-shell-light h2,
+.app-shell-light h3,
+.app-shell-light h4,
+.app-shell-light h5,
+.app-shell-light h6 {
+  color: #171717 !important;
+}
+
+/* Global form rule paints input text #ededed — invisible on white fields. */
+.app-shell-light input,
+.app-shell-light select,
+.app-shell-light textarea {
+  color: #171717 !important;
+  caret-color: #171717;
+}
+
+.app-shell-light input::placeholder,
+.app-shell-light textarea::placeholder {
+  color: #9b94a5 !important;
+  opacity: 1;
+}
+
+/* Light scrollbars inside the shell */
+.app-shell-light .custom-scrollbar {
+  scrollbar-color: #ddd6e2 transparent;
+}
+
+.app-shell-light .custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #ddd6e2;
+}
+
+.app-shell-light .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #c9bcc9;
+}
+
+/* Lavender sidebar */
+.app-sidebar-light {
+  background-color: #f6f3ff !important;
+  border-right: 1px solid #e5e0e8;
+}
+
+/* Pink primary action */
+.app-btn-pink {
+  background-color: #ff98c1 !important;
+  border: 1px solid #f27da8 !important;
+  color: #171717 !important;
+  font-weight: 700;
+  transition: background-color 0.15s ease-in-out, transform 0.15s ease-in-out;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.app-btn-pink:hover:not(:disabled) {
+  background-color: #ff8ab8 !important;
+  transform: translateY(-1px);
+}
+
+.app-btn-pink:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.app-btn-pink:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Active navigation item */
+.app-nav-active {
+  background-color: #ffffff !important;
+  border: 1px solid #e5e0e8;
+  color: #171717 !important;
+  font-weight: 700;
+}
+
+.app-nav-inactive {
+  background-color: transparent !important;
+  border: 1px solid transparent;
+  color: #625d68 !important;
+}
+
+.app-nav-inactive:hover {
+  background-color: #f1ecff !important;
+  color: #171717 !important;
+}
+
+/* Muted, thin section label */
+.app-section-label {
+  color: #77717f;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* Focus visibility on light surfaces */
+.app-shell-light :focus-visible {
+  outline: 2px solid #4a2e8f;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell-light *,
+  .app-shell-light *::before,
+  .app-shell-light *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

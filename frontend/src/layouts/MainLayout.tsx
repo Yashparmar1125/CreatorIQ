@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router';
 import logo from '../assets/logo.png';
 import {
-  LayoutDashboard,
+  LayoutGrid,
   TrendingUp,
   Settings,
   Search,
@@ -11,20 +11,22 @@ import {
   User,
   LogOut,
   Plus,
-  MessageSquare,
-  Trash2,
   Sparkles,
   PanelLeftClose,
   PanelLeftOpen,
   ChevronDown,
   Sliders,
+  ArrowRight,
+  MessageSquare,
+  Trash2,
 } from 'lucide-react';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useStrategyStore } from '../stores/useStrategyStore';
 import { cn } from '../lib/utils';
+import './MainLayout.css';
 
 const navItems = [
-  { name: 'Dashboard', icon: LayoutDashboard, href: '/app/dashboard' },
+  { name: 'Overview', icon: LayoutGrid, href: '/app/dashboard' },
   { name: 'Trends', icon: TrendingUp, href: '/app/trends' },
   { name: 'AI Strategy', icon: Sparkles, href: '/app/strategy' },
 ];
@@ -50,7 +52,7 @@ function SidebarNav({
     fetchSessions();
   }, [fetchSessions]);
 
-  const handleNewChat = async () => {
+  const handleNewResearch = async () => {
     clearCurrentSession();
     navigate('/app/strategy?new=true');
     if (onNavigate) onNavigate();
@@ -70,46 +72,36 @@ function SidebarNav({
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     cn(
-      'group relative flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-medium transition-all duration-150',
+      'group relative flex items-center gap-3 rounded-xl px-3 py-2 text-[13px] font-medium transition-all duration-150',
       collapsed && 'mx-auto h-9 w-9 justify-center px-0 py-0',
-      isActive
-        ? 'bg-[#1c1c1c] text-white border border-[#2e2e2e]'
-        : 'text-[#8e8e93] hover:bg-[#141414] hover:text-[#d1d1d6]'
+      isActive ? 'app-nav-active' : 'app-nav-inactive'
     );
 
   return (
     <nav
       className={cn(
-        'flex flex-1 flex-col gap-1 overflow-y-auto py-3 custom-scrollbar',
+        'flex flex-1 flex-col gap-1 overflow-y-auto py-4 custom-scrollbar',
         collapsed ? 'items-center px-2' : 'px-3'
       )}
     >
-      {/* '+ New chat' Pill Button */}
-      <div className={cn('mb-2.5 w-full', collapsed && 'flex justify-center')}>
+      {/* '+ New research' primary action */}
+      <div className={cn('mb-4 w-full', collapsed && 'flex justify-center')}>
         <button
           type="button"
-          onClick={handleNewChat}
-          title="New AI Strategy chat"
+          onClick={handleNewResearch}
+          title="Start a new research session"
+          aria-label="Start a new research session"
           className={cn(
-            'flex items-center rounded-lg border border-[#2c2c2c] bg-[#161616] text-xs font-semibold text-white hover:bg-[#202020] hover:border-[#383838] transition-all shadow-xs group cursor-pointer',
-            collapsed
-              ? 'h-9 w-9 justify-center p-0'
-              : 'w-full justify-between px-3 py-2'
+            'app-btn-pink text-[13px]',
+            collapsed ? 'h-9 w-9 p-0' : 'h-11 w-full px-3'
           )}
         >
-          <div className="flex items-center gap-2">
-            <Plus className="h-4 w-4 text-neutral-400 group-hover:text-white" />
-            {!collapsed && <span>New chat</span>}
-          </div>
-          {!collapsed && <span className="text-[10px] font-mono text-neutral-500">AI</span>}
+          <Plus className={cn('h-4 w-4', collapsed ? 'stroke-[3]' : 'stroke-[3]')} />
+          {!collapsed && <span>New research</span>}
         </button>
       </div>
 
-      {!collapsed && (
-        <div className="mb-1.5 px-2 text-[10px] font-semibold uppercase tracking-wider text-[#545458]">
-          Platform
-        </div>
-      )}
+      {!collapsed && <div className="app-section-label mb-1.5 px-2">Workspace</div>}
 
       {navItems.map((item) => (
         <NavLink
@@ -124,7 +116,7 @@ function SidebarNav({
               <item.icon
                 className={cn(
                   'h-4 w-4 shrink-0 transition-colors',
-                  isActive ? 'text-white' : 'text-[#71717a] group-hover:text-[#a1a1aa]'
+                  isActive ? 'text-[#4A2E8F]' : 'text-[#77717F] group-hover:text-[#171717]'
                 )}
               />
               {!collapsed && <span className="tracking-tight">{item.name}</span>}
@@ -133,18 +125,16 @@ function SidebarNav({
         </NavLink>
       ))}
 
-      {/* Dynamic Strategy & Chat History Section */}
+      {/* Planning history — real sessions from the API */}
       {!collapsed ? (
-        <div className="mt-4 flex min-h-0 flex-1 flex-col border-t border-[#1a1a1a] pt-3">
-          <div className="mb-1.5 flex items-center justify-between px-2 text-[10px] font-semibold uppercase tracking-wider text-[#545458]">
-            <span>Recent History</span>
-          </div>
+        <div className="mt-6 flex min-h-0 flex-1 flex-col border-t border-[#E5E0E8] pt-4">
+          <div className="app-section-label mb-2 px-2">Your planning history</div>
 
-          <div className="max-h-56 space-y-0.5 overflow-y-auto pr-1 custom-scrollbar">
+          <div className="max-h-64 space-y-0.5 overflow-y-auto pr-1 custom-scrollbar">
             {sessions.length === 0 ? (
-              <div className="px-2.5 py-2 text-[11px] text-neutral-600">
-                No chats yet. Start asking above.
-              </div>
+              <p className="px-2 text-[11px] leading-relaxed text-[#77717F]">
+                No research sessions yet. Start one to plan your next video.
+              </p>
             ) : (
               sessions.map((s) => {
                 const isSelected = currentSessionId === s.id;
@@ -153,10 +143,10 @@ function SidebarNav({
                     key={s.id}
                     onClick={() => handleSelectSession(s.id)}
                     className={cn(
-                      'group relative flex items-center justify-between rounded-lg px-2.5 py-1.5 text-xs transition-colors cursor-pointer',
+                      'group relative flex cursor-pointer items-center justify-between rounded-lg px-2.5 py-1.5 text-xs transition-colors',
                       isSelected
-                        ? 'bg-[#1e1e1e] text-white font-medium border border-[#2d2d2d]'
-                        : 'text-neutral-400 hover:bg-[#141414] hover:text-neutral-200'
+                        ? 'bg-white font-bold text-[#171717]'
+                        : 'text-[#625D68] hover:bg-[#F1ECFF] hover:text-[#171717]'
                     )}
                     title={s.title}
                   >
@@ -164,16 +154,17 @@ function SidebarNav({
                       <MessageSquare
                         className={cn(
                           'h-3 w-3 shrink-0',
-                          isSelected ? 'text-indigo-400' : 'text-neutral-500'
+                          isSelected ? 'text-[#4A2E8F]' : 'text-[#A79FB0]'
                         )}
                       />
-                      <span className="truncate text-xs">{s.title}</span>
+                      <span className="truncate">{s.title}</span>
                     </div>
                     <button
                       type="button"
                       onClick={(e) => handleDeleteSession(e, s.id)}
-                      className="ml-1 rounded p-0.5 text-neutral-500 opacity-0 transition-opacity hover:text-red-400 group-hover:opacity-100"
-                      title="Delete chat"
+                      className="ml-1 rounded p-0.5 text-[#A79FB0] opacity-60 transition-opacity hover:text-[#B42332] group-hover:opacity-100 focus-visible:opacity-100"
+                      title="Delete session"
+                      aria-label={`Delete session ${s.title}`}
                     >
                       <Trash2 className="h-3 w-3" />
                     </button>
@@ -187,7 +178,12 @@ function SidebarNav({
         <div className="flex-1" />
       )}
 
-      <div className={cn('mt-auto border-t border-[#1e1e1e] pt-3', collapsed ? 'w-full flex justify-center' : '')}>
+      <div
+        className={cn(
+          'mt-auto border-t border-[#E5E0E8] pt-3',
+          collapsed ? 'flex w-full justify-center' : ''
+        )}
+      >
         <NavLink
           to="/app/settings"
           title={collapsed ? 'Settings' : undefined}
@@ -199,7 +195,7 @@ function SidebarNav({
               <Settings
                 className={cn(
                   'h-4 w-4 shrink-0 transition-colors',
-                  isActive ? 'text-white' : 'text-[#71717a] group-hover:text-[#a1a1aa]'
+                  isActive ? 'text-[#4A2E8F]' : 'text-[#77717F] group-hover:text-[#171717]'
                 )}
               />
               {!collapsed && <span className="tracking-tight">Settings</span>}
@@ -251,23 +247,26 @@ export const MainLayout: React.FC = () => {
 
   const userInitial = user?.full_name?.charAt(0) || user?.email?.charAt(0)?.toUpperCase() || 'U';
   const userName = user?.full_name || user?.email?.split('@')[0] || 'Creator';
+  const planLabel = user?.plan_tier ? `${user.plan_tier} plan` : 'Active plan';
 
   if (location.pathname.startsWith('/app/strategy')) {
     return <Outlet />;
   }
 
+  const isDashboard = location.pathname.startsWith('/app/dashboard');
+
   return (
-    <div className="app-shell flex min-h-screen bg-[#0a0a0a] text-[#ededed]">
+    <div className="app-shell app-shell-light flex min-h-screen bg-[#FBFAF8] text-[#171717]">
       {/* Desktop sidebar */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-40 hidden flex-col border-r border-[#1a1a1a] bg-[#0d0d0d] text-[#ededed] transition-all duration-200 ease-in-out lg:flex',
-          collapsed ? 'w-[68px]' : 'w-60'
+          'app-sidebar-light fixed inset-y-0 left-0 z-40 hidden flex-col border-r border-[#E5E0E8] transition-all duration-200 ease-in-out lg:flex',
+          collapsed ? 'w-[68px]' : 'w-64'
         )}
       >
         <div
           className={cn(
-            'flex h-14 items-center border-b border-[#1a1a1a]',
+            'flex h-16 shrink-0 items-center border-b border-[#E5E0E8]',
             collapsed ? 'justify-center px-2' : 'px-4'
           )}
         >
@@ -276,46 +275,46 @@ export const MainLayout: React.FC = () => {
             className="flex items-center gap-2.5 transition-opacity hover:opacity-85"
             title="Back to Home"
           >
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-pure-white p-0.5 shadow-xs">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white p-0.5 shadow-xs">
               <img src={logo} alt="CreatorIQ" className="h-full w-full object-contain" />
             </div>
             {!collapsed && (
-              <div className="flex items-center gap-1.5">
-                <span className="font-sora text-sm font-semibold tracking-tight text-white">
-                  CreatorIQ
-                </span>
-                <span className="rounded border border-[#2a2a2a] bg-[#1a1a1a] px-1.5 py-0.5 text-[9px] font-medium text-neutral-400">
-                  AI
-                </span>
-              </div>
+              <span className="font-sora text-[15px] font-bold tracking-tight text-[#171717]">
+                CreatorIQ
+              </span>
             )}
           </Link>
         </div>
 
         <SidebarNav collapsed={collapsed} />
 
-        {/* Bottom User Pill */}
-        <div className="border-t border-[#1a1a1a] p-2.5">
+        {/* Bottom account area */}
+        <div className="border-t border-[#E5E0E8] p-2.5">
           {!collapsed ? (
-            <div className="flex items-center justify-between gap-2 rounded-xl p-2 transition-colors hover:bg-[#141414]">
+            <div className="flex items-center justify-between gap-2 rounded-xl p-2 transition-colors hover:bg-white">
               <div className="flex min-w-0 items-center gap-2.5">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-purple-600 text-xs font-bold text-white shadow-xs">
-                  {userInitial}
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#91F5D3] text-xs font-bold text-[#171717]">
+                  {user?.avatar_url ? (
+                    <img src={user.avatar_url} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    userInitial
+                  )}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs font-semibold leading-tight text-white">
+                  <p className="truncate text-xs font-bold leading-tight text-[#171717]">
                     {userName}
                   </p>
-                  <span className="inline-block text-[10px] font-medium text-neutral-500">
-                    Go &bull; Active
+                  <span className="inline-block text-[10px] font-medium capitalize text-[#77717F]">
+                    {planLabel}
                   </span>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => useAuthStore.getState().logout()}
-                className="rounded-lg p-1.5 text-neutral-500 transition-colors hover:bg-[#1f1616] hover:text-red-400 cursor-pointer"
+                className="cursor-pointer rounded-lg p-1.5 text-[#77717F] transition-colors hover:bg-[#FDECEF] hover:text-[#B42332]"
                 title="Log out"
+                aria-label="Log out"
               >
                 <LogOut className="h-3.5 w-3.5" />
               </button>
@@ -323,16 +322,21 @@ export const MainLayout: React.FC = () => {
           ) : (
             <div className="flex flex-col items-center gap-2">
               <div
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-600 text-xs font-bold text-white shadow-xs"
+                className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-[#91F5D3] text-xs font-bold text-[#171717]"
                 title={userName}
               >
-                {userInitial}
+                {user?.avatar_url ? (
+                  <img src={user.avatar_url} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  userInitial
+                )}
               </div>
               <button
                 type="button"
                 onClick={() => useAuthStore.getState().logout()}
-                className="rounded-lg p-1.5 text-neutral-500 transition-colors hover:bg-[#1f1616] hover:text-red-400 cursor-pointer"
+                className="cursor-pointer rounded-lg p-1.5 text-[#77717F] transition-colors hover:bg-[#FDECEF] hover:text-[#B42332]"
                 title="Log out"
+                aria-label="Log out"
               >
                 <LogOut className="h-3.5 w-3.5" />
               </button>
@@ -346,37 +350,38 @@ export const MainLayout: React.FC = () => {
         <div className="fixed inset-0 z-50 lg:hidden">
           <button
             type="button"
-            className="absolute inset-0 bg-black/70 backdrop-blur-xs"
+            className="absolute inset-0 bg-[#171717]/40 backdrop-blur-[2px]"
             aria-label="Close menu"
             onClick={() => setMobileOpen(false)}
           />
-          <aside className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col border-r border-[#1a1a1a] bg-[#0d0d0d] text-white shadow-2xl">
-            <div className="flex h-14 items-center justify-between border-b border-[#1a1a1a] px-4">
+          <aside className="app-sidebar-light absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col border-r border-[#E5E0E8] shadow-xl">
+            <div className="flex h-16 items-center justify-between border-b border-[#E5E0E8] px-4">
               <Link
                 to="/"
                 onClick={() => setMobileOpen(false)}
                 className="flex items-center gap-2.5 transition-opacity hover:opacity-85"
                 title="Back to Home"
               >
-                <div className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-lg bg-pure-white p-0.5">
+                <div className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-lg bg-white p-0.5">
                   <img src={logo} alt="CreatorIQ" className="h-full w-full object-contain" />
                 </div>
-                <span className="font-sora text-sm font-semibold text-white">CreatorIQ</span>
+                <span className="font-sora text-[15px] font-bold text-[#171717]">CreatorIQ</span>
               </Link>
               <button
                 type="button"
                 onClick={() => setMobileOpen(false)}
-                className="rounded-lg p-1.5 text-neutral-400 hover:bg-[#1a1a1a] hover:text-white"
+                className="rounded-lg p-1.5 text-[#625D68] transition-colors hover:bg-white hover:text-[#171717]"
+                aria-label="Close menu"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
             <SidebarNav onNavigate={() => setMobileOpen(false)} />
-            <div className="border-t border-[#1a1a1a] p-3">
+            <div className="border-t border-[#E5E0E8] p-3">
               <button
                 type="button"
                 onClick={() => useAuthStore.getState().logout()}
-                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-[#71717a] hover:bg-[#1a1212] hover:text-[#f87171]"
+                className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-[#625D68] transition-colors hover:bg-white hover:text-[#B42332]"
               >
                 <LogOut className="h-3.5 w-3.5" />
                 Log out
@@ -390,15 +395,15 @@ export const MainLayout: React.FC = () => {
       <div
         className={cn(
           'app-main flex min-h-screen flex-1 flex-col transition-all duration-200 ease-in-out',
-          collapsed ? 'lg:pl-[68px]' : 'lg:pl-60'
+          collapsed ? 'lg:pl-[68px]' : 'lg:pl-64'
         )}
       >
-        <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-[#1a1a1a] bg-[#0a0a0a]/90 px-4 backdrop-blur-md sm:px-6 lg:px-8">
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-[#E5E0E8] bg-white/90 px-4 backdrop-blur-md sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
             {/* Mobile drawer button */}
             <button
               type="button"
-              className="rounded-lg p-1.5 text-neutral-400 hover:bg-[#1a1a1a] lg:hidden"
+              className="rounded-lg p-1.5 text-[#625D68] transition-colors hover:bg-[#F6F3FF] hover:text-[#171717] lg:hidden"
               onClick={() => setMobileOpen(true)}
               aria-label="Open menu"
             >
@@ -409,7 +414,7 @@ export const MainLayout: React.FC = () => {
             <button
               type="button"
               onClick={toggleSidebar}
-              className="hidden rounded-lg border border-transparent p-1.5 text-neutral-400 transition-colors hover:border-[#262626] hover:bg-[#141414] hover:text-white lg:inline-flex cursor-pointer"
+              className="hidden cursor-pointer rounded-lg border border-transparent p-1.5 text-[#625D68] transition-colors hover:border-[#E5E0E8] hover:bg-[#F6F3FF] hover:text-[#171717] lg:inline-flex"
               title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
               aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
@@ -422,115 +427,131 @@ export const MainLayout: React.FC = () => {
 
             <div className="hidden min-w-0 flex-1 sm:block sm:w-80">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-500" />
+                <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#A79FB0]" />
                 <input
                   type="search"
                   placeholder="Search trends, topics, concepts..."
-                  className="h-8 w-full rounded-lg border border-[#242424] bg-[#121212] pl-8 pr-3 text-xs text-[#ededed] placeholder-neutral-500 transition-all focus:border-[#383838] focus:bg-[#141414] focus:outline-none"
+                  className="h-9 w-full rounded-xl border border-[#E5E0E8] bg-[#FBFAF8] pl-9 pr-3 text-xs text-[#171717] placeholder-[#9B94A5] transition-all focus:border-[#C9BCF0] focus:bg-white focus:outline-none"
                 />
               </div>
             </div>
           </div>
 
-          {/* Top-Right Profile Accordion / Popover */}
-          <div className="relative" ref={profileRef}>
-            <button
-              type="button"
-              onClick={() => setProfileOpen((prev) => !prev)}
-              className={cn(
-                'flex items-center gap-2.5 rounded-xl border px-2.5 py-1.5 text-left transition-all cursor-pointer',
-                profileOpen
-                  ? 'border-[#333333] bg-[#181818] text-white'
-                  : 'border-transparent bg-transparent hover:border-[#242424] hover:bg-[#141414]'
-              )}
-              aria-expanded={profileOpen}
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Link
+              to="/app/trends"
+              className="hidden items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-bold text-[#625D68] transition-colors hover:bg-[#F6F3FF] hover:text-[#171717] sm:inline-flex"
             >
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-[#2a2a2a] bg-[#1a1a1a] text-neutral-300">
-                {user?.avatar_url ? (
-                  <img src={user.avatar_url} alt="" className="h-full w-full object-cover" />
-                ) : (
-                  <User className="h-3.5 w-3.5" />
-                )}
-              </div>
-              <span className="hidden max-w-[140px] truncate text-xs font-medium text-[#ededed] sm:inline-block">
-                {user?.full_name ?? 'Creator Account'}
-              </span>
-              <ChevronDown
-                className={cn(
-                  'h-3.5 w-3.5 text-neutral-400 transition-transform duration-200',
-                  profileOpen && 'rotate-180 text-white'
-                )}
-              />
-            </button>
+              View all ideas
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
 
-            {profileOpen && (
-              <div className="absolute right-0 mt-2 w-60 origin-top-right overflow-hidden rounded-xl border border-[#262626] bg-[#121212] shadow-2xl shadow-black/80 animate-in">
-                {/* User Account Info Header */}
-                <div className="border-b border-[#1f1f1f] bg-[#161616]/70 px-4 py-3">
-                  <div className="flex items-center gap-2.5">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-purple-600 text-xs font-bold text-white">
-                      {userInitial}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-xs font-semibold text-white">
-                        {user?.full_name ?? 'Creator Account'}
-                      </p>
-                      <p className="truncate text-[11px] text-neutral-400">
-                        {user?.email ?? ''}
-                      </p>
+            {/* Top-Right Profile Accordion / Popover */}
+            <div className="relative" ref={profileRef}>
+              <button
+                type="button"
+                onClick={() => setProfileOpen((prev) => !prev)}
+                className={cn(
+                  'flex cursor-pointer items-center gap-2.5 rounded-xl border px-2 py-1.5 text-left transition-all',
+                  profileOpen
+                    ? 'border-[#E5E0E8] bg-[#F6F3FF] text-[#171717]'
+                    : 'border-transparent bg-transparent hover:border-[#E5E0E8] hover:bg-[#F6F3FF]'
+                )}
+                aria-expanded={profileOpen}
+              >
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-[#E5E0E8] bg-white text-[#625D68]">
+                  {user?.avatar_url ? (
+                    <img src={user.avatar_url} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <User className="h-3.5 w-3.5" />
+                  )}
+                </div>
+                <span className="hidden max-w-[140px] truncate text-xs font-semibold text-[#171717] sm:inline-block">
+                  {user?.full_name ?? 'Creator Account'}
+                </span>
+                <ChevronDown
+                  className={cn(
+                    'h-3.5 w-3.5 text-[#77717F] transition-transform duration-200',
+                    profileOpen && 'rotate-180 text-[#171717]'
+                  )}
+                />
+              </button>
+
+              {profileOpen && (
+                <div className="animate-in absolute right-0 mt-2 w-60 origin-top-right overflow-hidden rounded-xl border border-[#E5E0E8] bg-white shadow-lg shadow-black/5">
+                  {/* User Account Info Header */}
+                  <div className="border-b border-[#EFEBF2] bg-[#F6F3FF] px-4 py-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#91F5D3] text-xs font-bold text-[#171717]">
+                        {user?.avatar_url ? (
+                          <img src={user.avatar_url} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          userInitial
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs font-bold text-[#171717]">
+                          {user?.full_name ?? 'Creator Account'}
+                        </p>
+                        <p className="truncate text-[11px] text-[#625D68]">{user?.email ?? ''}</p>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Accordion Menu Actions */}
-                <div className="p-1.5">
-                  <Link
-                    to="/app/settings"
-                    onClick={() => setProfileOpen(false)}
-                    className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-neutral-300 transition-colors hover:bg-[#1c1c1c] hover:text-white"
-                  >
-                    <Settings className="h-3.5 w-3.5 text-neutral-400" />
-                    <span>Profile & Preferences</span>
-                  </Link>
-                  <Link
-                    to="/onboarding"
-                    onClick={() => setProfileOpen(false)}
-                    className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-neutral-300 transition-colors hover:bg-[#1c1c1c] hover:text-white"
-                  >
-                    <Sliders className="h-3.5 w-3.5 text-neutral-400" />
-                    <span>Recalibrate Onboarding</span>
-                  </Link>
-                </div>
+                  {/* Accordion Menu Actions */}
+                  <div className="p-1.5">
+                    <Link
+                      to="/app/settings"
+                      onClick={() => setProfileOpen(false)}
+                      className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-[#625D68] transition-colors hover:bg-[#F6F3FF] hover:text-[#171717]"
+                    >
+                      <Settings className="h-3.5 w-3.5 text-[#77717F]" />
+                      <span>Profile &amp; Preferences</span>
+                    </Link>
+                    <Link
+                      to="/onboarding"
+                      onClick={() => setProfileOpen(false)}
+                      className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-[#625D68] transition-colors hover:bg-[#F6F3FF] hover:text-[#171717]"
+                    >
+                      <Sliders className="h-3.5 w-3.5 text-[#77717F]" />
+                      <span>Recalibrate Onboarding</span>
+                    </Link>
+                  </div>
 
-                {/* Logout Footer */}
-                <div className="border-t border-[#1f1f1f] p-1.5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setProfileOpen(false);
-                      useAuthStore.getState().logout();
-                    }}
-                    className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-red-400 transition-colors hover:bg-[#1f1414] hover:text-red-300 cursor-pointer"
-                  >
-                    <LogOut className="h-3.5 w-3.5" />
-                    <span>Log out</span>
-                  </button>
+                  {/* Logout Footer */}
+                  <div className="border-t border-[#EFEBF2] p-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setProfileOpen(false);
+                        useAuthStore.getState().logout();
+                      }}
+                      className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-[#B42332] transition-colors hover:bg-[#FDECEF]"
+                    >
+                      <LogOut className="h-3.5 w-3.5" />
+                      <span>Log out</span>
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </header>
 
         <main
           className={cn(
-            'surface-app flex-1 bg-[#0a0a0a]',
+            'surface-app flex-1 bg-[#FBFAF8]',
             location.pathname.startsWith('/app/strategy')
-              ? 'h-[calc(100vh-3.5rem)] overflow-hidden'
+              ? 'h-[calc(100vh-4rem)] overflow-hidden'
               : 'overflow-x-hidden'
           )}
         >
           {location.pathname.startsWith('/app/strategy') ? (
             <Outlet />
+          ) : isDashboard ? (
+            <div className="w-full px-4 py-8 sm:px-8 sm:py-10 lg:px-12">
+              <Outlet />
+            </div>
           ) : (
             <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
               <Outlet />
@@ -541,5 +562,3 @@ export const MainLayout: React.FC = () => {
     </div>
   );
 };
-
-

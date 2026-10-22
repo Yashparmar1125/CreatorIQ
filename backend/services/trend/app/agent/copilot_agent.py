@@ -19,6 +19,40 @@ logger = logging.getLogger(__name__)
 
 CONVERSATIONAL_GREETINGS = {"hi", "hello", "hey", "hii", "hiii", "yo", "sup", "thanks", "thank you"}
 
+# Tool -> connector id. Tools that read the creator's own profile or memory are
+# always available because they never hit an external source.
+_TOOL_CONNECTORS: dict[str, str] = {
+    "get_my_saved_trends": "trends",
+    "search_trends": "trends",
+    "get_trend_detail": "trends",
+    "find_small_channel_outliers": "trends",
+    "search_web": "web",
+    "search_youtube_live": "youtube",
+}
+_ALWAYS_AVAILABLE_TOOLS = {"get_my_channel", "remember", "recall"}
+
+
+def _filter_tools_by_connectors(
+    tools: list[dict[str, Any]], active_connectors: list[str] | None
+) -> list[dict[str, Any]]:
+    """Restrict the agent tool set to the connectors the client enabled.
+
+    `active_connectors` is None/empty -> no external lookups at all.
+    """
+    if not active_connectors:
+        return [
+            t for t in tools if t["function"]["name"] in _ALWAYS_AVAILABLE_TOOLS
+        ]
+
+    allowed = set(active_connectors)
+    return [
+        t
+        for t in tools
+        if t["function"]["name"] in _ALWAYS_AVAILABLE_TOOLS
+        or _TOOL_CONNECTORS.get(t["function"]["name"]) in allowed
+    ]
+
+
 
 class CopilotAgent:
     def __init__(self) -> None:
@@ -150,8 +184,11 @@ class CopilotAgent:
             messages.append({"role": m.role, "content": m.content})
         messages.append({"role": "user", "content": prompt})
 
-        # Filter tools based on active connectors
-        active_tools = list(AGENT_TOOLS)
+        # Filter tools based on active connectors.
+        # An empty/absent connector list means "no live lookups" - a plain chat
+        # message must not trigger a search. Profile + memory tools stay
+        # available because they read the creator's own data, not the web.
+        active_tools = _filter_tools_by_connectors(AGENT_TOOLS, active_connectors)
         executed_tools_metadata = []
 
         # 6. Autonomous Multi-Turn Agent Loop (Max 4 rounds)
