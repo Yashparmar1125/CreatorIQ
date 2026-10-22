@@ -50,7 +50,7 @@ class LLMRouter:
         # 1. Try Groq (Primary for tool calling and reasoning)
         groq_all_keys = groq_pool.get_all_keys()
         if prefer_provider in ("groq", "any") and groq_all_keys:
-            groq_models = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "openai/gpt-oss-20b", "qwen/qwen3.8-27b"]
+            groq_models = ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b"]
             for model_name in groq_models:
                 for _ in range(len(groq_all_keys)):
                     key = await groq_pool.get_active_key()
@@ -111,7 +111,7 @@ class LLMRouter:
         *,
         tools: list[dict[str, Any]] | None = None,
         temperature: float = 0.6,
-        model: str = "llama-3.3-70b-versatile",
+        model: str = "openai/gpt-oss-120b",
     ) -> dict[str, Any]:
         url = "https://api.groq.com/openai/v1/chat/completions"
         headers = {
