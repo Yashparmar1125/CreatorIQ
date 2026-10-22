@@ -1,4 +1,5 @@
 .landing-page {
+  --header-height: 76px;
   --ink: #171717;
   --muted: #625d68;
   --soft: #77717f;
@@ -167,11 +168,17 @@ html:has(.landing-page) {
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  padding: 104px 0 112px;
+  min-height: calc(100vh - var(--header-height, 76px));
+  min-height: calc(100dvh - var(--header-height, 76px));
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 56px 0 72px;
   text-align: center;
   background-image: url("/background.png");
-  background-size: 97% auto;
-  background-position: center top;
+  background-size: cover;
+  background-position: center center;
   background-repeat: no-repeat;
   background-color: #fbfaf8;
 }
@@ -211,6 +218,7 @@ html:has(.landing-page) {
   display: flex;
   flex-direction: column;
   align-items: center;
+  width: 100%;
 }
 
 .landing-page .hero-content h1 {
@@ -632,7 +640,7 @@ html:has(.landing-page) {
 
 @media (max-width: 1024px) {
   .landing-hero {
-    padding: 84px 0 92px;
+    padding: 56px 0 68px;
   }
 
   .landing-section {
@@ -708,7 +716,9 @@ html:has(.landing-page) {
   }
 
   .landing-hero {
-    padding: 64px 0 72px;
+    min-height: calc(100vh - 120px);
+    min-height: calc(100dvh - 120px);
+    padding: 40px 0 52px;
   }
 
   .hero-ribbon {
@@ -785,7 +795,9 @@ html:has(.landing-page) {
 
 @media (max-width: 560px) {
   .landing-hero {
-    padding: 52px 0 60px;
+    min-height: calc(100vh - 130px);
+    min-height: calc(100dvh - 130px);
+    padding: 36px 0 48px;
   }
 
   .landing-page .hero-content h1 {
