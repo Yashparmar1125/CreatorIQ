@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { api } from '../lib/api';
+import { SSE_CHAT_URL } from '../lib/config';
 
 export interface AgentStep {
   tool: string;
@@ -47,6 +48,7 @@ interface StrategyState {
   // Active connectors in prompt composer
   activeConnectors: string[];
   toggleConnector: (connector: string) => void;
+  setConnectors: (connectors: string[]) => void;
 
   fetchSessions: () => Promise<ChatSession[]>;
   selectSession: (sessionId: string) => Promise<void>;
@@ -56,8 +58,6 @@ interface StrategyState {
   clearCurrentSession: () => void;
 }
 
-const apiBase = import.meta.env.VITE_API_URL || 'https://api.ciq.yashparmar.in/v1';
-
 export const useStrategyStore = create<StrategyState>((set, get) => ({
   sessions: [],
   currentSessionId: null,
@@ -66,7 +66,8 @@ export const useStrategyStore = create<StrategyState>((set, get) => ({
   isLoadingMessages: false,
   isSending: false,
   error: null,
-  activeConnectors: ['trends', 'youtube', 'web'],
+  // Connectors are opt-in: a plain chat message must not trigger live lookups.
+  activeConnectors: [],
 
   toggleConnector: (connector: string) => {
     set((state) => {
@@ -77,6 +78,10 @@ export const useStrategyStore = create<StrategyState>((set, get) => ({
           : [...state.activeConnectors, connector],
       };
     });
+  },
+
+  setConnectors: (connectors: string[]) => {
+    set({ activeConnectors: [...connectors] });
   },
 
   fetchSessions: async () => {
@@ -97,25 +102,30 @@ export const useStrategyStore = create<StrategyState>((set, get) => ({
     try {
       const { data } = await api.get(`/strategy/sessions/${sessionId}`);
       const rawMessages: any[] = data.data || [];
-      const messages: ChatMessage[] = rawMessages.map((m) => ({
-        id: m.id,
-        role: m.role,
-        content: m.content || '',
-        metadata: {
-          steps: m.metadata_json?.tools_used?.map((t: any) => ({
-            tool: t.tool || 'tool',
-            label: t.label || 'Research Step',
-            summary: t.summary || 'Queried live intelligence',
-            status: 'done' as const,
-            duration_ms: t.duration_ms || 0,
-          })) || [],
-          cards: m.metadata_json?.cards || [],
-          tools_used: m.metadata_json?.tools_used || [],
-          provider: m.metadata_json?.provider,
-          model: m.metadata_json?.model,
-        },
-        created_at: m.created_at,
-      }));
+      const messages: ChatMessage[] = rawMessages.map((m) => {
+        // The API returns the message metadata under `metadata`
+        // (see backend strategy_service.get_session_messages).
+        const meta = m.metadata ?? m.metadata_json ?? {};
+        return {
+          id: m.id,
+          role: m.role,
+          content: m.content || '',
+          metadata: {
+            steps: meta.tools_used?.map((t: any) => ({
+              tool: t.tool || 'tool',
+              label: t.label || 'Research Step',
+              summary: t.summary || 'Queried live intelligence',
+              status: 'done' as const,
+              duration_ms: t.duration_ms || 0,
+            })) || [],
+            cards: meta.cards || [],
+            tools_used: meta.tools_used || [],
+            provider: meta.provider,
+            model: meta.model,
+          },
+          created_at: m.created_at,
+        };
+      });
       set({ messages, isLoadingMessages: false });
     } catch (e: any) {
       set({ isLoadingMessages: false, error: e.response?.data?.error?.message || 'Failed to load messages' });
@@ -190,7 +200,7 @@ export const useStrategyStore = create<StrategyState>((set, get) => ({
 
     try {
       const token = localStorage.getItem('ciq_access_token');
-      const streamUrl = `${apiBase}/strategy/chat/stream`;
+      const streamUrl = SSE_CHAT_URL;
 
       const response = await fetch(streamUrl, {
         method: 'POST',
