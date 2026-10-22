@@ -1,8 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router';
+import { motion, useScroll, useTransform } from 'framer-motion';
 import { ArrowRight, ChevronRight, Lightbulb, Sparkles, Youtube } from 'lucide-react';
 import { useAuthStore } from '../stores/useAuthStore';
 import { PublicLayout } from '../components/organisms/PublicLayout';
+import { HeroLivingRibbons } from '../components/marketing/HeroLivingRibbons';
 import { cn } from '../lib/utils';
 
 const featureCards = [
@@ -50,31 +52,56 @@ const opportunities = [
 
 function OpportunitySparkline({ path, tone }: { path: string; tone: 'mint' | 'lilac' }) {
   const stroke = tone === 'mint' ? '#167A59' : '#7C5CD6';
+  const dPath = 'M ' + path.split(' ').join(' L ');
+  const lastPoint = path.split(' ').pop()?.split(',') || ['138', '11'];
+  const lastX = parseFloat(lastPoint[0]);
+  const lastY = parseFloat(lastPoint[1]);
+
   return (
-    <svg
-      className="h-11 w-full"
-      viewBox="0 0 140 44"
-      preserveAspectRatio="none"
-      role="img"
-      aria-label="Illustrative trend shape for this example opportunity"
-    >
-      <polyline
-        points={path}
-        fill="none"
-        stroke={stroke}
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        vectorEffect="non-scaling-stroke"
-      />
-    </svg>
+    <div className="relative h-11 w-full">
+      <svg
+        className="h-11 w-full overflow-visible"
+        viewBox="0 0 140 44"
+        preserveAspectRatio="none"
+        role="img"
+        aria-label="Illustrative trend shape for this example opportunity"
+      >
+        <motion.path
+          d={dPath}
+          fill="none"
+          stroke={stroke}
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          vectorEffect="non-scaling-stroke"
+          initial={{ pathLength: 0, opacity: 0 }}
+          whileInView={{ pathLength: 1, opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 1.4, ease: 'easeOut' }}
+        />
+        <motion.circle
+          cx={lastX}
+          cy={lastY}
+          r="3.5"
+          fill={stroke}
+          initial={{ scale: 0 }}
+          whileInView={{ scale: [0, 1.4, 1] }}
+          viewport={{ once: true }}
+          transition={{ delay: 1.2, duration: 0.4 }}
+        />
+      </svg>
+    </div>
   );
 }
 
 function OpportunityCard({ opportunity }: { opportunity: (typeof opportunities)[number] }) {
   const isMint = opportunity.tone === 'mint';
   return (
-    <article className="flex flex-col justify-between rounded-2xl border border-[#E5E0E8] bg-white p-6 shadow-xs transition-all duration-200 hover:-translate-y-1 hover:shadow-md">
+    <motion.article
+      whileHover={{ y: -5 }}
+      transition={{ duration: 0.2 }}
+      className="flex flex-col justify-between rounded-2xl border border-[#E5E0E8] bg-white p-6 shadow-xs transition-shadow duration-200 hover:shadow-[0_12px_28px_rgba(74,46,143,0.08)]"
+    >
       <div>
         <div className="mb-4">
           <span
@@ -113,7 +140,7 @@ function OpportunityCard({ opportunity }: { opportunity: (typeof opportunities)[
           View details <ChevronRight size={14} aria-hidden="true" />
         </Link>
       </div>
-    </article>
+    </motion.article>
   );
 }
 
@@ -121,46 +148,67 @@ export const LandingPage: React.FC = () => {
   const { isAuthenticated } = useAuthStore();
   const primaryPath = isAuthenticated ? '/app/trends' : '/signup';
 
+  // Smooth scroll parallax for the hero
+  const { scrollY } = useScroll();
+  const heroY = useTransform(scrollY, [0, 600], [0, 120]);
+  const heroOpacity = useTransform(scrollY, [0, 480], [1, 0.5]);
+
   return (
     <PublicLayout>
-      {/* Hero Section — fully consumes screen viewport */}
+      {/* Hero Section — fully consumes screen viewport with interactive animated ribbons */}
       <section
-        className="relative isolate flex min-h-[calc(100vh-76px)] min-h-[calc(100dvh-76px)] flex-col items-center justify-center overflow-hidden bg-[#FBFAF8] bg-cover bg-center bg-no-repeat py-14 text-center"
-        style={{ backgroundImage: 'url(/background.png)' }}
+        className="relative isolate flex min-h-[calc(100vh-76px)] min-h-[calc(100dvh-76px)] flex-col items-center justify-center overflow-hidden bg-[#FBFAF8] py-14 text-center"
         aria-labelledby="hero-title"
       >
-        <div className="pointer-events-none absolute inset-0 z-0" aria-hidden="true">
-          <div className="absolute -left-44 top-10 h-[480px] w-[480px] rounded-full bg-[#91F5D3]/40 blur-[60px]" />
-          <div className="absolute -right-36 -top-28 h-[420px] w-[420px] rounded-full bg-[#FF98C1]/35 blur-[60px]" />
-        </div>
+        {/* Living, Animated 3D Acrylic Ribbons with Mouse Parallax & Specular Glint */}
+        <HeroLivingRibbons />
 
-        <div className="relative z-10 mx-auto flex w-full max-w-[1180px] flex-col items-center px-6 sm:px-8">
-          <h1
+        <motion.div
+          style={{ y: heroY, opacity: heroOpacity }}
+          className="relative z-10 mx-auto flex w-full max-w-[1180px] flex-col items-center px-6 sm:px-8"
+        >
+          {/* Staggered Main Headline */}
+          <motion.h1
             id="hero-title"
-            className="mx-auto max-w-[17ch] text-balance text-4xl font-bold tracking-tight text-[#171717] leading-[1.05] sm:text-5xl lg:text-7xl"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: 'easeOut' }}
+            className="mx-auto max-w-[17ch] text-balance font-sora text-4xl font-bold tracking-tight text-[#171717] leading-[1.05] sm:text-5xl lg:text-7xl"
           >
             Find your next YouTube content based on trends
-          </h1>
-          <p className="mx-auto mt-6 max-w-[58ch] text-base leading-relaxed text-[#625D68] sm:text-lg">
+          </motion.h1>
+
+          <motion.p
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2, ease: 'easeOut' }}
+            className="mx-auto mt-6 max-w-[58ch] text-base leading-relaxed text-[#625D68] sm:text-lg"
+          >
             CreatorIQ turns public YouTube signals into a ranked shortlist for your niche — then
             shows the evidence behind every opportunity.
-          </p>
-          <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
+          </motion.p>
+
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3, ease: 'easeOut' }}
+            className="mt-9 flex flex-wrap items-center justify-center gap-3"
+          >
             <Link
               to={primaryPath}
-              className="inline-flex h-[52px] items-center justify-center gap-2 rounded-full bg-[#FF98C1] px-7 text-[15px] font-bold text-[#171717] shadow-[0_8px_22px_rgba(224,84,138,0.18)] transition-all hover:bg-[#FF86B7] hover:-translate-y-0.5 hover:shadow-[0_10px_26px_rgba(224,84,138,0.24)]"
+              className="inline-flex h-[52px] items-center justify-center gap-2 rounded-full bg-[#FF98C1] px-7 text-[15px] font-bold text-[#171717] shadow-[0_8px_22px_rgba(224,84,138,0.18)] transition-all hover:bg-[#FF86B7] hover:-translate-y-0.5 hover:shadow-[0_10px_26px_rgba(224,84,138,0.24)] active:translate-y-0"
             >
               Explore CreatorIQ
               <ArrowRight size={17} aria-hidden="true" />
             </Link>
             <a
               href="#how"
-              className="inline-flex h-[52px] items-center justify-center gap-2 rounded-full border border-[#D9D2E0] bg-white/90 px-7 text-[15px] font-bold text-[#171717] transition-all hover:border-[#BDB2C9] hover:bg-white hover:-translate-y-0.5"
+              className="inline-flex h-[52px] items-center justify-center gap-2 rounded-full border border-[#D9D2E0] bg-white/90 px-7 text-[15px] font-bold text-[#171717] transition-all hover:border-[#BDB2C9] hover:bg-white hover:-translate-y-0.5 active:translate-y-0"
             >
               How it works
             </a>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </section>
 
       {/* Value Section */}
@@ -170,7 +218,13 @@ export const LandingPage: React.FC = () => {
         aria-labelledby="value-title"
       >
         <div className="mx-auto w-full max-w-[1180px] px-6 sm:px-8">
-          <div className="mb-12 max-w-[760px]">
+          <motion.div
+            initial={{ opacity: 0, y: 32 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-60px' }}
+            transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
+            className="mb-12 max-w-[760px]"
+          >
             <h2
               id="value-title"
               className="text-3xl font-bold tracking-tight text-[#171717] sm:text-4xl lg:text-5xl"
@@ -180,21 +234,34 @@ export const LandingPage: React.FC = () => {
             <p className="mt-4 text-base leading-relaxed text-[#625D68] sm:text-lg">
               Three connected steps take you from raw channel activity to a decision you can act on.
             </p>
-          </div>
+          </motion.div>
 
           <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-            {featureCards.map((feature) => {
+            {featureCards.map((feature, i) => {
               const Icon = feature.icon;
               return (
-                <article
-                  className="flex flex-col justify-between rounded-2xl border border-[#E5E0E8] bg-white p-7 shadow-xs transition-all duration-200 hover:-translate-y-1 hover:shadow-md"
+                <motion.article
                   key={feature.title}
+                  initial={{ opacity: 0, y: 40 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: '-50px' }}
+                  transition={{
+                    duration: 0.6,
+                    delay: i * 0.14,
+                    ease: [0.16, 1, 0.3, 1],
+                  }}
+                  whileHover={{ y: -6, transition: { duration: 0.2 } }}
+                  className="group flex flex-col justify-between rounded-2xl border border-[#E5E0E8] bg-white p-7 shadow-xs transition-shadow duration-200 hover:shadow-[0_14px_32px_rgba(74,46,143,0.08)]"
                 >
                   <div>
                     <div className="mb-5 flex items-center justify-between">
-                      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F6F3FF] text-[#4A2E8F]">
+                      <motion.span
+                        whileHover={{ scale: 1.12, rotate: 6 }}
+                        transition={{ type: 'spring', stiffness: 300, damping: 15 }}
+                        className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F6F3FF] text-[#4A2E8F] transition-colors group-hover:bg-[#F1ECFF]"
+                      >
                         <Icon size={18} aria-hidden="true" />
-                      </span>
+                      </motion.span>
                       <span className="font-mono text-xs font-bold text-[#77717F]">
                         {feature.step}
                       </span>
@@ -206,7 +273,7 @@ export const LandingPage: React.FC = () => {
                       {feature.description}
                     </p>
                   </div>
-                </article>
+                </motion.article>
               );
             })}
           </div>
@@ -219,7 +286,13 @@ export const LandingPage: React.FC = () => {
         aria-labelledby="opportunities-title"
       >
         <div className="mx-auto w-full max-w-[1180px] px-6 sm:px-8">
-          <div className="mb-12 flex flex-col justify-between gap-4 md:flex-row md:items-end">
+          <motion.div
+            initial={{ opacity: 0, y: 32 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-60px' }}
+            transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
+            className="mb-12 flex flex-col justify-between gap-4 md:flex-row md:items-end"
+          >
             <div>
               <h2
                 id="opportunities-title"
@@ -232,11 +305,23 @@ export const LandingPage: React.FC = () => {
               Examples of the CreatorIQ format. Sign in to see live opportunities ranked for your
               niche.
             </p>
-          </div>
+          </motion.div>
 
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            {opportunities.map((opportunity) => (
-              <OpportunityCard key={opportunity.title} opportunity={opportunity} />
+            {opportunities.map((opportunity, i) => (
+              <motion.div
+                key={opportunity.title}
+                initial={{ opacity: 0, y: 44, scale: 0.98 }}
+                whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                viewport={{ once: true, margin: '-50px' }}
+                transition={{
+                  duration: 0.65,
+                  delay: i * 0.18,
+                  ease: [0.16, 1, 0.3, 1],
+                }}
+              >
+                <OpportunityCard opportunity={opportunity} />
+              </motion.div>
             ))}
           </div>
         </div>
@@ -247,7 +332,13 @@ export const LandingPage: React.FC = () => {
         className="border-t border-[#EFEAF3] bg-[#FBFAF8] py-20 text-center"
         aria-labelledby="cta-title"
       >
-        <div className="mx-auto w-full max-w-[1180px] px-6 sm:px-8">
+        <motion.div
+          initial={{ opacity: 0, y: 36, scale: 0.97 }}
+          whileInView={{ opacity: 1, y: 0, scale: 1 }}
+          viewport={{ once: true, margin: '-60px' }}
+          transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
+          className="mx-auto w-full max-w-[1180px] px-6 sm:px-8"
+        >
           <h2
             id="cta-title"
             className="text-3xl font-bold tracking-tight text-[#171717] sm:text-4xl lg:text-5xl"
@@ -258,15 +349,21 @@ export const LandingPage: React.FC = () => {
             Bring an idea. Follow the signals. Decide what deserves a deeper look.
           </p>
           <div className="mt-8 flex justify-center">
-            <Link
-              to={primaryPath}
-              className="inline-flex h-[52px] items-center justify-center gap-2 rounded-full bg-[#FF98C1] px-7 text-[15px] font-bold text-[#171717] shadow-[0_8px_22px_rgba(224,84,138,0.18)] transition-all hover:bg-[#FF86B7] hover:-translate-y-0.5 hover:shadow-[0_10px_26px_rgba(224,84,138,0.24)]"
+            <motion.div
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 20 }}
             >
-              Start exploring
-              <ArrowRight size={17} aria-hidden="true" />
-            </Link>
+              <Link
+                to={primaryPath}
+                className="inline-flex h-[52px] items-center justify-center gap-2 rounded-full bg-[#FF98C1] px-7 text-[15px] font-bold text-[#171717] shadow-[0_8px_22px_rgba(224,84,138,0.18)] transition-all hover:bg-[#FF86B7] hover:-translate-y-0.5 hover:shadow-[0_10px_26px_rgba(224,84,138,0.24)]"
+              >
+                Start exploring
+                <ArrowRight size={17} aria-hidden="true" />
+              </Link>
+            </motion.div>
           </div>
-        </div>
+        </motion.div>
       </section>
     </PublicLayout>
   );

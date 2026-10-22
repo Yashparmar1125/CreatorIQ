@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { useDashboardStore } from '../../../stores/useDashboardStore';
 import { useTrendsStore } from '../../../stores/useTrendsStore';
@@ -105,7 +106,12 @@ export const DashboardPage: React.FC = () => {
       {/* ------------------------------------------------------------------
           Main workspace — the research task is the primary content
          ------------------------------------------------------------------ */}
-      <div className="mx-auto w-full max-w-3xl">
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+        className="mx-auto w-full max-w-3xl"
+      >
         <h1 className="font-sora text-[26px] font-extrabold leading-tight tracking-tight text-[#171717] sm:text-[32px]">
           What content to plan today,{' '}
           <span className="text-[#4A2E8F]">{firstName}</span>?
@@ -194,11 +200,16 @@ export const DashboardPage: React.FC = () => {
           </div>
 
           {/* Inline connector picker — expands the composer instead of floating over it */}
-          {showConnectors && (
-            <div
-              id="dashboard-connector-panel"
-              className="mt-3 w-full min-w-0 rounded-xl border border-[#E5E0E8] bg-[#FBFAF8] p-3"
-            >
+          <AnimatePresence>
+            {showConnectors && (
+              <motion.div
+                id="dashboard-connector-panel"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                className="mt-3 w-full min-w-0 overflow-hidden rounded-xl border border-[#E5E0E8] bg-[#FBFAF8] p-3"
+              >
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#EFEBF2] pb-2">
                 <span className="font-sora text-xs font-bold text-[#171717]">Live research</span>
                 <span className="text-[10px] font-mono text-[#77717F]">REAL-TIME SOURCES</span>
@@ -245,28 +256,34 @@ export const DashboardPage: React.FC = () => {
                   );
                 })}
               </div>
-            </div>
-          )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </form>
 
         {/* Suggested prompts */}
         <div className="mt-6">
           <p className="app-section-label">Try a prompt</p>
           <div className="mt-2.5 flex flex-wrap gap-2">
-            {SUGGESTED_PROMPTS.map((text) => (
-              <button
+            {SUGGESTED_PROMPTS.map((text, i) => (
+              <motion.button
                 key={text}
                 type="button"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: 0.15 + i * 0.05 }}
+                whileHover={{ y: -2, scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => applySuggestion(text)}
-                className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[#E5E0E8] bg-white px-3.5 py-1.5 text-xs font-medium text-[#625D68] transition-colors hover:border-[#C9BCF0] hover:bg-[#F6F3FF] hover:text-[#171717]"
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[#E5E0E8] bg-white px-3.5 py-1.5 text-xs font-medium text-[#625D68] shadow-[0_1px_2px_rgba(23,23,23,0.03)] transition-colors hover:border-[#C9BCF0] hover:bg-[#F6F3FF] hover:text-[#171717]"
               >
                 <Sparkles className="h-3.5 w-3.5 text-[#4A2E8F]" />
                 {text}
-              </button>
+              </motion.button>
             ))}
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* ------------------------------------------------------------------
           Evidence entry point — real opportunities from the personalised feed
@@ -312,52 +329,59 @@ export const DashboardPage: React.FC = () => {
           </div>
         ) : (
           <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-            {topTrends.map((trend) => {
+            {topTrends.map((trend, i) => {
               const score =
                 trend.opportunity_score != null ? Math.round(trend.opportunity_score) : null;
               const why = cleanTrendText(trend.why_predicted);
               return (
-                <Link
+                <motion.div
                   key={trend.id}
-                  to={`/app/trends/detail/${trend.id}`}
-                  className="group flex flex-col gap-3 rounded-2xl border border-[#E5E0E8] bg-white p-4 transition-all duration-150 hover:-translate-y-0.5 hover:border-[#C9BCF0] hover:shadow-[0_10px_24px_rgba(23,23,23,0.06)]"
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: i * 0.08, ease: [0.22, 1, 0.36, 1] }}
+                  whileHover={{ y: -4, transition: { duration: 0.2 } }}
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex flex-wrap gap-1.5">
-                      {trend.niches?.slice(0, 1).map((tag: string) => (
-                        <span
-                          key={tag}
-                          className="rounded-md border border-[#E5E0E8] bg-[#F6F3FF] px-2 py-0.5 text-[10px] font-semibold text-[#4A2E8F]"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                      {trend.archetype && (
-                        <span className="rounded-md border border-[#E5E0E8] bg-[#FBFAF8] px-2 py-0.5 text-[10px] font-semibold capitalize text-[#625D68]">
-                          {trend.archetype}
+                  <Link
+                    to={`/app/trends/detail/${trend.id}`}
+                    className="group flex h-full flex-col gap-3 rounded-2xl border border-[#E5E0E8] bg-white p-4 transition-all duration-150 hover:border-[#C9BCF0] hover:shadow-[0_12px_28px_rgba(74,46,143,0.08)]"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex flex-wrap gap-1.5">
+                        {trend.niches?.slice(0, 1).map((tag: string) => (
+                          <span
+                            key={tag}
+                            className="rounded-md border border-[#E5E0E8] bg-[#F6F3FF] px-2 py-0.5 text-[10px] font-semibold text-[#4A2E8F]"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                        {trend.archetype && (
+                          <span className="rounded-md border border-[#E5E0E8] bg-[#FBFAF8] px-2 py-0.5 text-[10px] font-semibold capitalize text-[#625D68]">
+                            {trend.archetype}
+                          </span>
+                        )}
+                      </div>
+                      {score != null && (
+                        <span className="shrink-0 rounded-md border border-[#B8EED8] bg-[#E8FBF4] px-2 py-0.5 text-[10px] font-bold text-[#0F5C43]">
+                          {score}/100 fit
                         </span>
                       )}
                     </div>
-                    {score != null && (
-                      <span className="shrink-0 rounded-md border border-[#B8EED8] bg-[#E8FBF4] px-2 py-0.5 text-[10px] font-bold text-[#0F5C43]">
-                        {score}/100 fit
-                      </span>
+
+                    <h3 className="text-[13.5px] font-bold leading-snug text-[#171717] group-hover:text-[#4A2E8F]">
+                      {cleanTrendTitle(trend.topic)}
+                    </h3>
+
+                    {why && (
+                      <p className="line-clamp-3 text-xs leading-relaxed text-[#625D68]">{why}</p>
                     )}
-                  </div>
 
-                  <h3 className="text-[13.5px] font-bold leading-snug text-[#171717] group-hover:text-[#4A2E8F]">
-                    {cleanTrendTitle(trend.topic)}
-                  </h3>
-
-                  {why && (
-                    <p className="line-clamp-3 text-xs leading-relaxed text-[#625D68]">{why}</p>
-                  )}
-
-                  <span className="mt-auto inline-flex items-center gap-1 pt-1 text-xs font-bold text-[#4A2E8F]">
-                    Inspect evidence
-                    <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
-                  </span>
-                </Link>
+                    <span className="mt-auto inline-flex items-center gap-1 pt-1 text-xs font-bold text-[#4A2E8F]">
+                      Inspect evidence
+                      <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
+                    </span>
+                  </Link>
+                </motion.div>
               );
             })}
           </div>

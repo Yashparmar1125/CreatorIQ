@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router';
+import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -112,7 +113,12 @@ export const AuthPage: React.FC = () => {
               </div>
 
               {/* Floating White Trend Metric Card with Neobrutalist Mint Drop Shadow */}
-              <div className="rounded-[20px] border-[1.5px] border-[#181719] bg-white p-6 sm:p-7 shadow-[7px_7px_0px_#70F4B8] transition-all hover:-translate-y-0.5 hover:shadow-[8px_8px_0px_#70F4B8]">
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                className="rounded-[20px] border-[1.5px] border-[#181719] bg-white p-6 sm:p-7 shadow-[7px_7px_0px_#70F4B8] transition-all hover:-translate-y-1 hover:shadow-[9px_9px_0px_#70F4B8]"
+              >
                 {/* Booming pill tag */}
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#e8faf3] text-[#059669] text-xs font-bold border border-[#a7f3d0]/60">
                   <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
@@ -139,12 +145,17 @@ export const AuthPage: React.FC = () => {
                     <div className="mt-0.5">81% model confidence</div>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             </div>
           </div>
 
           {/* Right Column: Auth Form */}
-          <div className="lg:col-span-5 flex justify-center lg:justify-start w-full">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+            className="lg:col-span-5 flex justify-center lg:justify-start w-full"
+          >
             <div className="w-full max-w-[390px]">
               {/* Title & Subtitle */}
               <div className="mb-6 sm:mb-7">
@@ -300,7 +311,7 @@ export const AuthPage: React.FC = () => {
                 .
               </p>
             </div>
-          </div>
+          </motion.div>
         </div>
       </main>
 

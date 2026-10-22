@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams, Link } from 'react-router';
+import { motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useStrategyStore, type AgentStep, type AgentCard } from '../../../stores/useStrategyStore';
@@ -105,9 +106,13 @@ const InteractiveCardsList: React.FC<{ cards: AgentCard[] }> = ({ cards }) => {
         if (c.card_type === 'trend') {
           const t = c.payload;
           return (
-            <div
+            <motion.div
               key={i}
-              className="rounded-2xl border border-[#E5E0E8] bg-white p-4 flex flex-col justify-between space-y-3 shadow-xs hover:border-[#C9C0DA] transition-all"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, delay: i * 0.05 }}
+              whileHover={{ y: -3, transition: { duration: 0.2 } }}
+              className="rounded-2xl border border-[#E5E0E8] bg-white p-4 flex flex-col justify-between space-y-3 shadow-xs hover:border-[#C9C0DA] hover:shadow-[0_8px_20px_rgba(74,46,143,0.06)] transition-all"
             >
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between gap-2">
@@ -137,16 +142,20 @@ const InteractiveCardsList: React.FC<{ cards: AgentCard[] }> = ({ cards }) => {
                   </button>
                 )}
               </div>
-            </div>
+            </motion.div>
           );
         }
 
         if (c.card_type === 'video') {
           const v = c.payload;
           return (
-            <div
+            <motion.div
               key={i}
-              className="rounded-2xl border border-[#E5E0E8] bg-white p-4 flex flex-col justify-between space-y-3 shadow-xs hover:border-[#C9C0DA] transition-all"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, delay: i * 0.05 }}
+              whileHover={{ y: -3, transition: { duration: 0.2 } }}
+              className="rounded-2xl border border-[#E5E0E8] bg-white p-4 flex flex-col justify-between space-y-3 shadow-xs hover:border-[#C9C0DA] hover:shadow-[0_8px_20px_rgba(74,46,143,0.06)] transition-all"
             >
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between gap-2">
@@ -163,7 +172,7 @@ const InteractiveCardsList: React.FC<{ cards: AgentCard[] }> = ({ cards }) => {
                 <h4 className="text-sm font-bold text-[#171717] line-clamp-2">{v.title}</h4>
                 <div className="flex items-center gap-2 text-[11px] text-[#625D68]">
                   <span>{v.channel}</span>
-                  {v.views !== undefined && <span>â€¢ {Number(v.views).toLocaleString()} views</span>}
+                  {v.views !== undefined && <span>• {Number(v.views).toLocaleString()} views</span>}
                 </div>
               </div>
               {v.url && (
@@ -179,7 +188,7 @@ const InteractiveCardsList: React.FC<{ cards: AgentCard[] }> = ({ cards }) => {
                   </a>
                 </div>
               )}
-            </div>
+            </motion.div>
           );
         }
 

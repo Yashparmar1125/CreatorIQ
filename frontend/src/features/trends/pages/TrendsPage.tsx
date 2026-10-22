@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
+import { motion } from 'framer-motion';
 import { useTrendsStore, type Trend } from '../../../stores/useTrendsStore';
 import { FeedHistoryDrawer } from '../components/FeedHistoryDrawer';
 import { TrendMiniChart } from '../components/TrendMiniChart';
@@ -274,19 +275,20 @@ export const TrendsPage: React.FC = () => {
         {DEMAND_FILTERS.map((d) => {
           const isActive = demandFilter === d.key;
           return (
-            <button
+            <motion.button
               key={d.key}
               type="button"
+              whileTap={{ scale: 0.95 }}
               onClick={() => setDemandFilter(d.key)}
               aria-pressed={isActive}
-              className={`inline-flex cursor-pointer items-center rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+              className={`inline-flex cursor-pointer items-center rounded-full border px-3 py-1.5 text-xs font-semibold transition-all ${
                 isActive
-                  ? 'border-[#171717] bg-[#171717] text-white'
+                  ? 'border-[#171717] bg-[#171717] text-white shadow-sm'
                   : 'border-[#E5E0E8] bg-white text-[#625D68] hover:border-[#C9BCF0] hover:bg-[#F6F3FF] hover:text-[#171717]'
               }`}
             >
               {d.label}
-            </button>
+            </motion.button>
           );
         })}
 
@@ -295,21 +297,22 @@ export const TrendsPage: React.FC = () => {
         {FORMAT_TABS.map(({ key, label, Icon }) => {
           const isActive = activeFormatFilter === key;
           return (
-            <button
+            <motion.button
               key={key}
               type="button"
+              whileTap={{ scale: 0.92 }}
               onClick={() => setFormatFilter(key)}
               aria-pressed={isActive}
               aria-label={label}
               title={label}
-              className={`inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border transition-colors ${
+              className={`inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border transition-all ${
                 isActive
-                  ? 'border-[#171717] bg-[#171717] text-white'
+                  ? 'border-[#171717] bg-[#171717] text-white shadow-sm'
                   : 'border-[#E5E0E8] bg-white text-[#77717F] hover:border-[#C9BCF0] hover:bg-[#F6F3FF] hover:text-[#171717]'
               }`}
             >
               <Icon className="h-3.5 w-3.5" />
-            </button>
+            </motion.button>
           );
         })}
       </div>
@@ -410,7 +413,7 @@ export const TrendsPage: React.FC = () => {
          ---------------------------------------------------------- */}
       {!isLoading && filteredTrends.length > 0 && (
         <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
-          {filteredTrends.map((trend: Trend) => {
+          {filteredTrends.map((trend: Trend, i: number) => {
             const score =
               trend.opportunity_score != null
                 ? Math.round(trend.opportunity_score)
@@ -426,7 +429,7 @@ export const TrendsPage: React.FC = () => {
                   ? trend.volume
                   : null;
             /* Views of the topic's videos divided by their own channel's
-               subscriber count â€” how far a video travels beyond its channel. */
+               subscriber count — how far a video travels beyond its channel. */
             const reachValue =
               trend.reach_ratio_median != null && trend.reach_ratio_median > 0
                 ? `${Number(trend.reach_ratio_median).toFixed(1)}x`
@@ -438,9 +441,13 @@ export const TrendsPage: React.FC = () => {
                 : null;
 
             return (
-              <article
+              <motion.article
                 key={trend.id}
-                className="group flex flex-col rounded-2xl border border-[#E5E0E8] bg-white p-5 transition-colors hover:border-[#C9BCF0]"
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: i * 0.08, ease: [0.22, 1, 0.36, 1] }}
+                whileHover={{ y: -4, transition: { duration: 0.2 } }}
+                className="group flex flex-col rounded-2xl border border-[#E5E0E8] bg-white p-5 transition-shadow hover:border-[#C9BCF0] hover:shadow-[0_12px_28px_rgba(74,46,143,0.08)]"
               >
                 {/* Badge row */}
                 <div className="flex items-start justify-between gap-3">
@@ -544,7 +551,7 @@ export const TrendsPage: React.FC = () => {
                     <ArrowRight className="h-3.5 w-3.5" />
                   </Link>
                 </div>
-              </article>
+              </motion.article>
             );
           })}
         </div>

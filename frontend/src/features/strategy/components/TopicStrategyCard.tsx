@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import {
   Zap,
   Copy,
@@ -84,7 +85,13 @@ export const TopicStrategyCard: React.FC<TopicStrategyCardProps> = ({
   const tabIdle = 'border-transparent text-[#625D68] hover:text-[#171717]';
 
   return (
-    <div className="group relative rounded-2xl border border-[#E5E0E8] bg-white shadow-xs overflow-hidden transition-all hover:border-[#C9C0DA] my-4">
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+      whileHover={{ y: -3, transition: { duration: 0.2 } }}
+      className="group relative rounded-2xl border border-[#E5E0E8] bg-white shadow-xs overflow-hidden transition-all hover:border-[#C9C0DA] hover:shadow-[0_12px_28px_rgba(74,46,143,0.08)] my-4"
+    >
       {/* â”€â”€ CARD HEADER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="p-4 sm:p-5 border-b border-[#EFEBF2] space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2.5">
@@ -411,6 +418,6 @@ export const TopicStrategyCard: React.FC<TopicStrategyCardProps> = ({
           <ChevronRight className="h-3.5 w-3.5 transition-transform group-hover/btn:translate-x-0.5" />
         </button>
       </div>
-    </div>
+    </motion.div>
   );
 };

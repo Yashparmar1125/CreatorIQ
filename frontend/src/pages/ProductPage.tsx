@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router';
+import { motion } from 'framer-motion';
 import {
   ArrowRight,
   BarChart2,
@@ -93,13 +94,21 @@ export const ProductPage: React.FC = () => {
         description="Each part answers a specific question in your content pipeline. Anything still in development is labelled honestly."
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {modules.map((mod) => {
+          {modules.map((mod, i) => {
             const Icon = mod.icon;
             const available = mod.status === 'Available';
             return (
-              <article key={mod.title} className="flex flex-col p-7 border border-[#E5E0E8] rounded-[18px] bg-white shadow-[0_1px_2px_rgba(23,23,23,0.03)]">
+              <motion.article
+                key={mod.title}
+                initial={{ opacity: 0, y: 32 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-40px' }}
+                transition={{ duration: 0.55, delay: i * 0.12, ease: [0.16, 1, 0.3, 1] }}
+                whileHover={{ y: -6, transition: { duration: 0.2 } }}
+                className="group flex flex-col p-7 border border-[#E5E0E8] rounded-[18px] bg-white shadow-[0_1px_2px_rgba(23,23,23,0.03)] transition-shadow duration-200 hover:shadow-[0_12px_28px_rgba(74,46,143,0.08)]"
+              >
                 <div className="flex items-start justify-between gap-3">
-                  <span className="grid place-items-center w-10 h-10 rounded-xl bg-[#F1ECFF] text-[#4A2E8F]">
+                  <span className="grid place-items-center w-10 h-10 rounded-xl bg-[#F1ECFF] text-[#4A2E8F] transition-colors group-hover:bg-[#E9DFFE]">
                     <Icon size={18} aria-hidden="true" />
                   </span>
                   <span
@@ -120,7 +129,7 @@ export const ProductPage: React.FC = () => {
                     </li>
                   ))}
                 </ul>
-              </article>
+              </motion.article>
             );
           })}
         </div>
@@ -132,7 +141,14 @@ export const ProductPage: React.FC = () => {
         className="border-t border-[#EFEAF2] bg-white"
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <article className="flex flex-col p-7 border border-[#E5E0E8] rounded-[18px] bg-white shadow-[0_1px_2px_rgba(23,23,23,0.03)]">
+          <motion.article
+            initial={{ opacity: 0, x: -24 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, margin: '-40px' }}
+            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            whileHover={{ y: -4 }}
+            className="flex flex-col p-7 border border-[#E5E0E8] rounded-[18px] bg-white shadow-[0_1px_2px_rgba(23,23,23,0.03)] hover:shadow-md transition-shadow"
+          >
             <h3 className="mb-2.5 font-sora text-xl font-bold tracking-[-0.015em] text-[#171717]">Signal sources</h3>
             <ul className="mt-2 list-none p-0">
               <li className="flex items-baseline justify-between gap-4 py-3 border-b border-[#F0EDF3] text-sm text-[#625D68]">
@@ -148,9 +164,16 @@ export const ProductPage: React.FC = () => {
                 <strong className="font-semibold text-[#171717] text-right">Personalization</strong>
               </li>
             </ul>
-          </article>
+          </motion.article>
 
-          <article className="flex flex-col p-7 border border-[#CFEDE1] rounded-[18px] bg-[#F1FCF8] shadow-[0_1px_2px_rgba(23,23,23,0.03)]">
+          <motion.article
+            initial={{ opacity: 0, x: 24 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, margin: '-40px' }}
+            transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+            whileHover={{ y: -4 }}
+            className="flex flex-col p-7 border border-[#CFEDE1] rounded-[18px] bg-[#F1FCF8] shadow-[0_1px_2px_rgba(23,23,23,0.03)] hover:shadow-md transition-shadow"
+          >
             <h3 className="mb-2.5 font-sora text-xl font-bold tracking-[-0.015em] text-[#171717]">On every refresh</h3>
             <ol className="mt-2 list-none p-0 grid gap-3.5 [counter-reset:step]">
               <li className="flex gap-3 text-sm leading-relaxed text-[#3F3A45] before:[counter-increment:step] before:content-[counter(step)] before:shrink-0 before:grid before:place-items-center before:w-6 before:h-6 before:rounded-full before:bg-[#F1ECFF] before:text-[#4A2E8F] before:font-mono before:text-[11px] before:font-bold">Filter concepts by niche fit and quality</li>
@@ -158,22 +181,30 @@ export const ProductPage: React.FC = () => {
               <li className="flex gap-3 text-sm leading-relaxed text-[#3F3A45] before:[counter-increment:step] before:content-[counter(step)] before:shrink-0 before:grid before:place-items-center before:w-6 before:h-6 before:rounded-full before:bg-[#F1ECFF] before:text-[#4A2E8F] before:font-mono before:text-[11px] before:font-bold">Apply freshness so repeat feeds stay useful</li>
               <li className="flex gap-3 text-sm leading-relaxed text-[#3F3A45] before:[counter-increment:step] before:content-[counter(step)] before:shrink-0 before:grid before:place-items-center before:w-6 before:h-6 before:rounded-full before:bg-[#F1ECFF] before:text-[#4A2E8F] before:font-mono before:text-[11px] before:font-bold">Add generated angles and title ideas where available</li>
             </ol>
-          </article>
+          </motion.article>
         </div>
       </MarketingSection>
 
       <MarketingSection title="Built on principles that matter">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {pillars.map((p) => {
+          {pillars.map((p, i) => {
             const Icon = p.icon;
             return (
-              <article key={p.title} className="flex flex-col p-7 border border-[#E5E0E8] rounded-[18px] bg-white shadow-[0_1px_2px_rgba(23,23,23,0.03)]">
-                <span className="grid place-items-center w-10 h-10 rounded-xl bg-[#F1ECFF] text-[#4A2E8F] mb-5">
+              <motion.article
+                key={p.title}
+                initial={{ opacity: 0, y: 32 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-40px' }}
+                transition={{ duration: 0.55, delay: i * 0.12, ease: [0.16, 1, 0.3, 1] }}
+                whileHover={{ y: -6, transition: { duration: 0.2 } }}
+                className="group flex flex-col p-7 border border-[#E5E0E8] rounded-[18px] bg-white shadow-[0_1px_2px_rgba(23,23,23,0.03)] hover:shadow-[0_12px_28px_rgba(74,46,143,0.08)] transition-all"
+              >
+                <span className="grid place-items-center w-10 h-10 rounded-xl bg-[#F1ECFF] text-[#4A2E8F] mb-5 transition-colors group-hover:bg-[#E9DFFE]">
                   <Icon size={18} aria-hidden="true" />
                 </span>
                 <h3 className="mb-2.5 font-sora text-xl font-bold tracking-[-0.015em] text-[#171717]">{p.title}</h3>
                 <p className="text-[15px] leading-[1.65] text-[#625D68]">{p.body}</p>
-              </article>
+              </motion.article>
             );
           })}
         </div>

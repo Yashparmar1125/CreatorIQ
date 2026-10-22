@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router';
+import { motion } from 'framer-motion';
 import { ArrowRight, BarChart3, Globe, Shield, TrendingUp, Zap } from 'lucide-react';
 import { PublicLayout } from '../components/organisms/PublicLayout';
 import { MarketingHero, MarketingSection, MarketingCta } from '../components/marketing/MarketingSections';
@@ -95,7 +96,15 @@ export const InsightsPage: React.FC = () => {
           {steps.map((step, index) => {
             const Icon = step.icon;
             return (
-              <article key={step.title} className="flex flex-col p-6 sm:p-7 border border-[#E5E0E8] rounded-[18px] bg-white shadow-[0_1px_2px_rgba(23,23,23,0.03)]">
+              <motion.article
+                key={step.title}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-40px' }}
+                transition={{ duration: 0.45, delay: index * 0.1, ease: [0.22, 1, 0.36, 1] }}
+                whileHover={{ y: -4, transition: { duration: 0.2 } }}
+                className="flex flex-col p-6 sm:p-7 border border-[#E5E0E8] rounded-[18px] bg-white shadow-[0_1px_2px_rgba(23,23,23,0.03)] hover:shadow-[0_10px_24px_rgba(74,46,143,0.07)] hover:border-[#D5CBE5] transition-all"
+              >
                 <div className="flex items-center justify-between">
                   <span className="grid place-items-center w-10 h-10 rounded-xl bg-[#F1ECFF] text-[#4A2E8F]">
                     <Icon size={18} aria-hidden="true" />
@@ -106,7 +115,7 @@ export const InsightsPage: React.FC = () => {
                 </div>
                 <h3 className="mt-5 mb-2 font-sora text-[17px] font-bold tracking-[-0.015em] text-[#171717]">{step.title}</h3>
                 <p className="text-sm leading-relaxed text-[#625D68]">{step.body}</p>
-              </article>
+              </motion.article>
             );
           })}
         </div>
@@ -118,30 +127,46 @@ export const InsightsPage: React.FC = () => {
         className="border-t border-[#EFEAF2] bg-white"
       >
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {signals.map((signal) => (
-            <article key={signal.title} className="flex flex-col p-6 sm:p-7 border border-[#E5E0E8] rounded-[18px] bg-white shadow-[0_1px_2px_rgba(23,23,23,0.03)]">
+          {signals.map((signal, i) => (
+            <motion.article
+              key={signal.title}
+              initial={{ opacity: 0, y: 18 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-40px' }}
+              transition={{ duration: 0.45, delay: i * 0.08, ease: [0.22, 1, 0.36, 1] }}
+              whileHover={{ y: -3, transition: { duration: 0.2 } }}
+              className="flex flex-col p-6 sm:p-7 border border-[#E5E0E8] rounded-[18px] bg-white shadow-[0_1px_2px_rgba(23,23,23,0.03)] hover:shadow-[0_8px_20px_rgba(74,46,143,0.06)] hover:border-[#D5CBE5] transition-all"
+            >
               <h3 className="mb-2 font-sora text-[17px] font-bold tracking-[-0.015em] text-[#171717]">{signal.title}</h3>
               <p className="text-sm leading-relaxed text-[#625D68]">{signal.body}</p>
               <p className="mt-4 border-t border-[#F0EDF3] pt-3 text-[12px] leading-relaxed text-[#9B94A5]">
                 {signal.caveat}
               </p>
-            </article>
+            </motion.article>
           ))}
         </div>
       </MarketingSection>
 
       <MarketingSection title="Our editorial principles">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {principles.map((p) => {
+          {principles.map((p, i) => {
             const Icon = p.icon;
             return (
-              <article key={p.title} className="flex flex-col p-7 border border-[#E5E0E8] rounded-[18px] bg-white shadow-[0_1px_2px_rgba(23,23,23,0.03)]">
+              <motion.article
+                key={p.title}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-40px' }}
+                transition={{ duration: 0.45, delay: i * 0.1, ease: [0.22, 1, 0.36, 1] }}
+                whileHover={{ y: -4, transition: { duration: 0.2 } }}
+                className="flex flex-col p-7 border border-[#E5E0E8] rounded-[18px] bg-white shadow-[0_1px_2px_rgba(23,23,23,0.03)] hover:shadow-[0_10px_24px_rgba(74,46,143,0.07)] hover:border-[#D5CBE5] transition-all"
+              >
                 <span className="grid place-items-center w-10 h-10 rounded-xl bg-[#F1ECFF] text-[#4A2E8F] mb-5">
                   <Icon size={18} aria-hidden="true" />
                 </span>
                 <h3 className="mb-2.5 font-sora text-xl font-bold tracking-[-0.015em] text-[#171717]">{p.title}</h3>
                 <p className="text-[15px] leading-[1.65] text-[#625D68]">{p.body}</p>
-              </article>
+              </motion.article>
             );
           })}
         </div>

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router';
+import { motion } from 'framer-motion';
 import { useTrendsStore, type Trend } from '../../../stores/useTrendsStore';
 import {
   cleanTrendText,
@@ -383,7 +384,12 @@ export const TrendDetailPage: React.FC = () => {
     });
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-5 pb-16">
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+      className="mx-auto w-full max-w-5xl space-y-5 pb-16"
+    >
       {/* Breadcrumb + primary actions */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E5E0E8] pb-3.5">
         <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-xs">
@@ -924,6 +930,6 @@ export const TrendDetailPage: React.FC = () => {
           Back to all trends
         </Link>
       </p>
-    </div>
+    </motion.div>
   );
 };

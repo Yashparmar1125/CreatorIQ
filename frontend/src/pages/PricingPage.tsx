@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router';
+import { motion } from 'framer-motion';
 import {
   ArrowRight,
   Building2,
@@ -140,12 +141,17 @@ export const PricingPage: React.FC = () => {
 
       <MarketingSection>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
-          {highlights.map((h) => {
+          {highlights.map((h, i) => {
             const Icon = h.icon;
             return (
-              <div
+              <motion.div
                 key={h.title}
-                className="flex items-start gap-3 rounded-2xl border border-[#E5E0E8] bg-white p-5 shadow-[0_1px_2px_rgba(23,23,23,0.03)]"
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-40px' }}
+                transition={{ duration: 0.45, delay: i * 0.1, ease: [0.22, 1, 0.36, 1] }}
+                whileHover={{ y: -3, transition: { duration: 0.2 } }}
+                className="flex items-start gap-3 rounded-2xl border border-[#E5E0E8] bg-white p-5 shadow-[0_1px_2px_rgba(23,23,23,0.03)] hover:shadow-[0_8px_20px_rgba(74,46,143,0.06)] hover:border-[#D5CBE5] transition-shadow cursor-default"
               >
                 <span className="grid place-items-center w-10 h-10 rounded-xl bg-[#F1ECFF] text-[#4A2E8F] shrink-0">
                   <Icon size={17} aria-hidden="true" />
@@ -154,25 +160,30 @@ export const PricingPage: React.FC = () => {
                   <p className="text-sm font-semibold text-[#171717]">{h.title}</p>
                   <p className="mt-1 text-[13px] leading-relaxed text-[#77717F]">{h.desc}</p>
                 </div>
-              </div>
+              </motion.div>
             );
           })}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {plans.map((plan) => {
+          {plans.map((plan, i) => {
             const Icon = plan.icon;
             return (
-              <article
+              <motion.article
                 key={plan.name}
-                className={`relative flex flex-col p-7 border rounded-[18px] bg-white transition-all ${
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-40px' }}
+                transition={{ duration: 0.5, delay: i * 0.12, ease: [0.22, 1, 0.36, 1] }}
+                whileHover={{ y: -6, transition: { duration: 0.25 } }}
+                className={`relative flex flex-col p-7 border rounded-[18px] bg-white transition-shadow ${
                   plan.popular
-                    ? 'border-[#C9B8EE] shadow-[0_14px_34px_rgba(74,46,143,0.1)]'
-                    : 'border-[#E5E0E8] shadow-[0_1px_2px_rgba(23,23,23,0.03)]'
+                    ? 'border-[#C9B8EE] shadow-[0_14px_34px_rgba(74,46,143,0.12)] hover:shadow-[0_22px_44px_rgba(74,46,143,0.18)]'
+                    : 'border-[#E5E0E8] shadow-[0_1px_2px_rgba(23,23,23,0.03)] hover:shadow-[0_12px_28px_rgba(23,23,23,0.07)] hover:border-[#D5CBE5]'
                 }`}
               >
                 {plan.popular && (
-                  <span className="absolute -top-3 left-6 px-3 py-1 rounded-full bg-[#FF98C1] text-[#171717] text-[11px] font-bold tracking-wide uppercase">
+                  <span className="absolute -top-3 left-6 px-3 py-1 rounded-full bg-[#FF98C1] text-[#171717] text-[11px] font-bold tracking-wide uppercase shadow-sm">
                     Most popular
                   </span>
                 )}
@@ -223,15 +234,21 @@ export const PricingPage: React.FC = () => {
                     {plan.cta}
                   </Link>
                 )}
-              </article>
+              </motion.article>
             );
           })}
         </div>
 
-        <p className="mt-6 p-3.5 sm:px-4 border border-[#E5E0E8] rounded-xl bg-white text-[13px] leading-relaxed text-[#625D68]">
+        <motion.p
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+          className="mt-6 p-3.5 sm:px-4 border border-[#E5E0E8] rounded-xl bg-white text-[13px] leading-relaxed text-[#625D68]"
+        >
           Analytics and the content planner are still in development. Current workspaces include
           trend discovery, trend detail, strategy briefs and channel overview.
-        </p>
+        </motion.p>
       </MarketingSection>
 
       <MarketingSection
@@ -239,7 +256,13 @@ export const PricingPage: React.FC = () => {
         description="See what is included at each tier."
         className="border-t border-[#EFEAF2] bg-white"
       >
-        <div className="overflow-x-auto rounded-2xl border border-[#E5E0E8] bg-white">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-40px' }}
+          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          className="overflow-x-auto rounded-2xl border border-[#E5E0E8] bg-white shadow-sm"
+        >
           <table className="w-full min-w-[560px] border-collapse text-left text-sm">
             <thead>
               <tr>
@@ -253,7 +276,7 @@ export const PricingPage: React.FC = () => {
             </thead>
             <tbody>
               {comparison.map((row) => (
-                <tr key={row.feature} className="last:[&>td]:border-b-0">
+                <tr key={row.feature} className="last:[&>td]:border-b-0 hover:bg-[#FDFBFF] transition-colors">
                   <td className="px-5 py-3.5 border-b border-[#F0EDF3] text-[#3F3A45] font-medium text-left">{row.feature}</td>
                   <td className="px-5 py-3.5 border-b border-[#F0EDF3] text-center text-[#171717]">
                     <FeatureCell value={row.free} />
@@ -268,13 +291,21 @@ export const PricingPage: React.FC = () => {
               ))}
             </tbody>
           </table>
-        </div>
+        </motion.div>
       </MarketingSection>
 
       <MarketingSection title="Frequently asked questions">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {faqs.map((faq) => (
-            <article key={faq.q} className="p-6 border border-[#E5E0E8] rounded-[18px] bg-white shadow-[0_1px_2px_rgba(23,23,23,0.03)]">
+          {faqs.map((faq, i) => (
+            <motion.article
+              key={faq.q}
+              initial={{ opacity: 0, y: 18 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-30px' }}
+              transition={{ duration: 0.45, delay: i * 0.08, ease: [0.22, 1, 0.36, 1] }}
+              whileHover={{ y: -3, transition: { duration: 0.2 } }}
+              className="p-6 border border-[#E5E0E8] rounded-[18px] bg-white shadow-[0_1px_2px_rgba(23,23,23,0.03)] hover:shadow-[0_8px_20px_rgba(74,46,143,0.06)] hover:border-[#D5CBE5] transition-all"
+            >
               <div className="flex items-start gap-3">
                 <HelpCircle
                   size={17}
@@ -286,7 +317,7 @@ export const PricingPage: React.FC = () => {
                   <p className="text-sm leading-relaxed text-[#625D68]">{faq.a}</p>
                 </div>
               </div>
-            </article>
+            </motion.article>
           ))}
         </div>
         <p className="mt-8 text-center text-sm text-[#625D68]">
