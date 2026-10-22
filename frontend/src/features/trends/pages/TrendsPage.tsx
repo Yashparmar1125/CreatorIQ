@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 
 /* ------------------------------------------------------------------ *
- * Content-type filters — these map to the existing supported formats
+ * Content-type filters â€” these map to the existing supported formats
  * ------------------------------------------------------------------ */
 const FORMAT_TABS = [
   { key: 'all' as const, label: 'All content types', Icon: Layers },
@@ -35,7 +35,7 @@ const FORMAT_TABS = [
 ];
 
 /* ------------------------------------------------------------------ *
- * Demand filters — driven by the real `lifecycle` value the API returns
+ * Demand filters â€” driven by the real `lifecycle` value the API returns
  * (emerging / growing / peaking / declining / expired)
  * ------------------------------------------------------------------ */
 type DemandKey = 'all' | 'growing' | 'peaking' | 'moderate' | 'declining';
@@ -144,7 +144,7 @@ export const TrendsPage: React.FC = () => {
     return trends.filter((t) => t.supported_formats?.includes(activeFormatFilter));
   }, [trends, savedTrends, activeFormatFilter]);
 
-  /** Demand filter — applied on top of the content-type filter. */
+  /** Demand filter â€” applied on top of the content-type filter. */
   const filteredTrends = useMemo(() => {
     const active = DEMAND_FILTERS.find((d) => d.key === demandFilter);
     if (!active || !active.lifecycles) return formatFiltered;
@@ -175,12 +175,12 @@ export const TrendsPage: React.FC = () => {
          ---------------------------------------------------------- */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="font-sora text-[22px] font-extrabold leading-tight tracking-tight text-[#171717] sm:text-[28px]">
+          <h1 className="font-cal-sans text-[22px] font-extrabold leading-tight tracking-tight text-[#171717] sm:text-[28px]">
             Content opportunities
           </h1>
           <p className="mt-1.5 max-w-xl text-[13px] leading-relaxed text-[#625D68]">
             {activeSearch
-              ? `Results for “${activeSearch}”`
+              ? `Results for â€œ${activeSearch}â€`
               : isPersonalized
                 ? 'Ranked for your niche from the live signal feed.'
                 : 'Browse the collected signal feed.'}
@@ -194,7 +194,7 @@ export const TrendsPage: React.FC = () => {
               onClick={() => loadCurrentFeed()}
               className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[#D9CEF5] bg-[#F1ECFF] px-3 py-1.5 text-xs font-semibold text-[#4A2E8F] transition-colors hover:bg-[#E7E0FF]"
             >
-              Past snapshot · Back to current
+              Past snapshot Â· Back to current
             </button>
           )}
           <button
@@ -234,7 +234,7 @@ export const TrendsPage: React.FC = () => {
           e.preventDefault();
           handlePredict();
         }}
-        className="mt-5 flex items-center gap-2 rounded-2xl border border-[#E5E0E8] bg-white p-1.5 pl-4 transition-shadow focus-within:border-[#C9BCF0] focus-within:shadow-[0_0_0_3px_rgba(241,236,255,0.9)]"
+        className="app-field mt-5 flex items-center gap-2 p-1.5 pl-4"
       >
         <Search className="h-4 w-4 shrink-0 text-[#A79FB0]" aria-hidden="true" />
         <label htmlFor="trends-search" className="sr-only">
@@ -268,7 +268,7 @@ export const TrendsPage: React.FC = () => {
       </form>
 
       {/* ---------------------------------------------------------- *
-          One filter row — demand chips + content-type icons
+          One filter row â€” demand chips + content-type icons
          ---------------------------------------------------------- */}
       <div className="mt-4 flex flex-wrap items-center gap-2">
         {DEMAND_FILTERS.map((d) => {
@@ -315,14 +315,14 @@ export const TrendsPage: React.FC = () => {
       </div>
 
       {/* ---------------------------------------------------------- *
-          Feed context — one quiet line
+          Feed context â€” one quiet line
          ---------------------------------------------------------- */}
       {(contextParts.length > 0 || snapshotAt) && (
         <p className="mt-4 text-[11px] leading-relaxed text-[#77717F]">
-          {contextParts.join(' · ')}
+          {contextParts.join(' Â· ')}
           {snapshotAt && (
             <>
-              {contextParts.length > 0 ? ' · ' : ''}
+              {contextParts.length > 0 ? ' Â· ' : ''}
               Updated {new Date(snapshotAt).toLocaleString()}
             </>
           )}
@@ -347,7 +347,7 @@ export const TrendsPage: React.FC = () => {
           role="alert"
           className="mt-5 rounded-xl border border-[#F3C9CE] bg-[#FDF1F2] px-4 py-3 text-xs text-[#8A1B26]"
         >
-          Could not load trends — {error}. Your search text is kept, try again in a moment.
+          Could not load trends â€” {error}. Your search text is kept, try again in a moment.
         </div>
       )}
 
@@ -369,7 +369,7 @@ export const TrendsPage: React.FC = () => {
           <TrendingUp className="mx-auto h-6 w-6 text-[#A79FB0]" />
           <h2 className="mt-2 text-sm font-bold text-[#171717]">
             {activeSearch
-              ? `No results for “${activeSearch}”`
+              ? `No results for â€œ${activeSearch}â€`
               : isFiltered
                 ? 'No trends match these filters'
                 : 'No opportunities yet'}
@@ -426,7 +426,7 @@ export const TrendsPage: React.FC = () => {
                   ? trend.volume
                   : null;
             /* Views of the topic's videos divided by their own channel's
-               subscriber count — how far a video travels beyond its channel. */
+               subscriber count â€” how far a video travels beyond its channel. */
             const reachValue =
               trend.reach_ratio_median != null && trend.reach_ratio_median > 0
                 ? `${Number(trend.reach_ratio_median).toFixed(1)}x`
@@ -497,18 +497,18 @@ export const TrendsPage: React.FC = () => {
                       Reach vs channel size
                     </dt>
                     <dd className="mt-0.5 font-mono text-[15px] font-bold text-[#171717]">
-                      {reachValue ?? '—'}
+                      {reachValue ?? 'â€”'}
                     </dd>
                   </div>
                   <div className="min-w-0">
                     <dt className="text-[11px] text-[#77717F]">Search volume</dt>
                     <dd className="mt-0.5 font-mono text-[15px] font-bold text-[#171717]">
-                      {volumeValue ?? '—'}
+                      {volumeValue ?? 'â€”'}
                     </dd>
                   </div>
                 </dl>
 
-                {/* Footer — one primary action, one secondary */}
+                {/* Footer â€” one primary action, one secondary */}
                 <div className="mt-4 flex items-center justify-between gap-3 border-t border-[#EFEBF2] pt-3.5">
                   <button
                     type="button"

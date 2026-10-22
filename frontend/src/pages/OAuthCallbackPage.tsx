@@ -28,13 +28,13 @@ export const OAuthCallbackPage: React.FC = () => {
 
   if (err) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-neutral-950 text-white p-6">
+      <div className="min-h-screen flex items-center justify-center bg-[#FBFAF8] text-[#171717] p-6">
         <div className="text-center max-w-md">
-          <p className="text-red-400 font-bold mb-4">{err}</p>
+          <p className="text-[#B42332] font-bold mb-4">{err}</p>
           <button
             type="button"
             onClick={() => navigate('/login', { replace: true })}
-            className="px-6 py-2 rounded-xl bg-white text-neutral-900 font-bold text-sm"
+            className="px-6 py-2 rounded-full bg-[#FF98C1] text-[#171717] font-bold text-sm"
           >
             Back to login
           </button>
@@ -44,9 +44,9 @@ export const OAuthCallbackPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-neutral-950 text-white gap-4">
-      <Loader2 className="w-10 h-10 animate-spin text-brand-400" />
-      <p className="text-sm font-bold text-neutral-400 uppercase tracking-wider">Completing sign-in…</p>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#FBFAF8] text-[#171717] gap-4">
+      <Loader2 className="w-10 h-10 animate-spin text-[#7C5CD6]" />
+      <p className="text-sm font-bold text-[#77717F] uppercase tracking-wider">Completing sign-in…</p>
     </div>
   );
 };

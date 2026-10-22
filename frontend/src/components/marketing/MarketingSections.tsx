@@ -55,7 +55,7 @@ export const MarketingHero: React.FC<MarketingHeroProps> = ({
         )}
         <h1
           className={cn(
-            'font-sora text-[2.1rem] font-bold leading-[1.1] tracking-[-0.03em] text-[#171717] sm:text-[2.7rem] lg:text-[3.1rem]',
+            'font-cal-sans text-[2.1rem] font-bold leading-[1.1] tracking-[-0.03em] text-[#171717] sm:text-[2.7rem] lg:text-[3.1rem]',
             centered && !visual && 'mx-auto max-w-[20ch]',
           )}
         >
@@ -105,7 +105,7 @@ export const MarketingSection: React.FC<MarketingSectionProps> = ({
           className={cn('mb-12 max-w-2xl', align === 'center' && 'mx-auto text-center')}
         >
           {title && (
-            <h2 className="font-sora text-[1.8rem] font-bold leading-tight tracking-[-0.025em] text-[#171717] sm:text-[2.1rem]">
+            <h2 className="font-cal-sans text-[1.8rem] font-bold leading-tight tracking-[-0.025em] text-[#171717] sm:text-[2.1rem]">
               {title}
             </h2>
           )}
@@ -126,7 +126,7 @@ export const MarketingCta: React.FC<{
 }> = ({ title, description, children }) => (
   <section className="bg-[#91F5D3] py-20">
     <div className="mx-auto w-full max-w-4xl px-8 text-center">
-      <h2 className="font-sora text-[1.8rem] font-bold leading-tight tracking-[-0.02em] text-[#171717] sm:text-[2.2rem]">
+      <h2 className="font-cal-sans text-[1.8rem] font-bold leading-tight tracking-[-0.02em] text-[#171717] sm:text-[2.2rem]">
         {title}
       </h2>
       <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-[#17453A]">

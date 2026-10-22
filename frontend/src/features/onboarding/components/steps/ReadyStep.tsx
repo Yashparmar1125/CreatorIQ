@@ -30,7 +30,7 @@ export const ReadyStep: React.FC<ReadyStepProps> = ({ onEnter }) => (
         <span>Profile & Vector Embedding Calibrated</span>
       </div>
 
-      <h1 className="font-sora text-3xl sm:text-4xl font-extrabold tracking-tight text-[#14121a]">
+      <h1 className="font-cal-sans text-3xl sm:text-4xl font-extrabold tracking-tight text-[#14121a]">
         You&apos;re all set!
       </h1>
       <p className="mx-auto mt-3 max-w-md text-sm sm:text-base leading-relaxed text-[#6b6775]">

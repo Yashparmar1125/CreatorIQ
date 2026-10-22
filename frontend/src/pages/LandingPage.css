@@ -558,14 +558,14 @@ html:has(.landing-page) {
   text-align: center;
 }
 
-.landing-cta h2 {
+.landing-page .landing-cta h2 {
   max-width: 24ch;
   margin: 0 auto;
   font-size: clamp(28px, 3.4vw, 42px);
   text-align: center;
 }
 
-.landing-cta p {
+.landing-page .landing-cta p {
   margin: 14px auto 0;
   max-width: 48ch;
   font-size: 16px;

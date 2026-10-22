@@ -125,7 +125,7 @@ const router = createBrowserRouter([
         path: '*',
         element: (
           <div className="text-center py-20 bg-white rounded-3xl border border-neutral-100 shadow-sm">
-            <h1 className="text-4xl font-bold font-sora text-neutral-300 mb-2">404</h1>
+            <h1 className="text-4xl font-bold font-cal-sans text-neutral-300 mb-2">404</h1>
             <p className="text-neutral-500 font-medium tracking-tight">Feature currently in production...</p>
             <div className="mt-6 flex justify-center gap-4">
                <div className="w-1.5 h-1.5 rounded-full bg-brand-600 animate-pulse" />

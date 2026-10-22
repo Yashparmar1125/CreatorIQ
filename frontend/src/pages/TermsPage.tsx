@@ -37,7 +37,7 @@ export const TermsPage: React.FC = () => {
         >
           <div className="space-y-4 text-center md:text-left">
             <h1 className="text-4xl md:text-5xl font-black tracking-tight leading-tight">
-              Platform <span className="text-neutral-400">Rules.</span>
+              Platform <span className="text-neutral-600">Rules.</span>
             </h1>
             <p className="text-neutral-500 text-base md:text-lg leading-relaxed font-bold opacity-80 max-w-xl">
               Last updated: April 3, 2026. By using CreatorIQ, you agree to these terms. They exist to ensure a professional and safe environment for all creators.
@@ -67,7 +67,7 @@ export const TermsPage: React.FC = () => {
           </div>
 
           <div className="pt-12">
-             <p className="text-sm text-neutral-400 leading-relaxed text-center font-bold italic">
+             <p className="text-sm text-neutral-600 leading-relaxed text-center font-bold italic">
                 By clicking "I Agree" or by entering our platform, you acknowledge that you have read and understood these Terms of Service.
              </p>
           </div>

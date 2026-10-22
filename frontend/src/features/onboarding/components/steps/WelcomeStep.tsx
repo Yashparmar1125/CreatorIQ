@@ -40,7 +40,7 @@ export const WelcomeStep: React.FC<WelcomeStepProps> = ({ onNext }) => (
         </div>
         <div className="min-w-0 flex-1 text-left">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h1 className="font-sora text-2xl sm:text-3xl font-extrabold tracking-tight text-[#14121a]">
+            <h1 className="font-cal-sans text-2xl sm:text-3xl font-extrabold tracking-tight text-[#14121a]">
               Welcome to <span className="text-[#8b5cf6]">CreatorIQ</span>
             </h1>
             <span className="inline-flex items-center rounded-full border border-[#a7f3d0]/80 bg-[#e8faf3] px-3 py-1 text-xs font-bold text-[#059669]">
@@ -66,7 +66,7 @@ export const WelcomeStep: React.FC<WelcomeStepProps> = ({ onNext }) => (
                 <div className="mb-3.5 flex h-10 w-10 items-center justify-center rounded-xl border border-[#d8cbf9] bg-[#f0ebff] text-[#7033ea]">
                   <Icon className="h-5 w-5" />
                 </div>
-                <h3 className="text-base font-bold text-[#14121a] font-sora">{item.title}</h3>
+                <h3 className="text-base font-bold text-[#14121a] font-cal-sans">{item.title}</h3>
                 <p className="mt-1.5 text-xs sm:text-[13px] leading-relaxed text-[#6b6775]">{item.desc}</p>
               </div>
             </div>
@@ -77,7 +77,7 @@ export const WelcomeStep: React.FC<WelcomeStepProps> = ({ onNext }) => (
       {/* Bottom Action Bar */}
       <div className="flex flex-col items-stretch justify-between gap-4 border-t border-[#f0ebff] pt-6 sm:flex-row sm:items-center">
         <p className="text-xs text-[#716c7d]">
-          No YouTube OAuth required — update or connect channels anytime in Settings.
+          No YouTube OAuth required â€” update or connect channels anytime in Settings.
         </p>
         <button
           type="button"

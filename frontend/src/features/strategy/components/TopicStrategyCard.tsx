@@ -85,7 +85,7 @@ export const TopicStrategyCard: React.FC<TopicStrategyCardProps> = ({
 
   return (
     <div className="group relative rounded-2xl border border-[#E5E0E8] bg-white shadow-xs overflow-hidden transition-all hover:border-[#C9C0DA] my-4">
-      {/* ── CARD HEADER ──────────────────────────────────────────────────────── */}
+      {/* â”€â”€ CARD HEADER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="p-4 sm:p-5 border-b border-[#EFEBF2] space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2.5">
           <div className="flex items-center gap-2">
@@ -142,7 +142,7 @@ export const TopicStrategyCard: React.FC<TopicStrategyCardProps> = ({
         </div>
 
         {/* Topic Title */}
-        <h3 className="font-sora text-base sm:text-lg font-bold text-[#171717] tracking-tight leading-snug">
+        <h3 className="font-cal-sans text-base sm:text-lg font-bold text-[#171717] tracking-tight leading-snug">
           {topic.title}
         </h3>
 
@@ -154,7 +154,7 @@ export const TopicStrategyCard: React.FC<TopicStrategyCardProps> = ({
         )}
       </div>
 
-      {/* ── CARD TAB NAVIGATION ──────────────────────────────────────────────── */}
+      {/* â”€â”€ CARD TAB NAVIGATION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="flex items-center gap-1 px-4 sm:px-5 pt-2.5 border-b border-[#E5E0E8] bg-[#FBFAF8]">
         <button
           type="button"
@@ -184,7 +184,7 @@ export const TopicStrategyCard: React.FC<TopicStrategyCardProps> = ({
         </button>
       </div>
 
-      {/* ── CARD TAB BODY ────────────────────────────────────────────────────── */}
+      {/* â”€â”€ CARD TAB BODY â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="p-4 sm:p-5 text-xs space-y-4">
         {/* TAB 1: HOOK & SCRIPT BLUEPRINT */}
         {activeTab === 'hook' && (
@@ -194,7 +194,7 @@ export const TopicStrategyCard: React.FC<TopicStrategyCardProps> = ({
               <div className="flex items-center justify-between gap-2">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-[#4A2E8F] flex items-center gap-1 font-mono">
                   <Film className="h-3 w-3" />
-                  0–3s Visual Hook (Pattern Interrupt)
+                  0â€“3s Visual Hook (Pattern Interrupt)
                 </span>
                 {topic.hook?.visual && (
                   <button
@@ -245,7 +245,7 @@ export const TopicStrategyCard: React.FC<TopicStrategyCardProps> = ({
                 )}
               </div>
               <p className="text-[#2C2834] italic font-medium leading-relaxed text-xs">
-                {topic.hook?.audio ? `“${topic.hook.audio}”` : MISSING}
+                {topic.hook?.audio ? `â€œ${topic.hook.audio}â€` : MISSING}
               </p>
             </div>
 
@@ -365,14 +365,14 @@ export const TopicStrategyCard: React.FC<TopicStrategyCardProps> = ({
         )}
       </div>
 
-      {/* ── CARD ACTION FOOTER ───────────────────────────────────────────────── */}
+      {/* â”€â”€ CARD ACTION FOOTER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="px-4 sm:px-5 py-3 border-t border-[#EFEBF2] bg-[#FBFAF8] flex flex-wrap items-center justify-between gap-2.5">
         <div className="flex items-center gap-2">
-          {/* Save Topic Button — local to this session, not sent anywhere */}
+          {/* Save Topic Button â€” local to this session, not sent anywhere */}
           <button
             type="button"
             onClick={handleSave}
-            title="Kept for this session only — it is not added to your channel plan."
+            title="Kept for this session only â€” it is not added to your channel plan."
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
               isSaved
                 ? 'bg-[#E4FBF2] border-[#B9EFDD] text-[#167A59]'
@@ -404,7 +404,7 @@ export const TopicStrategyCard: React.FC<TopicStrategyCardProps> = ({
         <button
           type="button"
           onClick={() => onOpenStudio && onOpenStudio(topic)}
-          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#FF98C1] border border-[#F27DA8] text-[#171717] font-bold text-xs hover:bg-[#FF8AB8] transition-all cursor-pointer group/btn"
+          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#FF98C1] border border-[#F27DA8] text-[#171717] font-bold text-xs hover:bg-[#FF8AB8] transition-all cursor-pointer group/btn"
         >
           <Film className="h-3.5 w-3.5 text-[#171717]" />
           <span>Open Script Studio</span>

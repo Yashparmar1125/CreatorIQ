@@ -418,7 +418,7 @@ export const MainLayout: React.FC = () => {
                 <input
                   type="search"
                   placeholder="Search trends, topics, concepts..."
-                  className="h-9 w-full rounded-xl border border-[#E5E0E8] bg-[#FBFAF8] pl-9 pr-3 text-xs text-[#171717] placeholder-[#9B94A5] transition-all focus:border-[#C9BCF0] focus:bg-white focus:outline-none"
+                  className="app-field h-9 w-full pl-9 pr-3 text-xs text-[#171717] placeholder-[#9B94A5] focus:outline-none"
                 />
               </div>
             </div>

@@ -91,7 +91,7 @@ export const AuthPage: React.FC = () => {
           to="/"
           className="text-xs sm:text-[13px] font-medium text-[#23202a] hover:text-black transition-colors"
         >
-          — Back to Home
+          â€” Back to Home
         </Link>
       </header>
 
@@ -105,7 +105,7 @@ export const AuthPage: React.FC = () => {
                 <p className="text-[10px] sm:text-[10.5px] font-bold tracking-[0.14em] text-[#716c7d] uppercase mb-4 sm:mb-5">
                   YOUR PLANNING, A LITTLE CLEARER.
                 </p>
-                <h1 className="text-3xl sm:text-4xl lg:text-[42px] font-extrabold font-sora text-[#14121a] leading-[1.14] tracking-[-0.03em] mb-8 sm:mb-10">
+                <h1 className="text-3xl sm:text-4xl lg:text-[42px] font-extrabold font-cal-sans text-[#14121a] leading-[1.14] tracking-[-0.03em] mb-8 sm:mb-10">
                   Find your trending content,
                   <br />
                   Then we plan it
@@ -121,7 +121,7 @@ export const AuthPage: React.FC = () => {
                 </div>
 
                 {/* Card Title */}
-                <h2 className="text-xl sm:text-[22px] font-bold text-[#14121a] font-sora mt-3.5 mb-1.5">
+                <h2 className="text-xl sm:text-[22px] font-bold text-[#14121a] font-cal-sans mt-3.5 mb-1.5">
                   AI budgeting tools
                 </h2>
 
@@ -132,7 +132,7 @@ export const AuthPage: React.FC = () => {
 
                 {/* Card Bottom Row */}
                 <div className="mt-8 flex items-baseline justify-between">
-                  <div className="text-[28px] sm:text-[32px] font-extrabold text-[#14121a] font-sora tracking-tight flex items-center gap-1">
+                  <div className="text-[28px] sm:text-[32px] font-extrabold text-[#14121a] font-cal-sans tracking-tight flex items-center gap-1">
                     +28% <ArrowUpRight className="w-6 h-6 stroke-[3]" />
                   </div>
                   <div className="text-[11px] sm:text-[11.5px] text-[#716c7a] font-medium text-right leading-tight">
@@ -149,7 +149,7 @@ export const AuthPage: React.FC = () => {
             <div className="w-full max-w-[390px]">
               {/* Title & Subtitle */}
               <div className="mb-6 sm:mb-7">
-                <h2 className="text-3xl sm:text-[38px] font-extrabold text-[#14121a] font-sora tracking-[-0.025em] leading-tight">
+                <h2 className="text-3xl sm:text-[38px] font-extrabold text-[#14121a] font-cal-sans tracking-[-0.025em] leading-tight">
                   {mode === 'login' ? 'Welcome back.' : 'Create an account.'}
                 </h2>
                 <p className="text-[13px] sm:text-[13.5px] text-[#6b6775] mt-2">
@@ -208,7 +208,7 @@ export const AuthPage: React.FC = () => {
                     <input
                       {...registerField('password')}
                       type={showPassword ? 'text' : 'password'}
-                      placeholder="••••••••••••"
+                      placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
                       className="auth-page-input pr-11"
                     />
                     <button
@@ -275,8 +275,8 @@ export const AuthPage: React.FC = () => {
                   className="text-xs sm:text-[13px] font-semibold text-[#181719] hover:underline cursor-pointer"
                 >
                   {mode === 'login'
-                    ? 'New to Orbit? Create an account →'
-                    : 'Already have an account? Sign in →'}
+                    ? 'New to Orbit? Create an account â†’'
+                    : 'Already have an account? Sign in â†’'}
                 </button>
               </div>
 

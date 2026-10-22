@@ -182,7 +182,7 @@ export const OnboardingWizard: React.FC = () => {
               <circle cx="12" cy="12" r="2.2" fill="currentColor" />
             </svg>
           </div>
-          <span className="font-sora text-base sm:text-lg font-extrabold tracking-tight text-[#14121a]">
+          <span className="font-cal-sans text-base sm:text-lg font-extrabold tracking-tight text-[#14121a]">
             CreatorIQ
           </span>
         </div>

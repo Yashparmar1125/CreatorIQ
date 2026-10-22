@@ -76,7 +76,7 @@ const TONE_OPTIONS = [
 ];
 
 function formatCount(value?: number): string {
-  if (value == null) return '—';
+  if (value == null) return 'â€”';
   if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(value >= 10_000_000 ? 0 : 1)}M`;
   if (value >= 1_000) return `${(value / 1_000).toFixed(value >= 10_000 ? 0 : 1)}K`;
   return value.toLocaleString();
@@ -204,7 +204,7 @@ export const SettingsPage: React.FC = () => {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div>
-        <h1 className="font-sora text-2xl font-bold tracking-tight text-[#171717]">
+        <h1 className="font-cal-sans text-2xl font-bold tracking-tight text-[#171717]">
           Creator profile
         </h1>
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#625D68]">
@@ -247,12 +247,12 @@ export const SettingsPage: React.FC = () => {
             <div>
               <h2
                 id="channel-overview-title"
-                className="font-sora text-base font-bold text-[#171717]"
+                className="font-cal-sans text-base font-bold text-[#171717]"
               >
                 {profile.channel_stats.channel_name || 'Connected channel'}
               </h2>
               <p className="mt-1 text-xs text-[#77717F]">
-                Profile mode: {profile.profile_mode.replace(/_/g, ' ')} ·{' '}
+                Profile mode: {profile.profile_mode.replace(/_/g, ' ')} Â·{' '}
                 {humanize(profile.sync_status)}
               </p>
             </div>
@@ -283,7 +283,7 @@ export const SettingsPage: React.FC = () => {
       >
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 id="preferences-title" className="font-sora text-base font-bold text-[#171717]">
+            <h2 id="preferences-title" className="font-cal-sans text-base font-bold text-[#171717]">
               Manual preferences
             </h2>
             <p className="mt-1 text-xs leading-relaxed text-[#77717F]">
@@ -345,7 +345,7 @@ export const SettingsPage: React.FC = () => {
                   handleAddCustomNiche();
                 }
               }}
-              className="w-full rounded-lg border border-[#E5E0E8] bg-white px-3 py-2 text-sm text-[#171717] placeholder:text-[#9B94A5] focus:border-[#7C5CD6] focus:outline-none focus:ring-2 focus:ring-[#F1ECFF]"
+              className="app-field w-full px-3 py-2 text-sm text-[#171717] placeholder:text-[#9B94A5] focus:outline-none"
             />
             <button
               type="button"
@@ -493,7 +493,7 @@ export const SettingsPage: React.FC = () => {
             className="app-btn-pink h-10 px-5 text-[13px] disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Save size={15} aria-hidden="true" className={savingManual ? 'animate-spin' : ''} />
-            {savingManual ? 'Saving…' : 'Save preferences'}
+            {savingManual ? 'Savingâ€¦' : 'Save preferences'}
           </button>
         </div>
       </section>

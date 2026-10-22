@@ -49,7 +49,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
       </span>
       {showWordmark && (
         <span
-          className={`font-sora ${cfg.text} font-bold tracking-tight text-[#171717] ${wordmarkClassName}`}
+          className={`font-cal-sans ${cfg.text} font-bold tracking-tight text-[#171717] ${wordmarkClassName}`}
         >
           CreatorIQ
         </span>

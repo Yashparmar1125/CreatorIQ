@@ -128,7 +128,7 @@ export const DashboardPage: React.FC = () => {
         <form
           ref={connectorPanelRef}
           onSubmit={handleSubmit}
-          className="mt-6 rounded-[22px] border border-[#E5E0E8] bg-white p-4 shadow-[0_10px_30px_rgba(23,23,23,0.06)] transition-shadow focus-within:shadow-[0_14px_38px_rgba(23,23,23,0.10)] sm:p-5"
+          className="app-field app-field-lg mt-6 p-4 sm:p-5"
         >
           <label htmlFor="dashboard-prompt" className="sr-only">
             Describe what you want to research

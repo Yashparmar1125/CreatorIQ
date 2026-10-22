@@ -53,15 +53,15 @@ export const ScriptStudioModal: React.FC<ScriptStudioModalProps> = ({
 
   const shortScriptBlocks = [
     {
-      time: '0:00 – 0:03',
+      time: '0:00 â€“ 0:03',
       section: 'PATTERN INTERRUPT HOOK',
       visual: hookVisual,
       audio: hookAudio,
-      tip: 'Jump straight into the problem — never open with a greeting.',
+      tip: 'Jump straight into the problem â€” never open with a greeting.',
       sourced: Boolean(hookVisual || hookAudio),
     },
     {
-      time: '0:03 – 0:15',
+      time: '0:03 â€“ 0:15',
       section: 'AGITATION & STAKES',
       visual: '',
       audio: '',
@@ -69,7 +69,7 @@ export const ScriptStudioModal: React.FC<ScriptStudioModalProps> = ({
       sourced: false,
     },
     {
-      time: '0:15 – 0:40',
+      time: '0:15 â€“ 0:40',
       section: 'CORE PAYOFFS',
       visual: '',
       audio: '',
@@ -77,7 +77,7 @@ export const ScriptStudioModal: React.FC<ScriptStudioModalProps> = ({
       sourced: false,
     },
     {
-      time: '0:40 – 0:55',
+      time: '0:40 â€“ 0:55',
       section: 'TWIST & RETENTION LOOP CTA',
       visual: '',
       audio: '',
@@ -94,7 +94,7 @@ Format: ${selectedFormat === 'short' ? '60s YouTube Short' : '8-12m Deep Dive'}
 Optimal Window: ${topic?.metrics.targetWindow || 'Not provided'}
 Target Audience: ${topic?.audience || 'Not provided'}
 
-> Beats marked [template] are scaffolding from the studio template — replace them with your own script.
+> Beats marked [template] are scaffolding from the studio template â€” replace them with your own script.
 
 ---
 ${shortScriptBlocks
@@ -192,7 +192,7 @@ ${shortScriptBlocks
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#171717]/40 backdrop-blur-sm p-3 sm:p-6 animate-in">
       <div className="relative w-full max-w-4xl h-[92vh] flex flex-col rounded-3xl border border-[#E5E0E8] bg-white shadow-xl overflow-hidden">
-        {/* ── TOP HEADER ──────────────────────────────────────────────────────── */}
+        {/* â”€â”€ TOP HEADER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-[#E5E0E8] bg-white">
           <div className="flex items-center gap-3 min-w-0">
             <div className="h-9 w-9 rounded-xl bg-[#F1ECFF] border border-[#D9CEF5] flex items-center justify-center shrink-0">
@@ -203,12 +203,12 @@ ${shortScriptBlocks
                 <span className="text-[10px] font-mono uppercase tracking-wider text-[#4A2E8F] font-bold">
                   Script Studio
                 </span>
-                <span className="text-[#B5AEC0]">•</span>
+                <span className="text-[#B5AEC0]">â€¢</span>
                 <span className="text-[11px] text-[#625D68] truncate max-w-[280px] sm:max-w-md">
                   {topic.title}
                 </span>
               </div>
-              <h2 className="text-sm sm:text-base font-bold text-[#171717] truncate font-sora">
+              <h2 className="text-sm sm:text-base font-bold text-[#171717] truncate font-cal-sans">
                 {activeTitle}
               </h2>
             </div>
@@ -259,7 +259,7 @@ ${shortScriptBlocks
           </div>
         </div>
 
-        {/* ── MODE 1: BEAT SHEET STUDIO ───────────────────────────────────────── */}
+        {/* â”€â”€ MODE 1: BEAT SHEET STUDIO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         {mode === 'beatsheet' && (
           <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6 no-scrollbar">
             {/* Format & Title Selector */}
@@ -328,7 +328,7 @@ ${shortScriptBlocks
                   >
                     <Film className="h-4 w-4 mx-auto mb-1 text-[#4A2E8F]" />
                     <div className="text-xs font-bold">Deep Dive</div>
-                    <div className="text-[10px] text-[#77717F] font-mono">8–12 Min</div>
+                    <div className="text-[10px] text-[#77717F] font-mono">8â€“12 Min</div>
                   </button>
                 </div>
               </div>
@@ -388,7 +388,7 @@ ${shortScriptBlocks
                           Exact Spoken Dialogue
                         </span>
                         <p className="text-[#171717] font-medium italic leading-relaxed text-xs">
-                          {b.audio ? `“${b.audio}”` : MISSING}
+                          {b.audio ? `â€œ${b.audio}â€` : MISSING}
                         </p>
                       </div>
                     </div>
@@ -399,7 +399,7 @@ ${shortScriptBlocks
           </div>
         )}
 
-        {/* ── MODE 2: TELEPROMPTER MODE ────────────────────────────────────────── */}
+        {/* â”€â”€ MODE 2: TELEPROMPTER MODE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         {mode === 'teleprompter' && (
           <div className="flex-1 flex flex-col bg-[#FBFAF8] relative overflow-hidden">
             {/* Teleprompter Top HUD Controls */}
@@ -500,7 +500,7 @@ ${shortScriptBlocks
                 {shortScriptBlocks.map((b, idx) => (
                   <div key={idx} className="space-y-4">
                     <div className="inline-block px-3 py-1 rounded-full bg-white border border-[#E5E0E8] text-[#625D68] font-mono text-xs uppercase tracking-wider">
-                      {b.time} • {b.section}
+                      {b.time} â€¢ {b.section}
                     </div>
                     <p
                       style={{ fontSize: `${fontSize}px`, lineHeight: 1.4 }}
@@ -515,13 +515,13 @@ ${shortScriptBlocks
           </div>
         )}
 
-        {/* ── MODAL FOOTER ────────────────────────────────────────────────────── */}
+        {/* â”€â”€ MODAL FOOTER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 border-t border-[#E5E0E8] bg-white">
           <div className="flex items-center gap-2 text-xs text-[#625D68]">
             <span className="font-mono text-[#171717] font-semibold">{shortScriptBlocks.length} beats</span>
-            <span>•</span>
+            <span>â€¢</span>
             <span>{wordCount} spoken words</span>
-            <span>•</span>
+            <span>â€¢</span>
             <span className="text-[#77717F] font-mono">Studio template</span>
           </div>
 
@@ -538,7 +538,7 @@ ${shortScriptBlocks
             <button
               type="button"
               onClick={handleCopyScript}
-              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-[#FF98C1] border border-[#F27DA8] text-[#171717] text-xs font-bold hover:bg-[#FF8AB8] transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-[#FF98C1] border border-[#F27DA8] text-[#171717] text-xs font-bold hover:bg-[#FF8AB8] transition-colors cursor-pointer"
             >
               {copied ? (
                 <Check className="h-3.5 w-3.5 text-[#171717]" />

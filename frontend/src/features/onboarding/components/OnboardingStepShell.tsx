@@ -43,7 +43,7 @@ export const OnboardingStepShell: React.FC<OnboardingStepShellProps> = ({
       {/* Card Header */}
       <div className={cn('border-b border-[#f0ebff] pb-5', centered ? 'text-center' : 'text-left')}>
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="font-sora text-2xl sm:text-[26px] font-extrabold tracking-tight text-[#14121a]">
+          <h2 className="font-cal-sans text-2xl sm:text-[26px] font-extrabold tracking-tight text-[#14121a]">
             {title}
           </h2>
           {badge && (

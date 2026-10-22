@@ -33,7 +33,7 @@ import {
 } from 'lucide-react';
 import './StrategyPage.css';
 
-/* ── Inline Research Steps Accordion ─────────────────────────────────────── */
+/* â”€â”€ Inline Research Steps Accordion â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 const ResearchStepsAccordion: React.FC<{ steps: AgentStep[] }> = ({ steps }) => {
   const [isOpen, setIsOpen] = useState(false);
   if (!steps || steps.length === 0) return null;
@@ -95,7 +95,7 @@ const ResearchStepsAccordion: React.FC<{ steps: AgentStep[] }> = ({ steps }) => 
   );
 };
 
-/* ── Interactive Cards List (Trends + Outlier Videos) ────────────────────── */
+/* â”€â”€ Interactive Cards List (Trends + Outlier Videos) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 const InteractiveCardsList: React.FC<{ cards: AgentCard[] }> = ({ cards }) => {
   const navigate = useNavigate();
   if (!cards || cards.length === 0) return null;
@@ -164,7 +164,7 @@ const InteractiveCardsList: React.FC<{ cards: AgentCard[] }> = ({ cards }) => {
                 <h4 className="text-sm font-bold text-[#171717] line-clamp-2">{v.title}</h4>
                 <div className="flex items-center gap-2 text-[11px] text-[#625D68]">
                   <span>{v.channel}</span>
-                  {v.views !== undefined && <span>• {Number(v.views).toLocaleString()} views</span>}
+                  {v.views !== undefined && <span>â€¢ {Number(v.views).toLocaleString()} views</span>}
                 </div>
               </div>
               {v.url && (
@@ -190,7 +190,7 @@ const InteractiveCardsList: React.FC<{ cards: AgentCard[] }> = ({ cards }) => {
   );
 };
 
-/* ── Light-Themed Strategy Markdown & Interactive Cards ──────────────────── */
+/* â”€â”€ Light-Themed Strategy Markdown & Interactive Cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 const StrategyMessageContent: React.FC<{
   content: string;
   onOpenStudio: (t: TopicStrategyItem) => void;
@@ -200,13 +200,13 @@ const StrategyMessageContent: React.FC<{
 
   const markdownComponents = {
     h1: ({ children }: any) => (
-      <h1 className="text-xl font-extrabold text-[#171717] pb-1 mb-2 mt-3 font-sora flex items-center gap-2">
+      <h1 className="text-xl font-extrabold text-[#171717] pb-1 mb-2 mt-3 font-cal-sans flex items-center gap-2">
         <Sparkles className="h-4 w-4 text-[#4A2E8F] shrink-0" />
         <span>{children}</span>
       </h1>
     ),
     h2: ({ children }: any) => (
-      <h2 className="text-lg font-bold text-[#171717] pb-1 mb-2 mt-5 font-sora flex items-center gap-2">
+      <h2 className="text-lg font-bold text-[#171717] pb-1 mb-2 mt-5 font-cal-sans flex items-center gap-2">
         <Target className="h-4 w-4 text-[#4A2E8F] shrink-0" />
         <span>{children}</span>
       </h2>
@@ -316,7 +316,7 @@ const StrategyMessageContent: React.FC<{
   );
 };
 
-/* ── Scope prompts (sent to the real API) ────────────────────────────────── */
+/* â”€â”€ Scope prompts (sent to the real API) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 const SCOPE_PROMPTS: Record<string, string> = {
   practical:
     'Give me practical, easy-to-follow video ideas for my channel, with titles, hooks and a retention outline.',
@@ -333,7 +333,7 @@ const STARTER_PROMPTS = [
   'Which of my past videos should I make a follow-up to?',
 ];
 
-/* ── Main StrategyPage Component ─────────────────────────────────────────── */
+/* â”€â”€ Main StrategyPage Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 export const StrategyPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -510,10 +510,10 @@ export const StrategyPage: React.FC = () => {
 
   return (
     <div className="strategy-page min-h-screen flex w-full bg-[#FBFAF8] text-[#171717] overflow-hidden">
-      {/* ── Left Sidebar ──────────────────────────────────────────────────── */}
+      {/* â”€â”€ Left Sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <aside className="strategy-sidebar hidden lg:flex flex-col justify-between shrink-0 p-5 z-20">
         <div>
-          {/* Top Logo — same lockup as every other page header */}
+          {/* Top Logo â€” same lockup as every other page header */}
           <BrandLogo to="/" size="sm" className="mb-7" />
 
           {/* '+ New research' Button */}
@@ -536,7 +536,7 @@ export const StrategyPage: React.FC = () => {
             <span>Overview</span>
           </button>
 
-          {/* 'YOUR RESEARCH HISTORY' Section — real API sessions */}
+          {/* 'YOUR RESEARCH HISTORY' Section â€” real API sessions */}
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-2 px-1">
               <p className="text-[10px] font-bold text-[#77717F] tracking-[0.14em] uppercase">
@@ -615,12 +615,12 @@ export const StrategyPage: React.FC = () => {
         </div>
       </aside>
 
-      {/* ── Main Chat Stream & Workspace ──────────────────────────────────── */}
+      {/* â”€â”€ Main Chat Stream & Workspace â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="flex-1 flex flex-col h-screen min-w-0 bg-[#FBFAF8] overflow-hidden">
         {/* Top Header */}
         <header className="h-16 shrink-0 border-b border-[#E5E0E8] bg-white px-6 sm:px-10 flex items-center justify-between z-10">
           <div className="min-w-0">
-            <h1 className="font-sora text-base sm:text-lg font-extrabold text-[#171717] leading-tight truncate">
+            <h1 className="font-cal-sans text-base sm:text-lg font-extrabold text-[#171717] leading-tight truncate">
               {sessionTitle}
             </h1>
             <p className="text-xs text-[#625D68] mt-0.5 truncate">
@@ -634,7 +634,7 @@ export const StrategyPage: React.FC = () => {
               to="/app/dashboard"
               className="text-xs font-bold text-[#625D68] hover:text-[#171717] transition-colors"
             >
-              Dashboard ➔
+              Dashboard âž”
             </Link>
           </div>
         </header>
@@ -648,10 +648,10 @@ export const StrategyPage: React.FC = () => {
                 <div className="h-40 rounded-2xl bg-[#F1EEF5] animate-pulse" />
               </div>
             ) : !hasMessages && !isSending ? (
-              /* ── Empty state: honest, no invented findings ───────────────── */
+              /* â”€â”€ Empty state: honest, no invented findings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
               <div className="space-y-6">
                 <div>
-                  <h2 className="font-sora text-xl sm:text-[22px] font-bold text-[#171717]">
+                  <h2 className="font-cal-sans text-xl sm:text-[22px] font-bold text-[#171717]">
                     What should we research?
                   </h2>
                   <p className="text-xs sm:text-[13px] text-[#625D68] mt-1.5 leading-relaxed max-w-xl">
@@ -676,10 +676,10 @@ export const StrategyPage: React.FC = () => {
                   ))}
                 </div>
 
-                {/* Scope picker — sends a real request */}
+                {/* Scope picker â€” sends a real request */}
                 <div className="rounded-2xl border border-[#E5E0E8] bg-white p-6 sm:p-7 shadow-xs space-y-4">
                   <div>
-                    <h3 className="font-sora text-lg sm:text-[20px] font-bold text-[#171717]">
+                    <h3 className="font-cal-sans text-lg sm:text-[20px] font-bold text-[#171717]">
                       How should we scope this?
                     </h3>
                     <p className="text-xs sm:text-[13px] text-[#625D68] mt-1">
@@ -695,7 +695,7 @@ export const StrategyPage: React.FC = () => {
                         selectedScope === 'practical' ? 'strategy-chip-active' : 'strategy-chip-inactive'
                       }`}
                     >
-                      {selectedScope === 'practical' ? '✓ ' : ''}Practical explainers
+                      {selectedScope === 'practical' ? 'âœ“ ' : ''}Practical explainers
                     </button>
 
                     <button
@@ -705,7 +705,7 @@ export const StrategyPage: React.FC = () => {
                         selectedScope === 'compare' ? 'strategy-chip-active' : 'strategy-chip-inactive'
                       }`}
                     >
-                      {selectedScope === 'compare' ? '✓ ' : ''}Compare every angle
+                      {selectedScope === 'compare' ? 'âœ“ ' : ''}Compare every angle
                     </button>
 
                     <button
@@ -715,7 +715,7 @@ export const StrategyPage: React.FC = () => {
                         selectedScope === 'channel' ? 'strategy-chip-active' : 'strategy-chip-inactive'
                       }`}
                     >
-                      {selectedScope === 'channel' ? '✓ ' : ''}Start from my channel
+                      {selectedScope === 'channel' ? 'âœ“ ' : ''}Start from my channel
                     </button>
                   </div>
 
@@ -745,7 +745,7 @@ export const StrategyPage: React.FC = () => {
                 </div>
               </div>
             ) : (
-              /* ── Real conversation ────────────────────────────────────────── */
+              /* â”€â”€ Real conversation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
               messages.map((m) => {
                 const isUser = m.role === 'user';
                 const steps = m.metadata?.steps || [];
@@ -830,14 +830,14 @@ export const StrategyPage: React.FC = () => {
           </div>
         </div>
 
-        {/* ── Floating Bottom Composer Bar ───────────────────────────────── */}
+        {/* â”€â”€ Floating Bottom Composer Bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <div className="fixed bottom-5 left-0 right-0 px-4 sm:px-6 pointer-events-none z-30 lg:pl-64">
           <div className="max-w-3xl mx-auto w-full pointer-events-auto">
             {/* Connectors Popup Menu */}
             {showConnectorsMenu && (
               <div className="mb-2 w-80 rounded-2xl border border-[#E5E0E8] bg-white p-3.5 shadow-lg space-y-2.5 animate-in fade-in zoom-in-95 duration-150">
                 <div className="flex items-center justify-between pb-1.5 border-b border-[#EFEBF2]">
-                  <span className="text-xs font-bold text-[#171717] font-sora">Live research</span>
+                  <span className="text-xs font-bold text-[#171717] font-cal-sans">Live research</span>
                   <span className="text-[10px] font-mono text-[#77717F]">Real-Time</span>
                 </div>
                 <p className="text-[11px] text-[#625D68] leading-relaxed">
@@ -881,8 +881,8 @@ export const StrategyPage: React.FC = () => {
                 value={inputPrompt}
                 onChange={(e) => setInputPrompt(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask about your next videos, angles, hooks or a content plan…"
-                className="w-full resize-none bg-transparent px-1 py-0.5 text-sm sm:text-[14.5px] text-[#171717] placeholder-[#9B94A5] focus:outline-none font-normal leading-relaxed max-h-32 min-h-[30px]"
+                placeholder="Ask about your next videos, angles, hooks or a content planâ€¦"
+                className="app-field w-full resize-none px-3 py-2 text-sm sm:text-[14.5px] text-[#171717] placeholder-[#9B94A5] focus:outline-none font-normal leading-relaxed max-h-32 min-h-[30px] [--field-radius:10px]"
               />
 
               {/* Bottom Toolbar */}
@@ -901,12 +901,12 @@ export const StrategyPage: React.FC = () => {
                     <Radio className="h-3 w-3" />
                     <span>
                       {activeConnectors.length > 0
-                        ? `Live research · ${activeConnectors.length}`
+                        ? `Live research Â· ${activeConnectors.length}`
                         : 'Live research off'}
                     </span>
                     <ChevronDown className="h-3 w-3" />
                   </button>
-                  <span className="text-[#DCD6E2]">·</span>
+                  <span className="text-[#DCD6E2]">Â·</span>
                   <button
                     type="button"
                     onClick={() => setInputPrompt((p) => `${p} @source `)}
@@ -914,7 +914,7 @@ export const StrategyPage: React.FC = () => {
                   >
                     @ source
                   </button>
-                  <span className="text-[#DCD6E2]">·</span>
+                  <span className="text-[#DCD6E2]">Â·</span>
                   <button
                     type="button"
                     onClick={() => setInputPrompt((p) => `${p} #idea `)}
