@@ -160,9 +160,10 @@ async def search_trending_now(
                 "api_key": key,
                 "geo": geo,
                 "hours": hours,
-                "category_id": category_id,
                 "hl": hl,
             }
+            if category_id and str(category_id) != "0":
+                params["category_id"] = str(category_id)
             try:
                 r = await client.get(settings.serpapi_base_url, params=params)
                 if r.status_code == 429 or "Your monthly searches limit has been reached" in r.text:
