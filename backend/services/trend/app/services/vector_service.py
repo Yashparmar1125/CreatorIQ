@@ -159,6 +159,21 @@ class VectorService:
             logger.exception(f"Failed to upsert vector for concept {concept_id}: {e}")
             return False
 
+    def delete_concept_vector(self, concept_id: str) -> bool:
+        client = self.get_client()
+        if not client:
+            return False
+        try:
+            from qdrant_client.models import PointIdsList
+            client.delete(
+                collection_name=COLLECTION_NAME,
+                points_selector=PointIdsList(points=[concept_id]),
+            )
+            return True
+        except Exception as e:
+            logger.warning(f"Failed to delete vector for concept {concept_id}: {e}")
+            return False
+
     def search_similar(
         self,
         query_text: str,
@@ -194,6 +209,7 @@ class VectorService:
                 {
                     "concept_id": str(res.id),
                     "score": float(res.score),
+                    "similarity": float(res.score),
                     "title": res.payload.get("title", ""),
                     "niche_tags": res.payload.get("niche_tags", []),
                     "raw_momentum": res.payload.get("raw_momentum", 0.0),

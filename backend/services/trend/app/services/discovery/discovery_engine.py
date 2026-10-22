@@ -12,6 +12,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+import numpy as np
 from sqlalchemy import delete, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,7 +24,7 @@ from app.services.discovery.llm_concept_extractor import LLMConceptExtractor
 from app.services.discovery.tavily_harvester import TavilyTrendHarvester
 from app.services.discovery.trends_harvester import GoogleTrendsHarvester
 from app.services.discovery.youtube_popular_harvester import YouTubePopularHarvester
-from app.services.vector_service import VectorService
+from app.services.vector_service import VectorService, generate_semantic_vector
 
 logger = logging.getLogger(__name__)
 
@@ -89,6 +90,8 @@ class DiscoveryEngine:
 
         # 3. Process each category
         promotions_count = 0
+        batch_promoted_vectors: list[dict[str, Any]] = []
+
         for category, signals in by_category.items():
             if len(signals) < 3:
                 continue
@@ -111,11 +114,37 @@ class DiscoveryEngine:
                 if not name or len(name) < 4:
                     continue
 
-                summary["proposed_candidates"] += 1
                 desc = cand.get("description")
                 inc_terms = cand.get("include_terms") or [name.lower()]
                 exc_terms = cand.get("exclude_terms") or []
                 conf = float(cand.get("confidence_score") or 0.70)
+
+                # Precompute candidate vector for fast in-batch and persistent checks
+                cand_text = f"{name}. {desc or ''}".strip()
+                cand_vec = np.array(generate_semantic_vector(cand_text), dtype=np.float64)
+                cand_norm = np.linalg.norm(cand_vec)
+                if cand_norm > 0:
+                    cand_vec /= cand_norm
+
+                # In-batch duplicate check against concepts promoted within this exact discovery cycle
+                in_batch_dup = False
+                for prev in batch_promoted_vectors:
+                    sim = float(np.dot(cand_vec, prev["vector"]))
+                    if sim >= 0.75:
+                        summary["merged_duplicates"] += 1
+                        logger.info(
+                            "Candidate '%s' matches in-batch candidate '%s' (similarity: %.3f >= 0.75), skipping.",
+                            name,
+                            prev["name"],
+                            sim,
+                        )
+                        in_batch_dup = True
+                        break
+
+                if in_batch_dup:
+                    continue
+
+                summary["proposed_candidates"] += 1
 
                 # 4. Semantic Deduplication Gate (Qdrant & PostgreSQL)
                 dedup = await self.deduplicator.evaluate_candidate(
@@ -174,6 +203,7 @@ class DiscoveryEngine:
                     db.add(promoted_concept)
                     db_candidate.status = "promoted"
                     promotions_count += 1
+                    batch_promoted_vectors.append({"name": name, "vector": cand_vec})
 
                     # Index new concept into Qdrant
                     if settings.enable_vector_search:

@@ -17,7 +17,7 @@ from app.services.vector_service import VectorService
 
 logger = logging.getLogger(__name__)
 
-SIMILARITY_DUPLICATE_THRESHOLD = 0.82
+SIMILARITY_DUPLICATE_THRESHOLD = 0.75
 
 
 @dataclass
@@ -58,15 +58,20 @@ class ConceptDeduplicator:
                 action="exact_match",
             )
 
-        # 2. Semantic Vector search via Qdrant
-        query_text = f"{clean_name} {description or ''}".strip()
-        matches = self.vector_service.search_similar(query_text, niche_tags=[category], limit=3)
+        # 2. Semantic Vector search via Qdrant (global cross-niche check, clean text)
+        query_text = f"{clean_name}. {description or ''}".strip()
+        matches = self.vector_service.search_similar(query_text, niche_tags=None, limit=5)
 
         if matches:
             top_match = matches[0]
-            score = float(top_match.get("similarity", 0.0))
+            # Handle both "score" and "similarity" keys from vector service
+            score = float(
+                top_match.get("score")
+                if top_match.get("score") is not None
+                else top_match.get("similarity", 0.0)
+            )
             payload = top_match.get("payload") or {}
-            matched_title = payload.get("title") or top_match.get("concept_id")
+            matched_title = top_match.get("title") or payload.get("title") or top_match.get("concept_id")
 
             if score >= SIMILARITY_DUPLICATE_THRESHOLD:
                 logger.info(
@@ -85,7 +90,13 @@ class ConceptDeduplicator:
                 )
 
         # 3. Novel Topic confirmed
-        top_score = float(matches[0].get("similarity", 0.0)) if matches else 0.0
+        top_score = 0.0
+        if matches:
+            top_score = float(
+                matches[0].get("score")
+                if matches[0].get("score") is not None
+                else matches[0].get("similarity", 0.0)
+            )
         return DeduplicationResult(
             is_duplicate=False,
             matched_id=None,
