@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useNotificationStore } from '../stores/useNotificationStore';
+import { BrandLogo } from '../components/brand/BrandLogo';
 import {
   ArrowRight,
   ArrowUpRight,
