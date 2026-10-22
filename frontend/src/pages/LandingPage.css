@@ -169,11 +169,11 @@ html:has(.landing-page) {
   overflow: hidden;
   padding: 104px 0 112px;
   text-align: center;
-  background:
-    radial-gradient(ellipse 70% 60% at 12% 18%, rgba(145, 245, 211, 0.34), transparent 62%),
-    radial-gradient(ellipse 60% 58% at 88% 8%, rgba(255, 152, 193, 0.26), transparent 60%),
-    radial-gradient(ellipse 80% 60% at 50% 108%, rgba(241, 236, 255, 0.95), transparent 66%),
-    linear-gradient(180deg, #fdfcfa 0%, #f7fffb 48%, #fff8fb 100%);
+  background-image: url("/background.png");
+  background-size: 97% auto;
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-color: #fbfaf8;
 }
 
 .hero-decoration {
