@@ -212,3 +212,11 @@ async def list_candidates(
             for c in items
         ],
     }
+
+
+@router.get("/internal/trends/keypools/status")
+async def get_keypool_status() -> dict:
+    """Returns aggregated real-time pool status and quota tracking across all API providers."""
+    from app.core.key_pool import get_all_pool_stats
+    stats = await get_all_pool_stats()
+    return {"status": "success", "data": stats}

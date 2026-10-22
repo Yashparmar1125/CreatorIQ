@@ -1,5 +1,5 @@
 """
-SerpApi Google Trends clients with Multi-Key Pool & Automatic 429 Failover.
+SerpApi Google Trends clients with Redis-Backed Multi-Key Pool & Automatic 429 Failover.
   - search_google_trends()       → engine: google_trends (RELATED_QUERIES etc.)
   - search_trending_now()        → engine: google_trends_trending_now  ← primary
 """
@@ -10,59 +10,9 @@ from typing import Any
 import httpx
 
 from app.core.config import settings
+from app.core.key_pool import serpapi_pool
 
 logger = logging.getLogger(__name__)
-
-
-class SerpApiKeyPool:
-    """Thread-safe key pool for SerpApi with automatic 429 failover."""
-
-    def __init__(self) -> None:
-        self._keys: list[str] = []
-        self._exhausted_keys: set[str] = set()
-        self._current_idx: int = 0
-        self._reload_keys()
-
-    def _reload_keys(self) -> None:
-        raw = f"{settings.serpapi_api_keys},{settings.serpapi_api_key}".strip(",")
-        keys: list[str] = []
-        for k in raw.split(","):
-            clean = k.strip()
-            if clean and clean not in keys:
-                keys.append(clean)
-        self._keys = keys
-
-    def get_keys(self) -> list[str]:
-        if not self._keys:
-            self._reload_keys()
-        return list(self._keys)
-
-    def get_active_key(self) -> str | None:
-        if not self._keys:
-            self._reload_keys()
-        available = [k for k in self._keys if k not in self._exhausted_keys]
-        if not available:
-            if self._keys:
-                logger.warning("All SerpApi keys were marked exhausted; resetting pool.")
-                self._exhausted_keys.clear()
-                available = list(self._keys)
-            else:
-                return None
-        key = available[self._current_idx % len(available)]
-        self._current_idx += 1
-        return key
-
-    def mark_exhausted(self, key: str) -> None:
-        self._exhausted_keys.add(key)
-        logger.warning(
-            "SerpApi key ...%s marked exhausted (total exhausted: %d/%d).",
-            key[-6:],
-            len(self._exhausted_keys),
-            len(self._keys),
-        )
-
-
-serpapi_pool = SerpApiKeyPool()
 
 
 async def search_google_trends(
@@ -75,7 +25,7 @@ async def search_google_trends(
     gprop: str = "youtube",
 ) -> dict[str, Any]:
     """Legacy: keyword-based RELATED_QUERIES call. Kept for the debug proxy endpoint."""
-    keys = serpapi_pool.get_keys()
+    keys = serpapi_pool.get_all_keys()
     if not keys:
         raise RuntimeError("SERPAPI_API_KEY / SERPAPI_API_KEYS not set")
 
@@ -84,7 +34,7 @@ async def search_google_trends(
 
     async with httpx.AsyncClient(timeout=60.0) as client:
         for _ in range(max_attempts):
-            key = serpapi_pool.get_active_key()
+            key = await serpapi_pool.get_active_key()
             if not key:
                 break
             params: dict[str, Any] = {
@@ -103,14 +53,15 @@ async def search_google_trends(
             try:
                 r = await client.get(settings.serpapi_base_url, params=params)
                 if r.status_code == 429 or "Your monthly searches limit has been reached" in r.text:
-                    serpapi_pool.mark_exhausted(key)
+                    await serpapi_pool.mark_exhausted(key, cooldown_seconds=86400, reason="monthly_limit_429")
                     continue
                 r.raise_for_status()
+                await serpapi_pool.record_usage(key)
                 return r.json()
             except Exception as exc:
                 last_err = exc
                 if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code == 429:
-                    serpapi_pool.mark_exhausted(key)
+                    await serpapi_pool.mark_exhausted(key, cooldown_seconds=86400, reason="monthly_limit_429")
                     continue
                 raise
 
@@ -140,10 +91,10 @@ async def search_trending_now(
                   7  = Finance
                   20 = Jobs & Education
                   45 = Health
-                  0  = All topics
+                  0  = All topics (omitted from query)
     hl          : language code
     """
-    keys = serpapi_pool.get_keys()
+    keys = serpapi_pool.get_all_keys()
     if not keys:
         raise RuntimeError("SERPAPI_API_KEY / SERPAPI_API_KEYS not set")
 
@@ -152,7 +103,7 @@ async def search_trending_now(
 
     async with httpx.AsyncClient(timeout=60.0) as client:
         for _ in range(max_attempts):
-            key = serpapi_pool.get_active_key()
+            key = await serpapi_pool.get_active_key()
             if not key:
                 break
             params: dict[str, Any] = {
@@ -164,17 +115,19 @@ async def search_trending_now(
             }
             if category_id and str(category_id) != "0":
                 params["category_id"] = str(category_id)
+
             try:
                 r = await client.get(settings.serpapi_base_url, params=params)
                 if r.status_code == 429 or "Your monthly searches limit has been reached" in r.text:
-                    serpapi_pool.mark_exhausted(key)
+                    await serpapi_pool.mark_exhausted(key, cooldown_seconds=86400, reason="monthly_limit_429")
                     continue
                 r.raise_for_status()
+                await serpapi_pool.record_usage(key)
                 return r.json()
             except Exception as exc:
                 last_err = exc
                 if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code == 429:
-                    serpapi_pool.mark_exhausted(key)
+                    await serpapi_pool.mark_exhausted(key, cooldown_seconds=86400, reason="monthly_limit_429")
                     continue
                 raise
 

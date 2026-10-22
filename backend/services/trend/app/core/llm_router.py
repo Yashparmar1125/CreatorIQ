@@ -8,57 +8,23 @@ from typing import Any, AsyncGenerator
 import httpx
 
 from app.core.config import settings
+from app.core.key_pool import groq_pool, gemini_pool
 
 logger = logging.getLogger(__name__)
 
 
 class LLMRouter:
     """
-    Multi-Provider, Multi-Key LLM Router with automatic failover and key rotation.
+    Multi-Provider, Multi-Key LLM Router with Redis-backed key pool & automatic failover.
     1. Groq: openai/gpt-oss-120b (Primary for fast reasoning and structured tool-calling)
     2. Gemini API: gemini-3.8-flash (Primary for synthesis and long-context analysis)
     3. OpenRouter: Fallback
     """
 
     def __init__(self) -> None:
-        self.groq_keys = [
-            k.strip() for k in (settings.groq_api_keys or settings.groq_api_key).split(",") if k.strip()
-        ]
-        self.gemini_keys = [
-            k.strip() for k in (settings.gemini_api_keys or settings.gemini_api_key).split(",") if k.strip()
-        ]
         self.openrouter_keys = [
             k.strip() for k in settings.openrouter_api_key.split(",") if k.strip()
         ]
-
-        self._groq_idx = 0
-        self._gemini_idx = 0
-        self._cooldowns: dict[str, float] = {}
-
-    def _get_active_groq_key(self) -> str | None:
-        if not self.groq_keys:
-            return None
-        now = time.time()
-        for _ in range(len(self.groq_keys)):
-            key = self.groq_keys[self._groq_idx % len(self.groq_keys)]
-            self._groq_idx += 1
-            if self._cooldowns.get(key, 0) < now:
-                return key
-        return self.groq_keys[0]
-
-    def _get_active_gemini_key(self) -> str | None:
-        if not self.gemini_keys:
-            return None
-        now = time.time()
-        for _ in range(len(self.gemini_keys)):
-            key = self.gemini_keys[self._gemini_idx % len(self.gemini_keys)]
-            self._gemini_idx += 1
-            if self._cooldowns.get(key, 0) < now:
-                return key
-        return self.gemini_keys[0]
-
-    def _mark_cooldown(self, key: str, seconds: float = 60.0) -> None:
-        self._cooldowns[key] = time.time() + seconds
 
     async def chat(
         self,
@@ -69,7 +35,7 @@ class LLMRouter:
         prefer_provider: str = "groq",
     ) -> dict[str, Any]:
         """
-        Execute chat completion with automatic provider failover.
+        Execute chat completion with automatic provider failover and Redis-backed key rotation.
         Returns OpenAI-standard response dictionary:
         {
             "role": "assistant",
@@ -82,38 +48,48 @@ class LLMRouter:
         errors = []
 
         # 1. Try Groq (Primary for tool calling and reasoning)
-        if prefer_provider in ("groq", "any") and self.groq_keys:
+        groq_all_keys = groq_pool.get_all_keys()
+        if prefer_provider in ("groq", "any") and groq_all_keys:
             groq_models = ["openai/gpt-oss-20b", "qwen/qwen3.8-27b"]
             for model_name in groq_models:
-                for _ in range(len(self.groq_keys)):
-                    key = self._get_active_groq_key()
+                for _ in range(len(groq_all_keys)):
+                    key = await groq_pool.get_active_key()
                     if not key:
                         break
                     try:
                         res = await self._call_groq(key, messages, tools=tools, temperature=temperature, model=model_name)
+                        await groq_pool.record_usage(key)
                         res["provider"] = "groq"
                         res["model"] = model_name
                         return res
                     except Exception as exc:
                         errors.append(f"Groq {model_name} error: {exc}")
                         logger.warning("Groq call failed with key ending in %s on model %s: %s", key[-6:], model_name, exc)
-                        self._mark_cooldown(key, 30.0)
+                        err_str = str(exc).lower()
+                        if "429" in err_str or "rate limit" in err_str:
+                            ttl = 86400 if ("daily" in err_str or "quota" in err_str) else 60
+                            await groq_pool.mark_exhausted(key, cooldown_seconds=ttl, reason="rate_limit")
 
         # 2. Try Gemini 3.8 Flash (if no tools or as fallback)
-        if self.gemini_keys:
-            for _ in range(len(self.gemini_keys)):
-                key = self._get_active_gemini_key()
+        gemini_all_keys = gemini_pool.get_all_keys()
+        if gemini_all_keys:
+            for _ in range(len(gemini_all_keys)):
+                key = await gemini_pool.get_active_key()
                 if not key:
                     break
                 try:
                     res = await self._call_gemini(key, messages, tools=tools, temperature=temperature)
+                    await gemini_pool.record_usage(key)
                     res["provider"] = "gemini"
                     res["model"] = "gemini-3.8-flash"
                     return res
                 except Exception as exc:
                     errors.append(f"Gemini error: {exc}")
                     logger.warning("Gemini call failed with key ending in %s: %s", key[-6:], exc)
-                    self._mark_cooldown(key, 30.0)
+                    err_str = str(exc).lower()
+                    if "429" in err_str or "quota" in err_str:
+                        ttl = 86400 if "daily" in err_str else 60
+                        await gemini_pool.mark_exhausted(key, cooldown_seconds=ttl, reason="rate_limit")
 
         # 3. Try OpenRouter fallback
         if self.openrouter_keys:
