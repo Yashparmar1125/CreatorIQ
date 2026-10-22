@@ -672,7 +672,7 @@ class FeedService:
         concepts = await self.concept_repo.search_by_title(db, query, limit=30)
         scored: list[dict[str, Any]] = []
         for c in concepts:
-            item = self._score_concept(c, ctx)
+            item = self._score_concept(c, ctx, strict=False)
             if item:
                 scored.append(item)
         scored.sort(key=lambda x: x["opportunity_score"], reverse=True)
