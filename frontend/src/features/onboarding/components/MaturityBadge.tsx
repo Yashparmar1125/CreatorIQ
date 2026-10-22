@@ -9,9 +9,9 @@ function cn(...inputs: (string | undefined | null | false)[]) {
 export type ProfileMaturity = 'new' | 'emerging' | 'established';
 
 const LABELS: Record<ProfileMaturity, { label: string; className: string }> = {
-  new: { label: 'New Channel', className: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
-  emerging: { label: 'Growing', className: 'bg-brand-600/10 text-brand-400 border-brand-600/20' },
-  established: { label: 'Established', className: 'bg-green-500/10 text-green-400 border-green-500/20' },
+  new: { label: 'New Channel', className: 'bg-amber-50 text-amber-800 border-amber-300' },
+  emerging: { label: 'Growing', className: 'bg-[#f0ebff] text-[#6035c0] border-[#d8cbf9]' },
+  established: { label: 'Established', className: 'bg-[#ecfaf2] text-[#065f46] border-[#a7f3d0]' },
 };
 
 interface MaturityBadgeProps {
@@ -24,7 +24,7 @@ export const MaturityBadge: React.FC<MaturityBadgeProps> = ({ maturity, classNam
   return (
     <span
       className={cn(
-        'inline-flex items-center px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border',
+        'inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border shadow-xs',
         cfg.className,
         className
       )}

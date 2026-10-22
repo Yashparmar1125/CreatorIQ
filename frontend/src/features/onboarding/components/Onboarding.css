@@ -1,0 +1,151 @@
+/* ==========================================================================
+   CreatorIQ Onboarding - Light, Warm Lavender & Mint Brand Theme
+   ========================================================================== */
+
+body:has(.onboarding-page) {
+  background-color: #fbfbfe !important;
+  color: #181719 !important;
+}
+
+.onboarding-page {
+  background-color: #fbfbfe !important;
+  color: #181719 !important;
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  font-family: var(--font-dm-sans, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+}
+
+/* Force light typography across Onboarding page */
+.onboarding-page h1,
+.onboarding-page h2,
+.onboarding-page h3,
+.onboarding-page h4,
+.onboarding-page p,
+.onboarding-page span,
+.onboarding-page label,
+.onboarding-page strong {
+  color: inherit;
+}
+
+.onboarding-page h1,
+.onboarding-page h2,
+.onboarding-page h3 {
+  font-family: var(--font-sora, "Sora", sans-serif);
+  color: #14121a !important;
+}
+
+/* Onboarding Outer Shell Card */
+.onboarding-card {
+  background-color: #ffffff !important;
+  border: 1.5px solid #181719 !important;
+  border-radius: 28px !important;
+  box-shadow: 8px 8px 0px #70f4b8 !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Inputs */
+.onboarding-input {
+  width: 100%;
+  height: 44px;
+  padding-left: 14px;
+  padding-right: 14px;
+  border-radius: 12px;
+  border: 1px solid #dcd7e3 !important;
+  background-color: #ffffff !important;
+  color: #181719 !important;
+  font-size: 14px;
+  outline: none;
+  transition: all 0.15s ease-in-out;
+}
+
+.onboarding-input:focus {
+  border-color: #181719 !important;
+  box-shadow: 0 0 0 1px #181719;
+}
+
+.onboarding-input::placeholder {
+  color: #9ca3af !important;
+}
+
+/* Action Buttons */
+.onboarding-btn-primary {
+  height: 46px;
+  padding-left: 24px;
+  padding-right: 24px;
+  border-radius: 9999px;
+  background-color: #ffa2c8 !important;
+  border: 1.5px solid #181719 !important;
+  color: #181719 !important;
+  font-weight: 700;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.15s ease-in-out;
+  cursor: pointer;
+}
+
+.onboarding-btn-primary:hover:not(:disabled) {
+  background-color: #ff90bd !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 145, 190, 0.25);
+}
+
+.onboarding-btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.onboarding-btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.onboarding-btn-secondary {
+  height: 46px;
+  padding-left: 20px;
+  padding-right: 20px;
+  border-radius: 9999px;
+  background-color: #ffffff !important;
+  border: 1.5px solid #dcd7e3 !important;
+  color: #2c2834 !important;
+  font-weight: 700;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.15s ease-in-out;
+  cursor: pointer;
+}
+
+.onboarding-btn-secondary:hover {
+  border-color: #181719 !important;
+  color: #181719 !important;
+  background-color: #f8f7fa !important;
+}
+
+/* Interactive Option Tiles */
+.onboarding-tile {
+  background-color: #ffffff;
+  border: 1px solid #dcd7e3;
+  color: #2c2834;
+  border-radius: 14px;
+  transition: all 0.15s ease-in-out;
+  cursor: pointer;
+}
+
+.onboarding-tile:hover:not(:disabled) {
+  border-color: #181719;
+  background-color: #faf9fd;
+}
+
+.onboarding-tile-active {
+  background-color: #f0ebff !important;
+  border: 1.5px solid #181719 !important;
+  color: #14121a !important;
+  box-shadow: 3px 3px 0px #181719;
+}

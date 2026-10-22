@@ -9,14 +9,14 @@ import { NicheStep } from './steps/NicheStep';
 import { PreferencesStep } from './steps/PreferencesStep';
 import { ProfileReviewStep } from './steps/ProfileReviewStep';
 import { ReadyStep } from './steps/ReadyStep';
-import logo from '../../../assets/logo.png';
 import { cn } from '../../../lib/utils';
+import './Onboarding.css';
 
 const stepsConfig = [
   { id: 1, name: 'Welcome' },
   { id: 2, name: 'Channel' },
   { id: 3, name: 'Niche' },
-  { id: 4, name: 'Preferences' },
+  { id: 4, name: 'Strategy' },
   { id: 5, name: 'Review' },
 ];
 
@@ -160,30 +160,38 @@ export const OnboardingWizard: React.FC = () => {
   };
 
   return (
-    <div className="relative flex h-screen w-full flex-col justify-between overflow-hidden bg-[#0a0a0a] font-sora text-[#ededed]">
-      {/* Subtle Ambient Background Glow */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute -left-1/4 -top-1/4 h-[55%] w-[55%] rounded-full bg-brand-600/10 blur-[140px]" />
-        <div className="absolute -bottom-1/4 -right-1/4 h-[45%] w-[45%] rounded-full bg-cyan-500/8 blur-[130px]" />
-      </div>
-
-      {/* Full-Width 3-Zone Top Navigation Bar (Left: Brand, Center: Stepper, Right: Step Counter) */}
-      <header className="relative z-10 grid h-14 w-full shrink-0 grid-cols-2 items-center border-b border-[#1a1a1a] bg-[#0d0d0d]/90 px-6 backdrop-blur-md lg:grid-cols-3 lg:px-10">
-        {/* Left Zone: Brand Logo */}
-        <div className="flex items-center gap-2.5 justify-self-start">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-pure-white p-0.5 shadow-sm">
-            <img src={logo} alt="CreatorIQ" className="h-full w-full object-contain" />
+    <div className="onboarding-page min-h-screen flex flex-col justify-between bg-[#fbfbfe] text-[#181719]">
+      {/* Top Navigation Bar */}
+      <header className="relative z-10 grid h-16 w-full shrink-0 grid-cols-2 items-center border-b border-[#ede9f2] bg-white px-6 sm:px-10 lg:grid-cols-3">
+        {/* Left: Brand Logo */}
+        <div className="flex items-center gap-2 justify-self-start">
+          <div className="w-7 h-7 flex items-center justify-center text-black">
+            <svg
+              className="w-6 h-6 text-black shrink-0"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <circle cx="12" cy="12" r="9.5" stroke="currentColor" strokeWidth="2.4" />
+              <path
+                d="M12 6.5C8.96243 6.5 6.5 8.96243 6.5 12C6.5 15.0376 8.96243 17.5 12 17.5C15.0376 17.5 17.5 15.0376 17.5 12"
+                stroke="currentColor"
+                strokeWidth="2.4"
+                strokeLinecap="round"
+              />
+              <circle cx="12" cy="12" r="2.2" fill="currentColor" />
+            </svg>
           </div>
-          <span className="font-sora text-sm font-semibold tracking-tight text-white">
-            Creator<span className="text-neutral-500">IQ</span>
+          <span className="font-sora text-base sm:text-lg font-extrabold tracking-tight text-[#14121a]">
+            CreatorIQ
           </span>
         </div>
 
-        {/* Center Zone: Stepper */}
+        {/* Center: Stepper */}
         {step < 6 ? (
           <nav
             aria-label="Onboarding progress"
-            className="hidden items-center justify-center gap-2 justify-self-center lg:flex"
+            className="hidden items-center justify-center gap-2.5 justify-self-center lg:flex"
           >
             {stepsConfig.map((s, idx) => {
               const isCompleted = step > s.id;
@@ -193,24 +201,24 @@ export const OnboardingWizard: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <div
                       className={cn(
-                        'flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold transition-all duration-300',
+                        'flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold transition-all duration-200',
                         isCompleted
-                          ? 'bg-brand-600 text-white'
+                          ? 'bg-[#f0ebff] text-[#7033ea] border border-[#d8cbf9]'
                           : isCurrent
-                            ? 'border border-brand-400 bg-brand-500/20 text-white ring-2 ring-brand-500/20'
-                            : 'border border-[#262626] bg-[#141414] text-neutral-500'
+                            ? 'border-[1.5px] border-[#181719] bg-[#f0ebff] text-[#14121a] shadow-[2px_2px_0px_#181719]'
+                            : 'border border-[#dcd7e3] bg-white text-[#9ca3af]'
                       )}
                     >
-                      {isCompleted ? <Check className="h-3 w-3" /> : s.id}
+                      {isCompleted ? <Check className="h-3.5 w-3.5 stroke-[3]" /> : s.id}
                     </div>
                     <span
                       className={cn(
-                        'whitespace-nowrap text-xs font-medium transition-colors',
+                        'whitespace-nowrap text-xs font-bold transition-colors',
                         isCurrent
-                          ? 'text-white'
+                          ? 'text-[#14121a]'
                           : isCompleted
-                            ? 'text-neutral-300'
-                            : 'text-neutral-500'
+                            ? 'text-[#6b6775]'
+                            : 'text-[#9ca3af]'
                       )}
                     >
                       {s.name}
@@ -220,7 +228,7 @@ export const OnboardingWizard: React.FC = () => {
                     <div
                       className={cn(
                         'h-[1.5px] w-6 transition-colors duration-300',
-                        step > s.id ? 'bg-brand-500/70' : 'bg-[#242424]'
+                        step > s.id ? 'bg-[#8b5cf6]' : 'bg-[#e5e0ea]'
                       )}
                     />
                   )}
@@ -232,28 +240,27 @@ export const OnboardingWizard: React.FC = () => {
           <div className="hidden lg:block" />
         )}
 
-        {/* Right Zone: Step Pill */}
+        {/* Right: Step Counter Badge */}
         <div className="flex items-center gap-3 justify-self-end">
           {step < 6 && (
-            <span className="rounded-lg border border-[#242424] bg-[#141414] px-2.5 py-1 text-[11px] font-medium text-neutral-400">
-              Step <span className="font-semibold text-white">{step}</span> of 5
+            <span className="rounded-full border border-[#d8cbf9] bg-[#f0ebff] px-3.5 py-1 text-xs font-bold text-[#6035c0]">
+              Step <span className="text-[#14121a]">{step}</span> of 5
             </span>
           )}
         </div>
       </header>
 
-      {/* Main Viewport-Centered Area */}
-      <main className="relative z-10 mx-auto flex w-full max-w-3xl flex-1 flex-col items-center justify-center px-4 py-3 sm:px-6">
+      {/* Main Viewport Content Area */}
+      <main className="relative z-10 mx-auto flex w-full max-w-3xl flex-1 flex-col items-center justify-center px-4 py-8 sm:px-6 md:py-12">
         <AnimatePresence mode="wait">
           <motion.div key={step} className="w-full">
             {renderCurrentStep()}
           </motion.div>
         </AnimatePresence>
       </main>
+
+      {/* Bottom spacer / aesthetic breathing room */}
+      <footer className="w-full py-2"></footer>
     </div>
   );
 };
-
-
-
-

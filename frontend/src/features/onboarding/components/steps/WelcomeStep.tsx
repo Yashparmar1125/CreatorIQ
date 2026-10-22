@@ -1,8 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Sparkles, ArrowRight, TrendingUp, Cpu, Compass } from 'lucide-react';
-import { Button } from '../../../../components/ui/Button';
-import { Card } from '../../../../components/ui/Card';
 
 interface WelcomeStepProps {
   onNext: () => void;
@@ -12,17 +10,17 @@ const HIGHLIGHTS = [
   {
     icon: Compass,
     title: 'Vector Niche Match',
-    desc: '384-dim Qdrant embeddings match YouTube concepts to your niche & region.',
+    desc: '384-dim Qdrant embeddings match YouTube trends specifically to your audience & region.',
   },
   {
     icon: Cpu,
     title: 'LightGBM Virality',
-    desc: '85-feature model forecasts 7-day breakout probability & trajectory.',
+    desc: '85-feature model forecasts breakout probability, momentum, and search trajectory.',
   },
   {
     icon: TrendingUp,
     title: 'Strategy Co-Pilot',
-    desc: 'Generates tailored video hooks, titles, and angles for top trends.',
+    desc: 'Instantly generates high-retention video hooks, titles, and angles for top breakout topics.',
   },
 ];
 
@@ -34,46 +32,42 @@ export const WelcomeStep: React.FC<WelcomeStepProps> = ({ onNext }) => (
     transition={{ duration: 0.2 }}
     className="w-full"
   >
-    <Card
-      variant="elevated"
-      padding="none"
-      className="overflow-hidden rounded-2xl border border-[#242424] bg-[#121212] p-6 shadow-2xl shadow-black/70 sm:p-8"
-    >
+    <div className="onboarding-card p-6 sm:p-9 md:p-11">
       {/* Top Hero Header */}
-      <div className="flex items-center gap-4 border-b border-[#1f1f1f] pb-5">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-brand-500/30 bg-[#181826] shadow-md">
-          <Sparkles className="h-6 w-6 text-brand-400" />
+      <div className="flex items-start sm:items-center gap-4 border-b border-[#f0ebff] pb-6">
+        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border-[1.5px] border-[#181719] bg-[#f0ebff] shadow-[4px_4px_0px_#70f4b8]">
+          <Sparkles className="h-7 w-7 text-[#7033ea]" />
         </div>
         <div className="min-w-0 flex-1 text-left">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h1 className="font-sora text-xl font-semibold tracking-tight text-white sm:text-2xl">
-              Welcome to <span className="text-brand-400">CreatorIQ</span>
+            <h1 className="font-sora text-2xl sm:text-3xl font-extrabold tracking-tight text-[#14121a]">
+              Welcome to <span className="text-[#8b5cf6]">CreatorIQ</span>
             </h1>
-            <span className="inline-flex items-center rounded-md border border-brand-500/30 bg-brand-500/10 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-brand-400">
+            <span className="inline-flex items-center rounded-full border border-[#a7f3d0]/80 bg-[#e8faf3] px-3 py-1 text-xs font-bold text-[#059669]">
               2 Min Setup
             </span>
           </div>
-          <p className="mt-1 text-xs leading-relaxed text-neutral-400 sm:text-sm">
-            Configure your channel profile to calibrate trend velocity and view forecasts for your audience.
+          <p className="mt-2 text-sm leading-relaxed text-[#6b6775]">
+            Configure your channel profile to calibrate trend momentum and view opportunity forecasts for your unique audience.
           </p>
         </div>
       </div>
 
       {/* 3-Column Feature Grid */}
-      <div className="grid grid-cols-1 gap-3.5 py-5 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 py-7 sm:grid-cols-3">
         {HIGHLIGHTS.map((item) => {
           const Icon = item.icon;
           return (
             <div
               key={item.title}
-              className="flex flex-col justify-between rounded-xl border border-[#222222] bg-[#161616] p-4 text-left transition-colors hover:border-[#2e2e2e]"
+              className="flex flex-col justify-between rounded-2xl border-[1.5px] border-[#181719] bg-[#fcfaff] p-5 text-left transition-all hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_#f0ebff]"
             >
               <div>
-                <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg border border-brand-500/20 bg-brand-500/10 text-brand-400">
-                  <Icon className="h-4 w-4" />
+                <div className="mb-3.5 flex h-10 w-10 items-center justify-center rounded-xl border border-[#d8cbf9] bg-[#f0ebff] text-[#7033ea]">
+                  <Icon className="h-5 w-5" />
                 </div>
-                <h3 className="text-sm font-semibold text-white">{item.title}</h3>
-                <p className="mt-1 text-xs leading-relaxed text-neutral-400">{item.desc}</p>
+                <h3 className="text-base font-bold text-[#14121a] font-sora">{item.title}</h3>
+                <p className="mt-1.5 text-xs sm:text-[13px] leading-relaxed text-[#6b6775]">{item.desc}</p>
               </div>
             </div>
           );
@@ -81,18 +75,19 @@ export const WelcomeStep: React.FC<WelcomeStepProps> = ({ onNext }) => (
       </div>
 
       {/* Bottom Action Bar */}
-      <div className="flex flex-col items-stretch justify-between gap-3 border-t border-[#1f1f1f] pt-4 sm:flex-row sm:items-center">
-        <p className="text-xs text-neutral-500">
-          No YouTube OAuth required — update anytime in Settings.
+      <div className="flex flex-col items-stretch justify-between gap-4 border-t border-[#f0ebff] pt-6 sm:flex-row sm:items-center">
+        <p className="text-xs text-[#716c7d]">
+          No YouTube OAuth required — update or connect channels anytime in Settings.
         </p>
-        <Button size="lg" onClick={onNext} className="gap-2 px-6">
+        <button
+          type="button"
+          onClick={onNext}
+          className="onboarding-btn-primary"
+        >
           <span>Start Profile Setup</span>
-          <ArrowRight className="h-4 w-4" />
-        </Button>
+          <ArrowRight className="h-4 w-4 stroke-[2.5]" />
+        </button>
       </div>
-    </Card>
+    </div>
   </motion.div>
 );
-
-
-

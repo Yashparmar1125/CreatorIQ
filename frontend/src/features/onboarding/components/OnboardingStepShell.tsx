@@ -1,8 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, ArrowRight, Loader2 } from 'lucide-react';
-import { Card } from '../../../components/ui/Card';
-import { Button } from '../../../components/ui/Button';
 import { cn } from '../../../lib/utils';
 
 interface OnboardingStepShellProps {
@@ -41,25 +39,21 @@ export const OnboardingStepShell: React.FC<OnboardingStepShellProps> = ({
     transition={{ duration: 0.2, ease: 'easeOut' }}
     className={cn('w-full', className)}
   >
-    <Card
-      variant="elevated"
-      padding="none"
-      className="overflow-hidden rounded-2xl border border-[#242424] bg-[#121212] p-5 shadow-2xl shadow-black/70 sm:p-6"
-    >
+    <div className="onboarding-card p-6 sm:p-8 md:p-10">
       {/* Card Header */}
-      <div className={cn('border-b border-[#1f1f1f] pb-3.5', centered ? 'text-center' : 'text-left')}>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-sora text-lg font-semibold tracking-tight text-white sm:text-xl">
+      <div className={cn('border-b border-[#f0ebff] pb-5', centered ? 'text-center' : 'text-left')}>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="font-sora text-2xl sm:text-[26px] font-extrabold tracking-tight text-[#14121a]">
             {title}
           </h2>
           {badge && (
-            <span className="inline-flex items-center rounded-md border border-brand-500/30 bg-brand-500/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-brand-400">
+            <span className="inline-flex items-center rounded-full border border-[#a7f3d0]/80 bg-[#e8faf3] px-3 py-1 text-xs font-bold text-[#059669]">
               {badge}
             </span>
           )}
         </div>
         {description && (
-          <p className="mt-1 text-xs leading-relaxed text-neutral-400">
+          <p className="mt-2 text-sm leading-relaxed text-[#6b6775]">
             {description}
           </p>
         )}
@@ -67,38 +61,35 @@ export const OnboardingStepShell: React.FC<OnboardingStepShellProps> = ({
 
       {/* Card Body */}
       {children && (
-        <div className={cn('py-4', cardClassName)}>
+        <div className={cn('py-6', cardClassName)}>
           {children}
         </div>
       )}
 
       {/* Card Footer Action Bar */}
       {(onBack || onNext) && (
-        <div className="flex items-center justify-between gap-4 border-t border-[#1f1f1f] pt-3.5">
+        <div className="flex items-center justify-between gap-4 border-t border-[#f0ebff] pt-5">
           <div>
             {onBack ? (
-              <Button
+              <button
                 type="button"
-                variant="secondary"
-                size="md"
                 onClick={onBack}
-                className="gap-2 border-[#2a2a2a] bg-[#171717] px-4 text-neutral-300 hover:border-[#3a3a3a] hover:bg-[#202020] hover:text-white"
+                className="onboarding-btn-secondary"
               >
                 <ArrowLeft className="h-4 w-4" />
                 <span>Back</span>
-              </Button>
+              </button>
             ) : (
               <div />
             )}
           </div>
 
           {onNext && (
-            <Button
+            <button
               type="button"
               onClick={onNext}
               disabled={nextDisabled || isLoading}
-              size="md"
-              className="gap-2 px-5"
+              className="onboarding-btn-primary"
             >
               {isLoading ? (
                 <>
@@ -108,17 +99,13 @@ export const OnboardingStepShell: React.FC<OnboardingStepShellProps> = ({
               ) : (
                 <>
                   <span>{nextLabel}</span>
-                  <ArrowRight className="h-4 w-4" />
+                  <ArrowRight className="h-4 w-4 stroke-[2.5]" />
                 </>
               )}
-            </Button>
+            </button>
           )}
         </div>
       )}
-    </Card>
+    </div>
   </motion.div>
 );
-
-
-
-
