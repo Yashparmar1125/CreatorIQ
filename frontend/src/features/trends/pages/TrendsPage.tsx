@@ -1,53 +1,110 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router';
-import { useTrendsStore } from '../../../stores/useTrendsStore';
-import { AIScannerLoader } from '../../../components/ui/AIScannerLoader';
+import { Link, useNavigate } from 'react-router';
+import { useTrendsStore, type Trend, type TrendSignalPoint } from '../../../stores/useTrendsStore';
 import { FeedHistoryDrawer } from '../components/FeedHistoryDrawer';
-import { PageHeader } from '../../../components/ui/PageHeader';
-import { Card } from '../../../components/ui/Card';
-import { Button } from '../../../components/ui/Button';
-import { Badge } from '../../../components/ui/Badge';
-import { Alert } from '../../../components/ui/Alert';
-import { Input } from '../../../components/ui/Input';
+import { TrendMiniChart } from '../components/TrendMiniChart';
+import logo from '../../../assets/logo.png';
 import {
-  TrendingUp,
-  Search,
-  Sparkles,
-  Loader2,
-  X,
-  LayoutList,
-  Film,
-  Layers,
-  User,
-  RefreshCw,
-  Globe,
-  ExternalLink,
-  History,
+  cleanTrendText,
+  cleanTrendTitle,
+  isBoilerplateConcept,
+} from '../../../lib/cleanTrendTitle';
+import { formatCompactNumber } from '../../../lib/viewEstimator';
+import {
+  ArrowLeft,
+  ArrowRight,
   Bookmark,
   Check,
-  Copy,
-  Flame,
+  Film,
+  Globe,
+  History,
+  LayoutList,
+  Layers,
+  Loader2,
+  RefreshCw,
+  Search,
+  Sparkles,
+  TrendingUp,
+  X,
 } from 'lucide-react';
-import {
-  cleanTrendTitle,
-  cleanTrendText,
-  resolveVideoConcept,
-  resolveVideoConceptBadge,
-  cleanTrendHeadline,
-} from '../../../lib/cleanTrendTitle';
-import { cn } from '../../../lib/utils';
 
-const FORMAT_TABS = [
-  { key: 'all' as const, label: 'All', Icon: Layers },
+/* ------------------------------------------------------------------ *
+ * Content-type filters — these map to the existing supported formats
+ * ------------------------------------------------------------------ */
+const FORMAT_TABS = 
+[
+  { key: 'all' as const, label: 'All content types', Icon: Layers },
   { key: 'long_form' as const, label: 'Long-form', Icon: LayoutList },
   { key: 'shorts' as const, label: 'Shorts', Icon: Film },
   { key: 'saved' as const, label: 'Saved', Icon: Bookmark },
 ];
 
-function formatSubs(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
-  return String(n);
+/* ------------------------------------------------------------------ *
+ * Demand filters — driven by the real `lifecycle` value the API returns
+ * (emerging / growing / peaking / declining / expired)
+ * ------------------------------------------------------------------ */
+type DemandKey = 'all' | 'growing' | 'peaking' | 'moderate' | 'declining';
+
+const DEMAND_FILTERS: { key: DemandKey; label: string; lifecycles: string[] | null }[] = [
+  { key: 'all', label: 'All demand', lifecycles: null },
+  { key: 'growing', label: 'Growing demand', lifecycles: ['growing'] },
+  { key: 'peaking', label: 'Interest at peak', lifecycles: ['peaking'] },
+  { key: 'moderate', label: 'Moderate demand', lifecycles: ['emerging'] },
+  { key: 'declining', label: 'Declining demand', lifecycles: ['declining', 'expired'] },
+];
+
+const LIFECYCLE_META: Record<string, { label: string; className: string }> = {
+  emerging: {
+    label: 'Early signal',
+    className: 'border-[#D9CEF5] bg-[#F1ECFF] text-[#4A2E8F]',
+  },
+  growing: {
+    label: 'Growing demand',
+    className: 'border-[#B8EED8] bg-[#E8FBF4] text-[#0F5C43]',
+  },
+  peaking: {
+    label: 'Interest at peak',
+    className: 'border-[#B8EED8] bg-[#E8FBF4] text-[#0F5C43]',
+  },
+  declining: {
+    label: 'Declining demand',
+    className: 'border-[#E5E0E8] bg-[#FBFAF8] text-[#625D68]',
+  },
+  expired: {
+    label: 'Expired signal',
+    className: 'border-[#E5E0E8] bg-[#FBFAF8] text-[#77717F]',
+  },
+};
+
+function formatCompactVolume(num: number): string {
+  if (!Number.isFinite(num) || num <= 0) return '0';
+  return formatCompactNumber(num);
+}
+
+function daysBetween(from: string, to: string): number {
+  const start = Date.parse(from);
+  const end = Date.parse(to);
+  if (Number.isNaN(start) || Number.isNaN(end)) return 0;
+  return Math.max(0, Math.round((end - start) / 86_400_000));
+}
+
+interface GrowthReading {
+  pct: number;
+  days: number;
+}
+
+/** Growth measured from the real daily signal history the API returns. */
+function readGrowth(history?: TrendSignalPoint[]): GrowthReading | null {
+  if (!history || history.length < 2) return null;
+  const first = history[0];
+  const last = history[history.length - 1];
+  const base = Number(first.trend_score_median);
+  const current = Number(last.trend_score_median);
+  if (!Number.isFinite(base) || base <= 0 || !Number.isFinite(current)) return null;
+  return {
+    pct: ((current - base) / base) * 100,
+    days: daysBetween(first.video_date, last.video_date),
+  };
 }
 
 export const TrendsPage: React.FC = () => {
@@ -82,14 +139,8 @@ export const TrendsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeSearch, setActiveSearch] = useState('');
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [copiedConceptId, setCopiedConceptId] = useState<string | null>(null);
-
-  const handleCopyConcept = (trendId: string, conceptText: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    navigator.clipboard.writeText(conceptText);
-    setCopiedConceptId(trendId);
-    setTimeout(() => setCopiedConceptId((prev) => (prev === trendId ? null : prev)), 2000);
-  };
+  const [demandFilter, setDemandFilter] = useState<DemandKey>('all');
+  const [pendingDetailId, setPendingDetailId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchTrends();
@@ -113,7 +164,8 @@ export const TrendsPage: React.FC = () => {
     fetchTrends();
   };
 
-  const filteredTrends = useMemo(() => {
+  /** Content-type filter (existing behaviour, backed by supported_formats). */
+  const formatFiltered = useMemo(() => {
     if (activeFormatFilter === 'saved') {
       const fromFeed = trends.filter((t) => t.saved);
       const seen = new Set(fromFeed.map((t) => t.id));
@@ -124,111 +176,261 @@ export const TrendsPage: React.FC = () => {
     return trends.filter((t) => t.supported_formats?.includes(activeFormatFilter));
   }, [trends, savedTrends, activeFormatFilter]);
 
-  return (
-    <div className="space-y-6 animate-in text-[#ededed]">
-      <PageHeader
-        title="Trends Intelligence"
-        description="Personalized top opportunities ranked by vector similarity, niche fit, momentum velocity, and audience geography."
-        badge={
-          <div className="mb-2 flex flex-wrap items-center gap-1.5">
-            {isPersonalized && <Badge variant="brand">Personalized</Badge>}
-            {aiEnriched && (
-              <Badge variant="neutral">
-                <Sparkles className="h-3 w-3 text-indigo-400" />
-                AI curated
-              </Badge>
-            )}
-          </div>
-        }
-        actions={
-          !activeSearch ? (
-            <div className="flex flex-wrap gap-2">
-              <Button variant="secondary" onClick={() => setHistoryOpen(true)}>
-                <History className="h-3.5 w-3.5" />
-                History
-                {feedHistory.length > 0 && (
-                  <span className="ml-0.5 rounded bg-[#242424] px-1.5 py-0.5 text-[10px] font-semibold text-neutral-300">
-                    {feedHistory.length}
-                  </span>
-                )}
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() => refreshFeed()}
-                disabled={isRefreshing || isLoading}
-              >
-                {isRefreshing ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-3.5 w-3.5" />
-                )}
-                Refresh
-              </Button>
-            </div>
-          ) : undefined
-        }
-      />
+  /** Demand filter — applied on top of the content-type filter. */
+  const filteredTrends = useMemo(() => {
+    const active = DEMAND_FILTERS.find((d) => d.key === demandFilter);
+    if (!active || !active.lifecycles) return formatFiltered;
+    return formatFiltered.filter((t) =>
+      active.lifecycles?.includes(String(t.lifecycle || t.status || '').toLowerCase())
+    );
+  }, [formatFiltered, demandFilter]);
 
-      {/* Search Input Bar */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="relative min-w-0 flex-1 rounded-lg border border-[#242424] bg-[#121212] p-1">
-          <Input
-            icon={<Search className="h-4 w-4 text-neutral-500" />}
-            placeholder="Search a topic, concept or niche..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handlePredict();
-            }}
-            className="border-transparent bg-transparent pr-24 focus:bg-transparent"
-          />
-          {activeSearch && (
-            <button
-              type="button"
-              onClick={handleClearSearch}
-              className="absolute right-20 top-1/2 -translate-y-1/2 rounded p-1 text-neutral-500 hover:text-white"
-              aria-label="Clear search"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
-          <Button
-            size="sm"
-            className="absolute right-1 top-1/2 -translate-y-1/2 text-xs h-7 px-3"
-            onClick={handlePredict}
-            disabled={isLoading}
+  const demandCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    DEMAND_FILTERS.forEach((d) => {
+      counts[d.key] = d.lifecycles
+        ? formatFiltered.filter((t) =>
+            d.lifecycles?.includes(String(t.lifecycle || t.status || '').toLowerCase())
+          ).length
+        : formatFiltered.length;
+    });
+    return counts;
+  }, [formatFiltered]);
+
+  const isFiltered = activeFormatFilter !== 'all' || demandFilter !== 'all' || !!activeSearch;
+
+  const resetFilters = () => {
+    setFormatFilter('all');
+    setDemandFilter('all');
+  };
+
+  return (
+    <div className="mx-auto w-full max-w-6xl pb-16">
+      {/* ---------------------------------------------------------- *
+          Brand header
+         ---------------------------------------------------------- */}
+      <header className="flex items-center justify-between gap-3 border-b border-[#E5E0E8] pb-4">
+        <Link
+          to="/"
+          className="flex items-center gap-2 rounded-lg transition-opacity hover:opacity-80"
+          title="Back to home"
+        >
+          <span className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-lg bg-white p-0.5 shadow-xs">
+            <img src={logo} alt="CreatorIQ" className="h-full w-full object-contain" />
+          </span>
+          <span className="font-sora text-sm font-bold tracking-tight text-[#171717]">CreatorIQ</span>
+        </Link>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setHistoryOpen(true)}
+            className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[#E5E0E8] bg-white px-3 py-1.5 text-xs font-semibold text-[#625D68] transition-colors hover:border-[#C9BCF0] hover:bg-[#F6F3FF] hover:text-[#171717]"
           >
-            {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Search'}
-          </Button>
+            <History className="h-3.5 w-3.5" />
+            History
+            {feedHistory.length > 0 && (
+              <span className="rounded-full bg-[#F1ECFF] px-1.5 py-0.5 text-[10px] font-bold text-[#4A2E8F]">
+                {feedHistory.length}
+              </span>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => refreshFeed()}
+            disabled={isRefreshing || isLoading}
+            className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[#E5E0E8] bg-white px-3 py-1.5 text-xs font-semibold text-[#625D68] transition-colors hover:border-[#C9BCF0] hover:bg-[#F6F3FF] hover:text-[#171717] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isRefreshing ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <RefreshCw className="h-3.5 w-3.5" />
+            )}
+            Refresh
+          </button>
+        </div>
+      </header>
+
+      {/* ---------------------------------------------------------- *
+          Page title
+         ---------------------------------------------------------- */}
+      <div className="mt-6 flex items-start gap-3">
+        <button
+          type="button"
+          onClick={() => navigate('/app/dashboard')}
+          aria-label="Back to overview"
+          className="mt-0.5 inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-[#E5E0E8] bg-white text-[#625D68] transition-colors hover:border-[#C9BCF0] hover:bg-[#F6F3FF] hover:text-[#171717]"
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </button>
+        <div className="min-w-0">
+          <h1 className="font-sora text-[22px] font-extrabold leading-tight tracking-tight text-[#171717] sm:text-[28px]">
+            View all popular content ideas
+          </h1>
+          <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-[#625D68]">
+            {isPersonalized
+              ? 'Ranked for your niche from the live signal feed. Every metric below comes from the collected signals.'
+              : 'Browse the collected signal feed. Every metric below comes from the collected signals.'}
+          </p>
         </div>
       </div>
 
-      {/* Meta info bar */}
-      {!activeSearch && (geoContext?.badge || credits || isHistorical || snapshotAt) && (
-        <Card variant="default" padding="sm" className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs border-[#222222] bg-[#121212]">
+      {/* ---------------------------------------------------------- *
+          Search composer
+         ---------------------------------------------------------- */}
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          handlePredict();
+        }}
+        className="mt-5 flex items-center gap-2 rounded-2xl border border-[#E5E0E8] bg-white p-1.5 pl-4 transition-shadow focus-within:border-[#C9BCF0] focus-within:shadow-[0_0_0_3px_rgba(241,236,255,0.9)]"
+      >
+        <Search className="h-4 w-4 shrink-0 text-[#A79FB0]" aria-hidden="true" />
+        <label htmlFor="trends-search" className="sr-only">
+          Search content topics or trends
+        </label>
+        <input
+          id="trends-search"
+          type="search"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search content topics or trends..."
+          className="h-9 min-w-0 flex-1 border-0 bg-transparent text-sm text-[#171717] placeholder-[#9B94A5] focus:outline-none"
+        />
+        {activeSearch && (
+          <button
+            type="button"
+            onClick={handleClearSearch}
+            aria-label="Clear search"
+            className="cursor-pointer rounded-lg p-1.5 text-[#77717F] transition-colors hover:bg-[#F6F3FF] hover:text-[#171717]"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="app-btn-pink h-9 shrink-0 px-4 text-xs disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Search'}
+        </button>
+      </form>
+
+      {/* ---------------------------------------------------------- *
+          Filter chips — content type and demand are separate dimensions
+         ---------------------------------------------------------- */}
+      <div className="mt-5 space-y-2.5">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* <span className="app-section-label mr-1">Content type</span>
+          {FORMAT_TABS.map(({ key, label, Icon }) => {
+            const isActive = activeFormatFilter === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setFormatFilter(key)}
+                aria-pressed={isActive}
+                className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                  isActive
+                    ? 'border-[#171717] bg-[#171717] text-white'
+                    : 'border-[#E5E0E8] bg-white text-[#625D68] hover:border-[#C9BCF0] hover:bg-[#F6F3FF] hover:text-[#171717]'
+                }`}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {label}
+              </button>
+            );
+          })} */}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="app-section-label mr-1">Demand</span>
+          {DEMAND_FILTERS.map((d) => {
+            const isActive = demandFilter === d.key;
+            return (
+              <button
+                key={d.key}
+                type="button"
+                onClick={() => setDemandFilter(d.key)}
+                aria-pressed={isActive}
+                className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                  isActive
+                    ? 'border-[#171717] bg-[#171717] text-white'
+                    : 'border-[#E5E0E8] bg-white text-[#625D68] hover:border-[#C9BCF0] hover:bg-[#F6F3FF] hover:text-[#171717]'
+                }`}
+              >
+                {d.label}
+                <span
+                  className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+                    isActive ? 'bg-white/20 text-white' : 'bg-[#F1ECFF] text-[#4A2E8F]'
+                  }`}
+                >
+                  {demandCounts[d.key] ?? 0}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ---------------------------------------------------------- *
+          Feed context
+         ---------------------------------------------------------- */}
+      {(geoContext?.badge || credits || isHistorical || snapshotAt || aiEnriched) && (
+        <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-[#E5E0E8] bg-white px-3.5 py-2.5 text-xs text-[#625D68]">
           {isHistorical && (
-            <span className="text-amber-400">
-              Viewing past snapshot.{' '}
-              <button type="button" onClick={() => loadCurrentFeed()} className="font-medium text-indigo-400 hover:underline cursor-pointer">
+            <span className="text-[#946200]">
+              Viewing a past snapshot.{' '}
+              <button
+                type="button"
+                onClick={() => loadCurrentFeed()}
+                className="cursor-pointer font-semibold text-[#4A2E8F] underline hover:text-[#171717]"
+              >
                 Back to current
               </button>
             </span>
           )}
           {geoContext?.badge && (
-            <span className="flex items-center gap-1.5 text-neutral-400">
-              <Globe className="h-3.5 w-3.5 shrink-0" />
+            <span className="inline-flex items-center gap-1.5">
+              <Globe className="h-3.5 w-3.5 text-[#77717F]" />
               {geoContext.badge}
             </span>
           )}
-          <span className="text-[11px] text-emerald-400 font-medium">
-            Live stream active
-          </span>
+          {aiEnriched && (
+            <span className="inline-flex items-center gap-1.5 text-[#4A2E8F]">
+              <Sparkles className="h-3.5 w-3.5" />
+              AI enriched
+            </span>
+          )}
+          {credits && (
+            <span className="inline-flex items-center gap-1.5">
+              Refresh credits: {credits.remaining ?? credits.used ?? 0} left
+            </span>
+          )}
           {snapshotAt && (
-            <span className="ml-auto text-[11px] text-neutral-500">
+            <span className="ml-auto text-[11px] text-[#77717F]">
               Updated {new Date(snapshotAt).toLocaleString()}
             </span>
           )}
-        </Card>
+        </div>
+      )}
+
+      {channelContext?.name && !activeSearch && (
+        <div className="mt-3 flex items-center gap-2.5 text-xs text-[#625D68]">
+          {channelContext.thumbnail_url ? (
+            <img
+              src={channelContext.thumbnail_url}
+              alt=""
+              className="h-6 w-6 shrink-0 rounded-md border border-[#E5E0E8] object-cover"
+            />
+          ) : null}
+          <span>
+            Ranked for <span className="font-semibold text-[#171717]">{channelContext.name}</span>
+            {channelContext.niches?.length
+              ? ` · ${channelContext.niches.slice(0, 3).join(', ')}`
+              : ''}
+          </span>
+        </div>
       )}
 
       <FeedHistoryDrawer
@@ -241,268 +443,227 @@ export const TrendsPage: React.FC = () => {
         onSelectCurrent={() => loadCurrentFeed()}
       />
 
-      {/* Channel context + format filters */}
-      {(channelContext || activeSearch) && (
-        <Card variant="default" padding="sm" className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-[#222222] bg-[#121212]">
-          {activeSearch ? (
-            <div className="flex flex-wrap items-center gap-3">
-              <div>
-                <p className="text-[11px] text-neutral-500">Search results for</p>
-                <p className="text-xs font-semibold text-white">&ldquo;{activeSearch}&rdquo;</p>
-              </div>
-              <Button variant="ghost" size="sm" onClick={handleClearSearch} className="text-xs h-7">
-                Back to feed
-              </Button>
-            </div>
-          ) : channelContext ? (
-            <div className="flex min-w-0 items-center gap-3">
-              {channelContext.thumbnail_url ? (
-                <img
-                  src={channelContext.thumbnail_url}
-                  alt=""
-                  className="h-8 w-8 shrink-0 rounded-lg border border-[#2c2c2c] object-cover"
-                />
-              ) : (
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#1c1c1c] text-neutral-300">
-                  <User className="h-4 w-4" />
-                </div>
-              )}
-              <div className="min-w-0">
-                <p className="truncate text-xs font-semibold text-white">
-                  {channelContext.name ?? 'Your channel'}
-                  {channelContext.subscriber_count > 0 && (
-                    <span className="ml-2 text-neutral-400 font-normal">
-                      · {formatSubs(channelContext.subscriber_count)} subs
-                    </span>
-                  )}
-                </p>
-                <div className="mt-1 flex flex-wrap gap-1">
-                  {channelContext.niches.slice(0, 4).map((niche) => (
-                    <Badge key={niche} variant="neutral" className="text-[9px]">
-                      {niche}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ) : null}
-
-          <div className="flex items-center gap-1 rounded-lg border border-[#242424] bg-[#161616] p-1">
-            {FORMAT_TABS.map(({ key, label, Icon }) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setFormatFilter(key)}
-                className={cn(
-                  'flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer',
-                  activeFormatFilter === key
-                    ? 'bg-[#262626] text-white shadow-xs'
-                    : 'text-neutral-400 hover:text-neutral-200'
-                )}
-              >
-                <Icon className="h-3 w-3" />
-                {label}
-              </button>
-            ))}
-          </div>
-        </Card>
+      {/* ---------------------------------------------------------- *
+          Errors and states
+         ---------------------------------------------------------- */}
+      {error && (
+        <div
+          role="alert"
+          className="mt-5 rounded-xl border border-[#F5C6CE] bg-[#FDECEF] px-4 py-3 text-xs text-[#B42332]"
+        >
+          Could not load trends — {error}. Your search text is kept, try again in a moment.
+        </div>
       )}
-
-      {error && <Alert variant="error">Could not load trends — {error}</Alert>}
 
       {isLoading && (
-        <AIScannerLoader message={activeSearch ? `Searching vectors for "${activeSearch}"...` : undefined} />
+        <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2" aria-hidden="true">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="animate-pulse rounded-2xl border border-[#EFEBF2] bg-white p-5">
+              <div className="h-5 w-28 rounded-full bg-[#F1EEF5]" />
+              <div className="mt-4 h-4 w-3/4 rounded bg-[#F1EEF5]" />
+              <div className="mt-4 h-10 w-full rounded-lg bg-[#F1EEF5]" />
+              <div className="mt-4 h-8 w-full rounded bg-[#F1EEF5]" />
+            </div>
+          ))}
+        </div>
       )}
 
-      {!isLoading && (
-        <>
-          {filteredTrends.length === 0 ? (
-            <Card className="py-16 text-center border-[#222222] bg-[#121212]" variant="elevated">
-              <TrendingUp className="mx-auto h-7 w-7 text-neutral-600 mb-2" />
-              <h3 className="text-sm font-semibold text-neutral-200">
-                {activeFormatFilter !== 'all' ? 'No trends match this format filter' : 'No opportunities yet'}
-              </h3>
-              <p className="mx-auto mt-1 max-w-md text-xs text-neutral-500">
-                {emptyReason ??
-                  (activeFormatFilter !== 'all'
-                    ? 'Try switching to All or a different format.'
-                    : 'Trend signals are collecting. Refresh in a moment or search a topic.')}
-              </p>
-              {activeFormatFilter !== 'all' && (
-                <Button className="mt-4" size="sm" onClick={() => setFormatFilter('all')}>
-                  Show all formats
-                </Button>
-              )}
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              {filteredTrends.map((trend: any) => (
-                <Card
-                  key={trend.id}
-                  variant="elevated"
-                  hover
-                  className="group flex cursor-pointer flex-col gap-3.5 p-5 border-[#222222] hover:border-[#383838] transition-all duration-150"
-                  onClick={() => navigate(`/app/trends/detail/${trend.id}`)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      navigate(`/app/trends/detail/${trend.id}`);
-                    }
-                  }}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex flex-wrap gap-1.5">
-                      {trend.niches?.slice(0, 2).map((tag: string) => (
-                        <Badge key={tag} variant="neutral" className="text-[10px]">
-                          {tag}
-                        </Badge>
-                      ))}
-                      <Badge variant="brand" className="text-[10px] capitalize">{trend.archetype}</Badge>
-                      {trend.vector_similarity && (
-                        <Badge variant="success" className="text-[10px]">
-                          {Math.round(trend.vector_similarity * 100)}% Vector Match
-                        </Badge>
-                      )}
-                      {(trend.outlier_streak && trend.outlier_streak > 0) ? (
-                        <Badge variant="warning" className="text-[10px]">
-                          <Flame className="h-3 w-3 text-amber-400" />
-                          {trend.outlier_streak}d Outlier Streak
-                        </Badge>
-                      ) : trend.is_momentum_outlier ? (
-                        <Badge variant="warning" className="text-[10px]">
-                          <Flame className="h-3 w-3 text-amber-400" />
-                          Breakout Spike
-                        </Badge>
-                      ) : null}
-                    </div>
-                    {trend.opportunity_score != null && (
-                      <span className="shrink-0 rounded bg-[#1f1f1f] border border-[#2c2c2c] px-2 py-0.5 text-[10px] font-bold text-white">
-                        {Math.round(trend.opportunity_score ?? trend.tvs_score)} Fit
-                      </span>
-                    )}
-                  </div>
+      {!isLoading && filteredTrends.length === 0 && (
+        <div className="mt-6 rounded-2xl border border-dashed border-[#E5E0E8] bg-white p-10 text-center">
+          <TrendingUp className="mx-auto h-6 w-6 text-[#A79FB0]" />
+          <h2 className="mt-2 text-sm font-bold text-[#171717]">
+            {activeSearch
+              ? `No results for “${activeSearch}”`
+              : isFiltered
+                ? 'No trends match these filters'
+                : 'No opportunities yet'}
+          </h2>
+          <p className="mx-auto mt-1.5 max-w-md text-xs leading-relaxed text-[#625D68]">
+            {activeSearch
+              ? 'Nothing in the collected signals matches that phrase. Try a broader topic or clear the search.'
+              : emptyReason ??
+                (isFiltered
+                  ? 'Reset the filters to see every opportunity in the feed.'
+                  : 'Signals are still collecting. Refresh the feed in a moment to build your opportunity list.')}
+          </p>
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+            {activeSearch && (
+              <button
+                type="button"
+                onClick={handleClearSearch}
+                className="app-btn-pink h-9 px-4 text-xs"
+              >
+                Back to feed
+              </button>
+            )}
+            {isFiltered && !activeSearch && (
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="app-btn-pink h-9 px-4 text-xs"
+              >
+                Reset filters
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
-                  <div>
-                    <h3 className="text-sm font-bold text-white group-hover:text-indigo-400 transition-colors">
-                      {cleanTrendTitle(trend.topic)}
-                    </h3>
-                    <p className="mt-1 text-xs text-neutral-400">
-                      {cleanTrendHeadline(trend)}
-                    </p>
-                    {trend.is_youtube_video && trend.channel_name && (
-                      <p className="mt-2 text-[11px] text-neutral-500">
-                        {trend.channel_name}
-                        {trend.video_url && (
-                          <>
-                            {' · '}
-                            <a
-                              href={trend.video_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-0.5 text-indigo-400 hover:underline"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              Watch video <ExternalLink className="h-2.5 w-2.5" />
-                            </a>
-                          </>
-                        )}
-                      </p>
-                    )}
-                  </div>
+      {/* ---------------------------------------------------------- *
+          Trend cards
+         ---------------------------------------------------------- */}
+      {!isLoading && filteredTrends.length > 0 && (
+        <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+          {filteredTrends.map((trend: Trend) => {
+            const score =
+              trend.opportunity_score != null
+                ? Math.round(trend.opportunity_score)
+                : trend.tvs_score != null
+                  ? Math.round(trend.tvs_score)
+                  : null;
+            const lifecycle = String(trend.lifecycle || trend.status || '').toLowerCase();
+            const lifecycleMeta = LIFECYCLE_META[lifecycle];
+            const growth = readGrowth(trend.signal_history);
+            const volumeValue =
+              trend.search_volume != null && trend.search_volume > 0
+                ? formatCompactVolume(trend.search_volume)
+                : trend.volume && trend.volume !== 'N/A'
+                  ? trend.volume
+                  : null;
+            const interactionRate =
+              trend.interaction_density_median != null && trend.interaction_density_median > 0
+                ? `${(Number(trend.interaction_density_median) * 100).toFixed(1)}%`
+                : null;
+            const angle = !isBoilerplateConcept(trend.video_concept)
+              ? cleanTrendText(trend.video_concept)
+              : !isBoilerplateConcept(trend.content_angle)
+                ? cleanTrendText(trend.content_angle)
+                : null;
 
-                  {/* Video Concept Highlight Box */}
-                  <div className="rounded-lg border border-[#282828] bg-[#141414] p-3 transition-colors group-hover:border-[#383838]">
-                    <div className="flex items-center justify-between gap-2 mb-1">
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-neutral-400">
-                        <Sparkles className="h-3 w-3 text-indigo-400" />
-                        Video Concept
-                      </span>
-                      <div className="flex items-center gap-1.5">
-                        <span className="inline-flex items-center gap-1 rounded bg-[#1e1e1e] px-1.5 py-0.5 text-[9px] font-medium text-neutral-400 border border-[#2c2c2c]">
-                          <Film className="h-2.5 w-2.5" />
-                          {resolveVideoConceptBadge(trend)}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={(e) => handleCopyConcept(trend.id, resolveVideoConcept(trend), e)}
-                          title="Copy concept"
-                          className="inline-flex items-center gap-1 rounded bg-[#1a1a1a] px-1.5 py-0.5 text-[9px] font-medium text-neutral-300 hover:bg-[#222222] border border-[#2c2c2c] transition-colors cursor-pointer"
-                        >
-                          {copiedConceptId === trend.id ? (
-                            <>
-                              <Check className="h-2.5 w-2.5 text-emerald-400" />
-                              <span className="text-emerald-400">Copied</span>
-                            </>
-                          ) : (
-                            <>
-                              <Copy className="h-2.5 w-2.5" />
-                              <span>Copy</span>
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                    <p className="text-xs font-semibold text-neutral-200 leading-snug">
-                      &ldquo;{resolveVideoConcept(trend)}&rdquo;
-                    </p>
-                  </div>
-
-                  {/* Why Predicted */}
-                  {trend.why_predicted && (
-                    <p className="text-xs text-neutral-400 line-clamp-2 leading-relaxed">
-                      <span className="font-semibold text-neutral-300">Why Predicted: </span>
-                      {cleanTrendText(trend.why_predicted)}
-                    </p>
-                  )}
-
-                  <div className="grid grid-cols-3 gap-2 border-t border-[#1e1e1e] pt-3 text-xs">
-                    <div>
-                      <p className="text-[11px] text-neutral-500">Velocity</p>
-                      <p className="font-medium text-neutral-200">{trend.velocity}</p>
-                    </div>
-                    <div>
-                      <p className="text-[11px] text-neutral-500">
-                        {trend.reach_ratio_median != null ? 'Reach Ratio' : 'Reach'}
-                      </p>
-                      <p className="font-medium text-neutral-200">
-                        {trend.reach_ratio_median != null
-                          ? `${Number(trend.reach_ratio_median).toFixed(2)}x (${trend.volume})`
-                          : trend.volume}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-[11px] text-neutral-500">Stability</p>
-                      <p className="font-medium text-neutral-200">{Math.round(trend.stability_score ?? 50)}%</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between gap-2 border-t border-[#1e1e1e] pt-3">
-                    {trend.key_indicator ? (
-                      <span className="min-w-0 truncate text-[11px] text-neutral-500">{trend.key_indicator}</span>
-                    ) : (
-                      <span />
-                    )}
-                    <div className="flex shrink-0 items-center gap-2">
-                      <Button
-                        variant={trend.saved ? 'primary' : 'secondary'}
-                        size="sm"
-                        className="text-xs h-7 px-2.5"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleSaveTrend(trend.id);
-                        }}
+            return (
+              <article
+                key={trend.id}
+                className="group flex flex-col rounded-2xl border border-[#E5E0E8] bg-white p-5 transition-all duration-150 hover:-translate-y-0.5 hover:border-[#C9BCF0] hover:shadow-[0_12px_28px_rgba(23,23,23,0.06)]"
+              >
+                {/* Badge row */}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {lifecycleMeta && (
+                      <span
+                        className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${lifecycleMeta.className}`}
                       >
-                        <Bookmark className="h-3 w-3" />
-                        {trend.saved ? 'Saved' : 'Save'}
-                      </Button>
-                    </div>
+                        {lifecycleMeta.label}
+                      </span>
+                    )}
+                    {trend.niches?.slice(0, 1).map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-full border border-[#E5E0E8] bg-[#FBFAF8] px-2.5 py-0.5 text-[11px] font-semibold text-[#625D68]"
+                      >
+                        {tag}
+                      </span>
+                    ))}
                   </div>
-                </Card>
-              ))}
-            </div>
-          )}
-        </>
+                  {score != null && (
+                    <span className="shrink-0 rounded-full border border-[#E5E0E8] bg-[#FBFAF8] px-2.5 py-0.5 font-mono text-[11px] font-bold text-[#171717]">
+                      {score}/100 fit
+                    </span>
+                  )}
+                </div>
+
+                {/* Title */}
+                <h3 className="mt-3 text-[15px] font-bold leading-snug text-[#171717]">
+                  <Link to={`/app/trends/detail/${trend.id}`} className="hover:text-[#4A2E8F]">
+                    {cleanTrendTitle(trend.topic)}
+                  </Link>
+                </h3>
+
+                {angle && (
+                  <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-[#625D68]">
+                    <span className="font-semibold text-[#171717]">Angle: </span>
+                    {angle}
+                  </p>
+                )}
+
+                {/* Metrics */}
+                <dl className="mt-4 grid grid-cols-3 gap-3">
+                  <div>
+                    <dt className="text-[11px] text-[#77717F]">Search volume</dt>
+                    <dd className="mt-0.5 font-mono text-[15px] font-bold text-[#171717]">
+                      {volumeValue ?? '—'}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-[11px] text-[#77717F]">
+                      {growth ? `vs ${growth.days}d ago` : 'Momentum'}
+                    </dt>
+                    <dd
+                      className={`mt-0.5 font-mono text-[15px] font-bold ${
+                        growth
+                          ? growth.pct >= 0
+                            ? 'text-[#167A59]'
+                            : 'text-[#B42332]'
+                          : 'text-[#171717]'
+                      }`}
+                    >
+                      {growth
+                        ? `${growth.pct >= 0 ? '+' : ''}${growth.pct.toFixed(1)}%`
+                        : trend.velocity || '—'}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-[11px] text-[#77717F]">Interaction rate</dt>
+                    <dd className="mt-0.5 font-mono text-[15px] font-bold text-[#171717]">
+                      {interactionRate ?? '—'}
+                    </dd>
+                  </div>
+                </dl>
+
+                {/* Compact real-data graph: momentum series, upload reach, or score */}
+                <div className="mt-4">
+                  <TrendMiniChart trend={trend} />
+                </div>
+
+                {/* Footer */}
+                <div className="mt-4 flex items-center justify-between gap-3 border-t border-[#EFEBF2] pt-3.5">
+                  <button
+                    type="button"
+                    onClick={() => toggleSaveTrend(trend.id)}
+                    aria-pressed={Boolean(trend.saved)}
+                    aria-label={
+                      trend.saved ? `Remove ${trend.topic} from saved` : `Save ${trend.topic}`
+                    }
+                    className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                      trend.saved
+                        ? 'border-[#D9CEF5] bg-[#F1ECFF] text-[#4A2E8F]'
+                        : 'border-[#E5E0E8] bg-white text-[#625D68] hover:border-[#C9BCF0] hover:bg-[#F6F3FF] hover:text-[#171717]'
+                    }`}
+                  >
+                    {trend.saved ? (
+                      <Check className="h-3.5 w-3.5" />
+                    ) : (
+                      <Bookmark className="h-3.5 w-3.5" />
+                    )}
+                    {trend.saved ? 'Saved' : 'Save'}
+                  </button>
+
+                  <Link
+                    to={`/app/trends/detail/${trend.id}`}
+                    onClick={() => setPendingDetailId(trend.id)}
+                    aria-busy={pendingDetailId === trend.id}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-[#E5E0E8] bg-white px-3.5 py-1.5 text-xs font-bold text-[#171717] transition-colors hover:border-[#C9BCF0] hover:bg-[#F6F3FF]"
+                  >
+                    {pendingDetailId === trend.id ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : null}
+                    View details
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                </div>
+              </article>
+            );
+          })}
+        </div>
       )}
     </div>
   );

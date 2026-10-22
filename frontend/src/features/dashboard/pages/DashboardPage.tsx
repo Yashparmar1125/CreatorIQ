@@ -41,7 +41,7 @@ export const DashboardPage: React.FC = () => {
   const [prompt, setPrompt] = useState('');
   const [showConnectors, setShowConnectors] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const connectorPanelRef = useRef<HTMLDivElement>(null);
+  const connectorPanelRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     fetchDashboard();
@@ -126,6 +126,7 @@ export const DashboardPage: React.FC = () => {
 
         {/* Research composer */}
         <form
+          ref={connectorPanelRef}
           onSubmit={handleSubmit}
           className="mt-6 rounded-[22px] border border-[#E5E0E8] bg-white p-4 shadow-[0_10px_30px_rgba(23,23,23,0.06)] transition-shadow focus-within:shadow-[0_14px_38px_rgba(23,23,23,0.10)] sm:p-5"
         >
@@ -144,76 +145,24 @@ export const DashboardPage: React.FC = () => {
           />
 
           <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-[#EFEBF2] pt-3.5">
-            <div className="relative" ref={connectorPanelRef}>
-              <button
-                type="button"
-                onClick={() => setShowConnectors((v) => !v)}
-                aria-expanded={showConnectors}
-                className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[#E5E0E8] bg-white px-3 py-1.5 text-xs font-semibold text-[#625D68] transition-colors hover:border-[#C9BCF0] hover:bg-[#F6F3FF] hover:text-[#171717]"
-              >
-                <Plus className="h-3.5 w-3.5" />
-                add connectors
-                {activeConnectors.length > 0 && (
-                  <span className="rounded-full bg-[#F1ECFF] px-1.5 py-0.5 text-[10px] font-bold text-[#4A2E8F]">
-                    {activeConnectors.length}
-                  </span>
-                )}
-                <ChevronDown
-                  className={`h-3 w-3 transition-transform ${showConnectors ? 'rotate-180' : ''}`}
-                />
-              </button>
-
-              {showConnectors && (
-                <div className="animate-in absolute bottom-full left-0 z-30 mb-2 w-[19rem] max-w-[calc(100vw-2rem)] rounded-2xl border border-[#E5E0E8] bg-white p-3 shadow-lg shadow-black/5">
-                  <div className="flex items-center justify-between border-b border-[#EFEBF2] pb-2">
-                    <span className="font-sora text-xs font-bold text-[#171717]">Live research</span>
-                    <span className="text-[10px] font-mono text-[#77717F]">REAL-TIME</span>
-                  </div>
-                  <p className="mt-2 text-[11px] leading-relaxed text-[#625D68]">
-                    Pick the sources the research request may query. Nothing is sent anywhere until
-                    you press Research.
-                  </p>
-                  <div className="mt-2.5 space-y-1.5">
-                    {CONNECTOR_OPTIONS.map((c) => {
-                      const isOn = activeConnectors.includes(c.id);
-                      const Icon = c.icon;
-                      return (
-                        <button
-                          key={c.id}
-                          type="button"
-                          onClick={() => toggleConnector(c.id)}
-                          aria-pressed={isOn}
-                          className={`flex w-full cursor-pointer items-start gap-2.5 rounded-xl border p-2.5 text-left transition-colors ${
-                            isOn
-                              ? 'border-[#D9CEF5] bg-[#F6F3FF]'
-                              : 'border-[#EFEBF2] bg-white hover:bg-[#FBFAF8]'
-                          }`}
-                        >
-                          <span
-                            className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border ${
-                              isOn
-                                ? 'border-[#D9CEF5] bg-white text-[#4A2E8F]'
-                                : 'border-[#E5E0E8] bg-[#FBFAF8] text-[#77717F]'
-                            }`}
-                          >
-                            <Icon className="h-3.5 w-3.5" />
-                          </span>
-                          <span className="min-w-0 flex-1">
-                            <span className="flex items-center gap-1.5 text-xs font-bold text-[#171717]">
-                              {c.label}
-                              {isOn && <Check className="h-3 w-3 text-[#167A59]" />}
-                            </span>
-                            <span className="mt-0.5 block text-[11px] leading-relaxed text-[#77717F]">
-                              {c.description}
-                            </span>
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
+            <button
+              type="button"
+              onClick={() => setShowConnectors((v) => !v)}
+              aria-expanded={showConnectors}
+              aria-controls="dashboard-connector-panel"
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[#E5E0E8] bg-white px-3 py-1.5 text-xs font-semibold text-[#625D68] transition-colors hover:border-[#C9BCF0] hover:bg-[#F6F3FF] hover:text-[#171717]"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              add connectors
+              {activeConnectors.length > 0 && (
+                <span className="rounded-full bg-[#F1ECFF] px-1.5 py-0.5 text-[10px] font-bold text-[#4A2E8F]">
+                  {activeConnectors.length}
+                </span>
               )}
-            </div>
+              <ChevronDown
+                className={`h-3 w-3 transition-transform ${showConnectors ? 'rotate-180' : ''}`}
+              />
+            </button>
 
             {/* Connected account chip — real channel state only */}
             {primaryChannel ? (
@@ -243,6 +192,61 @@ export const DashboardPage: React.FC = () => {
               </button>
             </div>
           </div>
+
+          {/* Inline connector picker — expands the composer instead of floating over it */}
+          {showConnectors && (
+            <div
+              id="dashboard-connector-panel"
+              className="mt-3 w-full min-w-0 rounded-xl border border-[#E5E0E8] bg-[#FBFAF8] p-3"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#EFEBF2] pb-2">
+                <span className="font-sora text-xs font-bold text-[#171717]">Live research</span>
+                <span className="text-[10px] font-mono text-[#77717F]">REAL-TIME SOURCES</span>
+              </div>
+              <p className="mt-2 max-w-prose text-[11px] leading-relaxed text-[#625D68]">
+                Pick the sources the research request may query. Nothing is sent anywhere until you
+                press Research.
+              </p>
+              <div className="mt-2.5 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {CONNECTOR_OPTIONS.map((c) => {
+                  const isOn = activeConnectors.includes(c.id);
+                  const Icon = c.icon;
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => toggleConnector(c.id)}
+                      aria-pressed={isOn}
+                      className={`flex w-full min-w-0 cursor-pointer items-start gap-2.5 overflow-hidden rounded-xl border p-2.5 text-left transition-colors ${
+                        isOn
+                          ? 'border-[#D9CEF5] bg-white'
+                          : 'border-[#EFEBF2] bg-white hover:bg-[#F6F3FF]'
+                      }`}
+                    >
+                      <span
+                        className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border ${
+                          isOn
+                            ? 'border-[#D9CEF5] bg-[#F1ECFF] text-[#4A2E8F]'
+                            : 'border-[#E5E0E8] bg-[#FBFAF8] text-[#77717F]'
+                        }`}
+                      >
+                        <Icon className="h-3.5 w-3.5" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="flex items-center gap-1.5 text-xs font-bold text-[#171717]">
+                          {c.label}
+                          {isOn && <Check className="h-3 w-3 shrink-0 text-[#167A59]" />}
+                        </span>
+                        <span className="mt-0.5 block break-words text-[11px] leading-relaxed text-[#77717F]">
+                          {c.description}
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </form>
 
         {/* Suggested prompts */}

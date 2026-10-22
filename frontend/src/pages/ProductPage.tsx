@@ -1,49 +1,52 @@
 import React from 'react';
 import { Link } from 'react-router';
 import {
-  TrendingUp,
+  ArrowRight,
   BarChart2,
   Calendar,
+  Check,
   Lightbulb,
   Shield,
-  Zap,
   Target,
-  Check,
-  ArrowRight,
+  TrendingUp,
+  Zap,
 } from 'lucide-react';
 import { PublicLayout } from '../components/organisms/PublicLayout';
 import { MarketingHero, MarketingSection, MarketingCta } from '../components/marketing/MarketingSections';
-import { Button } from '../components/ui/Button';
-import { Card } from '../components/ui/Card';
+import './PublicPages.css';
 
 const modules = [
   {
     icon: TrendingUp,
     title: 'Trend Engine',
+    status: 'Available',
     description:
-      'A personalized Top 5 feed built from real YouTube video velocity, Google Trends corroboration, and your niche profile.',
-    benefits: ['Niche-fit scoring', 'AI content angles', 'Feed history'],
+      'A personalized Top 5 feed built from public YouTube upload signals, niche fit and your channel profile.',
+    benefits: ['Niche-fit scoring', 'Evidence on every card', 'Feed history'],
   },
   {
     icon: Lightbulb,
     title: 'Strategy Architect',
+    status: 'Available',
     description:
-      'Generate titles, hooks, script outlines, and SEO tags for any topic — grounded in your channel context.',
-    benefits: ['Copy-ready titles', '3-phase script', 'Channel-aware tone'],
+      'Turn a trend into titles, a hook, a script outline, retention beats, CTAs and SEO tags — grounded in your channel context.',
+    benefits: ['Copy-ready titles', 'Structured script outline', 'Channel-aware tone'],
   },
   {
     icon: BarChart2,
-    title: 'Analytics',
+    title: 'Channel analytics',
+    status: 'In development',
     description:
-      'Retention flow, traffic sources, and audience demographics to see where viewers engage and drop off.',
-    benefits: ['Retention metrics', 'Traffic breakdown', 'Audience geo'],
+      'Retention, traffic sources and audience composition. YouTube analytics access depends on the permissions granted during channel connection.',
+    benefits: ['Retention overview', 'Traffic breakdown', 'Audience composition'],
   },
   {
     icon: Calendar,
-    title: 'Planner',
+    title: 'Content planner',
+    status: 'In development',
     description:
-      'A production calendar to schedule drafts, track uploads, and keep your publishing rhythm consistent.',
-    benefits: ['Monthly view', 'Draft events', 'Team-ready layout'],
+      'A production calendar for moving a strategy brief into a draft, a slot and a publishing rhythm.',
+    benefits: ['Monthly view', 'Draft slots', 'Publishing rhythm'],
   },
 ];
 
@@ -51,17 +54,17 @@ const pillars = [
   {
     icon: Zap,
     title: 'Real signals',
-    body: 'YouTube Data API for video momentum — not just search strings.',
+    body: 'Recommendations are built from public YouTube video momentum, not just search strings.',
   },
   {
     icon: Target,
     title: 'Niche-first',
-    body: 'Hard filters ensure trends match your content clusters before ranking.',
+    body: 'Trends are filtered against your niche and format before they are ranked for your channel.',
   },
   {
     icon: Shield,
     title: 'Privacy-first',
-    body: 'OAuth-only YouTube access. Your data stays yours.',
+    body: 'YouTube access uses OAuth. We only read what you explicitly grant.',
   },
 ];
 
@@ -71,87 +74,109 @@ export const ProductPage: React.FC = () => {
       <MarketingHero
         badge="Platform overview"
         title="The intelligence layer for YouTube creators"
-        description="CreatorIQ connects trend discovery, strategy, analytics, and planning — so every video starts with a clear signal."
+        description="CreatorIQ connects trend discovery, strategy and channel context — so every video starts with a signal you can inspect."
         actions={
-          <Link to="/signup">
-            <Button size="lg">
+          <>
+            <Link to="/signup" className="pink-button">
               Start free
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-          </Link>
+              <ArrowRight size={17} aria-hidden="true" />
+            </Link>
+            <Link to="/pricing" className="outline-button">
+              See pricing
+            </Link>
+          </>
         }
       />
 
       <MarketingSection
+        id="how"
         title="Four modules, one workflow"
-        description="Each tool is designed to answer a specific question in your content pipeline."
-        className="bg-neutral-50"
+        description="Each part answers a specific question in your content pipeline. Anything still in development is labelled honestly."
       >
-        <div className="grid gap-6 md:grid-cols-2">
-          {modules.map((mod) => (
-            <Card key={mod.title}>
-              <div className="mb-4 flex h-9 w-9 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
-                <mod.icon className="h-4 w-4" />
-              </div>
-              <h3 className="text-lg font-semibold text-neutral-900">{mod.title}</h3>
-              <p className="mt-2 text-sm text-neutral-500">{mod.description}</p>
-              <ul className="mt-4 space-y-2">
-                {mod.benefits.map((b) => (
-                  <li key={b} className="flex items-center gap-2 text-sm text-neutral-600">
-                    <Check className="h-3.5 w-3.5 text-success-600" />
-                    {b}
-                  </li>
-                ))}
-              </ul>
-            </Card>
-          ))}
+        <div className="public-grid public-grid-2">
+          {modules.map((mod) => {
+            const Icon = mod.icon;
+            const available = mod.status === 'Available';
+            return (
+              <article key={mod.title} className="public-card">
+                <div className="flex items-start justify-between gap-3">
+                  <span className="public-icon-tile is-inline">
+                    <Icon size={18} aria-hidden="true" />
+                  </span>
+                  <span
+                    className={`public-badge ${
+                      available ? 'public-badge-mint' : 'public-badge-muted'
+                    }`}
+                  >
+                    {mod.status}
+                  </span>
+                </div>
+                <h3 className="mt-5">{mod.title}</h3>
+                <p>{mod.description}</p>
+                <ul className="public-check-list">
+                  {mod.benefits.map((b) => (
+                    <li key={b}>
+                      <Check size={14} aria-hidden="true" />
+                      {b}
+                    </li>
+                  ))}
+                </ul>
+              </article>
+            );
+          })}
         </div>
       </MarketingSection>
 
       <MarketingSection
         title="How trends are ranked"
-        description="Opportunity score combines momentum, niche fit, geography, and format alignment."
-        className="border-t border-neutral-200 bg-white"
+        description="The opportunity score combines momentum, niche fit, geography and format alignment. Every input comes from data the platform already has."
+        className="border-t border-[#EFEAF2] bg-white"
       >
-        <div className="grid gap-4 lg:grid-cols-2">
-          <Card>
-            <h3 className="text-sm font-medium text-neutral-900">Signal sources</h3>
-            <ul className="mt-4 space-y-3 text-sm text-neutral-600">
-              <li className="flex justify-between border-b border-neutral-100 pb-2">
+        <div className="public-grid public-grid-2">
+          <article className="public-card">
+            <h3>Signal sources</h3>
+            <ul className="public-rows mt-2">
+              <li>
                 <span>YouTube video velocity</span>
-                <span className="font-medium text-neutral-900">Primary</span>
+                <strong>Primary</strong>
               </li>
-              <li className="flex justify-between border-b border-neutral-100 pb-2">
-                <span>Google Trends (YouTube)</span>
-                <span className="font-medium text-neutral-900">Corroboration</span>
+              <li>
+                <span>Web search corroboration</span>
+                <strong>Supporting</strong>
               </li>
-              <li className="flex justify-between">
-                <span>Channel profile & geo</span>
-                <span className="font-medium text-neutral-900">Personalization</span>
+              <li>
+                <span>Channel profile &amp; geography</span>
+                <strong>Personalization</strong>
               </li>
             </ul>
-          </Card>
-          <Card className="bg-neutral-900 text-white border-neutral-800">
-            <h3 className="text-sm font-medium">On every refresh</h3>
-            <ol className="mt-4 space-y-3 text-sm text-neutral-300">
-              <li>1. Filter concepts by niche fit and quality</li>
-              <li>2. Score by opportunity + audience geography</li>
-              <li>3. Apply freshness (≥3 new items when possible)</li>
-              <li>4. AI-enrich cards with angles and growth tips</li>
+          </article>
+
+          <article className="public-card is-mint">
+            <h3>On every refresh</h3>
+            <ol className="public-steps mt-2">
+              <li>Filter concepts by niche fit and quality</li>
+              <li>Score by opportunity and audience geography</li>
+              <li>Apply freshness so repeat feeds stay useful</li>
+              <li>Add generated angles and title ideas where available</li>
             </ol>
-          </Card>
+          </article>
         </div>
       </MarketingSection>
 
-      <MarketingSection title="Built on principles that matter" className="bg-neutral-50">
-        <div className="grid gap-6 md:grid-cols-3">
-          {pillars.map((p) => (
-            <Card key={p.title}>
-              <p.icon className="h-5 w-5 text-brand-600" />
-              <h3 className="mt-4 text-base font-semibold text-neutral-900">{p.title}</h3>
-              <p className="mt-2 text-sm text-neutral-500">{p.body}</p>
-            </Card>
-          ))}
+      <MarketingSection title="Built on principles that matter">
+        <div className="public-grid public-grid-3">
+          {pillars.map((p) => {
+            const Icon = p.icon;
+            return (
+              <article key={p.title} className="public-card">
+                <span className="public-icon-tile">
+                  <Icon size={18} aria-hidden="true" />
+                </span>
+                <h3>{p.title}</h3>
+                <p>{p.body}</p>
+              </article>
+            );
+          })}
         </div>
       </MarketingSection>
 
@@ -159,14 +184,14 @@ export const ProductPage: React.FC = () => {
         title="See it on your own channel"
         description="Connect YouTube and get your first personalized trend feed in minutes."
       >
-        <Link to="/signup">
-          <Button size="lg">Create free account</Button>
-        </Link>
-        <Link to="/pricing">
-          <Button variant="secondary" size="lg">
+        <div className="public-cta-actions">
+          <Link to="/signup" className="pink-button">
+            Create free account
+          </Link>
+          <Link to="/pricing" className="outline-button">
             View pricing
-          </Button>
-        </Link>
+          </Link>
+        </div>
       </MarketingCta>
     </PublicLayout>
   );

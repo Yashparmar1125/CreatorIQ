@@ -12,9 +12,24 @@ export interface PopulationVideo {
   reach_ratio?: number;
   interaction_density?: number;
   semantic_score?: number;
+  trend_score?: number;
+  channel_tier?: string;
+  thumbnail_url?: string;
   is_outlier?: boolean;
   published_at?: string;
   url?: string;
+}
+
+export interface TrendSignalPoint {
+  video_date: string;
+  trend_score_median: number;
+  reach_ratio_median: number;
+  interaction_density_median: number;
+  population_size: number;
+  small_channel_count: number;
+  medium_channel_count: number;
+  big_channel_count: number;
+  outlier_streak: number;
 }
 
 export interface Trend {
@@ -22,6 +37,7 @@ export interface Trend {
   topic: string;
   velocity: string;
   volume: string;
+  search_volume?: number;
   niches: string[];
   saved?: boolean;
   archetype: string;
@@ -65,12 +81,18 @@ export interface Trend {
   outlier_streak?: number;
   semantic_score_mean?: number;
   population_videos?: PopulationVideo[];
+  /** Real per-upload population attached by the feed service (up to 4 for feed items). */
+  population?: PopulationVideo[];
   filter_audit?: {
     total_fetched?: number;
     passed_concept_gate?: number;
     passed_semantic_gate?: number;
     final_qualified?: number;
   };
+  /** Real daily trend-score series (up to 14 days) — used for the sparkline. */
+  timeseries_recent?: number[];
+  /** Real daily signal history with dates — used for growth comparisons. */
+  signal_history?: TrendSignalPoint[];
   verdict?: 'make_now' | 'test_short' | 'monitor';
   verdict_badge?: string;
   verdict_reason?: string;

@@ -9,6 +9,7 @@ import { ScriptStudioModal } from '../components/ScriptStudioModal';
 import { StrategyResearchLoader } from '../components/StrategyResearchLoader';
 import { parseStrategyTopics } from '../utils/parseStrategyTopics';
 import { ALL_CONNECTORS, CONNECTOR_OPTIONS } from '../../../lib/connectors';
+import { BrandLogo } from '../../../components/brand/BrandLogo';
 import {
   Sparkles,
   Plus,
@@ -512,29 +513,8 @@ export const StrategyPage: React.FC = () => {
       {/* ── Left Sidebar ──────────────────────────────────────────────────── */}
       <aside className="strategy-sidebar hidden lg:flex flex-col justify-between shrink-0 p-5 z-20">
         <div>
-          {/* Top Logo */}
-          <Link to="/" className="inline-flex items-center gap-2 group mb-7">
-            <div className="w-7 h-7 flex items-center justify-center text-[#171717]">
-              <svg
-                className="w-6 h-6 text-[#171717] shrink-0 transition-transform group-hover:scale-105"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <circle cx="12" cy="12" r="9.5" stroke="currentColor" strokeWidth="2.4" />
-                <path
-                  d="M12 6.5C8.96243 6.5 6.5 8.96243 6.5 12C6.5 15.0376 8.96243 17.5 12 17.5C15.0376 17.5 17.5 15.0376 17.5 12"
-                  stroke="currentColor"
-                  strokeWidth="2.4"
-                  strokeLinecap="round"
-                />
-                <circle cx="12" cy="12" r="2.2" fill="currentColor" />
-              </svg>
-            </div>
-            <span className="font-sora text-lg font-extrabold tracking-tight text-[#171717]">
-              CreatorIQ
-            </span>
-          </Link>
+          {/* Top Logo — same lockup as every other page header */}
+          <BrandLogo to="/" size="sm" className="mb-7" />
 
           {/* '+ New research' Button */}
           <button

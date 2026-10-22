@@ -1,0 +1,418 @@
+/* Shared light-theme styles for the public marketing pages. */
+
+.landing-page .public-grid {
+  display: grid;
+  gap: 20px;
+}
+
+.landing-page .public-grid-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.landing-page .public-grid-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.landing-page .public-grid-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.landing-page .public-card {
+  display: flex;
+  flex-direction: column;
+  padding: 28px;
+  border: 1px solid #e5e0e8;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(23, 23, 23, 0.03);
+}
+
+.landing-page .public-card h3 {
+  margin: 0 0 10px;
+  font-family: "Sora", sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: #171717 !important;
+}
+
+.landing-page .public-card p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.65;
+  color: #625d68;
+}
+
+.landing-page .public-icon-tile {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin-bottom: 20px;
+  border-radius: 12px;
+  background: #f1ecff;
+  color: #4a2e8f;
+}
+
+.landing-page .public-icon-tile.is-inline {
+  margin-bottom: 0;
+}
+
+.landing-page .public-card.is-mint {
+  border-color: #cfede1;
+  background: #f1fcf8;
+}
+
+.landing-page .public-card.is-compact h3 {
+  font-size: 17px;
+}
+
+.landing-page .public-card.is-compact p {
+  font-size: 14px;
+}
+
+.landing-page .public-card.is-faq h3 {
+  margin-bottom: 8px;
+  font-size: 15px;
+}
+
+.landing-page .public-card.is-faq p {
+  font-size: 14px;
+}
+
+.landing-page .public-check-list {
+  margin: 20px 0 0;
+  padding: 16px 0 0;
+  border-top: 1px solid #efeaf2;
+  list-style: none;
+  display: grid;
+  gap: 9px;
+}
+
+.landing-page .public-check-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #625d68;
+}
+
+.landing-page .public-check-list svg {
+  flex: none;
+  color: #167a59;
+}
+
+.landing-page .public-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.landing-page .public-badge-mint {
+  background: #e8fbf4;
+  color: #0f5c43;
+}
+
+.landing-page .public-badge-lavender {
+  background: #f1ecff;
+  color: #4a2e8f;
+}
+
+.landing-page .public-badge-muted {
+  background: #f2eff4;
+  color: #625d68;
+}
+
+.landing-page .public-note {
+  margin: 0;
+  padding: 14px 16px;
+  border: 1px solid #e5e0e8;
+  border-radius: 12px;
+  background: #ffffff;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #625d68;
+}
+
+.landing-page .public-steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 14px;
+  counter-reset: step;
+}
+
+.landing-page .public-steps li {
+  display: flex;
+  gap: 12px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #3f3a45;
+}
+
+.landing-page .public-steps li::before {
+  counter-increment: step;
+  content: counter(step);
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: #f1ecff;
+  color: #4a2e8f;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.landing-page .public-rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.landing-page .public-rows li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0edf3;
+  font-size: 14px;
+  color: #625d68;
+}
+
+.landing-page .public-rows li:last-child {
+  border-bottom: 0;
+}
+
+.landing-page .public-rows strong {
+  font-weight: 600;
+  color: #171717;
+  text-align: right;
+}
+
+.landing-page .public-cta-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
+/* ---------- Pricing ---------- */
+
+.landing-page .plan-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 28px;
+  border: 1px solid #e5e0e8;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(23, 23, 23, 0.03);
+}
+
+.landing-page .plan-card.is-popular {
+  border-color: #c9b8ee;
+  box-shadow: 0 14px 34px rgba(74, 46, 143, 0.1);
+}
+
+.landing-page .plan-badge {
+  position: absolute;
+  top: -12px;
+  left: 24px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: #ff98c1;
+  color: #171717;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.landing-page .plan-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.landing-page .plan-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #f1ecff;
+  color: #4a2e8f;
+}
+
+.landing-page .plan-card.is-popular .plan-icon {
+  background: #ffe3ee;
+  color: #a32458;
+}
+
+.landing-page .plan-name {
+  margin: 0;
+  font-family: "Sora", sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  color: #171717 !important;
+}
+
+.landing-page .plan-price {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 20px;
+}
+
+.landing-page .plan-price strong {
+  font-family: "Sora", sans-serif;
+  font-size: 38px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: #171717;
+}
+
+.landing-page .plan-price span {
+  font-size: 13px;
+  font-weight: 600;
+  color: #77717f;
+}
+
+.landing-page .plan-desc {
+  margin: 12px 0 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #625d68;
+}
+
+.landing-page .plan-features {
+  margin: 24px 0;
+  padding: 20px 0 0;
+  border-top: 1px solid #efeaf2;
+  list-style: none;
+  display: grid;
+  gap: 11px;
+  flex: 1;
+}
+
+.landing-page .plan-features li {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #3f3a45;
+}
+
+.landing-page .plan-features svg {
+  flex: none;
+  margin-top: 2px;
+  color: #167a59;
+}
+
+.landing-page .plan-card .pink-button,
+.landing-page .plan-card .outline-button {
+  width: 100%;
+  height: 44px;
+  padding: 0 18px;
+  font-size: 13px;
+  box-shadow: none;
+}
+
+.landing-page .public-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #e5e0e8;
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.landing-page .public-table {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 14px;
+}
+
+.landing-page .public-table th,
+.landing-page .public-table td {
+  padding: 14px 20px;
+  border-bottom: 1px solid #f0edf3;
+}
+
+.landing-page .public-table thead th {
+  background: #faf8fc;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #625d68;
+}
+
+.landing-page .public-table thead th.is-pro {
+  color: #4a2e8f;
+}
+
+.landing-page .public-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.landing-page .public-table tbody td:first-child {
+  color: #3f3a45;
+  font-weight: 500;
+}
+
+.landing-page .public-table td {
+  text-align: center;
+  color: #171717;
+}
+
+.landing-page .public-table td:first-child {
+  text-align: left;
+}
+
+.landing-page .public-table .is-pro-col {
+  background: #faf7ff;
+}
+
+.landing-page .public-table .is-empty {
+  color: #b0a9b6;
+}
+
+@media (max-width: 980px) {
+  .landing-page .public-grid-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .landing-page .public-grid-3 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .landing-page .public-grid-2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 720px) {
+  .landing-page .public-grid-4 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .landing-page .public-card,
+  .landing-page .plan-card {
+    padding: 22px;
+  }
+}
