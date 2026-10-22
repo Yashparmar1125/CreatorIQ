@@ -45,8 +45,12 @@ export const PublicLayout: React.FC<PublicLayoutProps> = ({ children }) => {
 
           <nav className="landing-nav" aria-label="Main navigation">
             {NAV_LINKS.map((link) => {
-              const base = link.to.split('#')[0];
-              const active = pathname === base;
+              /*
+               * A link is active only when it is the exact current location.
+               * "/product" and "/product#how" are different destinations, so
+               * only one of them can ever be underlined at a time.
+               */
+              const active = link.to === `${pathname}${hash}`;
               return (
                 <Link
                   key={link.to}

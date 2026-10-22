@@ -84,29 +84,7 @@ export const AuthPage: React.FC = () => {
     <div className="auth-page min-h-screen flex flex-col justify-between bg-white text-[#181719]">
       {/* Top Header */}
       <header className="w-full max-w-[1340px] mx-auto px-6 sm:px-10 lg:px-12 pt-6 sm:pt-8 pb-4 flex items-center justify-between">
-        <Link to="/" className="inline-flex items-center gap-2 group">
-          {/* Circular logo glyph matching screenshot */}
-          <div className="w-7 h-7 flex items-center justify-center text-black">
-            <svg
-              className="w-6 h-6 text-black shrink-0 transition-transform group-hover:scale-105"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <circle cx="12" cy="12" r="9.5" stroke="currentColor" strokeWidth="2.4" />
-              <path
-                d="M12 6.5C8.96243 6.5 6.5 8.96243 6.5 12C6.5 15.0376 8.96243 17.5 12 17.5C15.0376 17.5 17.5 15.0376 17.5 12"
-                stroke="currentColor"
-                strokeWidth="2.4"
-                strokeLinecap="round"
-              />
-              <circle cx="12" cy="12" r="2.2" fill="currentColor" />
-            </svg>
-          </div>
-          <span className="font-sora text-lg sm:text-[19px] font-extrabold tracking-tight text-[#14121a]">
-            CreatorIQ
-          </span>
-        </Link>
+        <BrandLogo to="/" size="md" />
 
         <Link
           to="/"
