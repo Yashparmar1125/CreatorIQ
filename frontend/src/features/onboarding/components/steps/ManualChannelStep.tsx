@@ -59,7 +59,7 @@ export const ManualChannelStep: React.FC<ManualChannelStepProps> = ({
               value={channelName}
               onChange={(e) => onChannelNameChange(e.target.value)}
               placeholder="e.g. Tech With Alex"
-              className="onboarding-input pl-10"
+              className="h-11 w-full rounded-xl border-[1.5px] border-[#181719] bg-white px-3.5 text-sm text-[#181719] placeholder-[#9B94A5] shadow-[4px_4px_0px_#B197FC] transition-all hover:shadow-[5px_5px_0px_#A78BFA] focus:border-[#181719] focus:outline-none focus:ring-2 focus:ring-[#7C5CD6]/20"
               autoFocus
             />
           </div>
@@ -80,7 +80,7 @@ export const ManualChannelStep: React.FC<ManualChannelStepProps> = ({
                 onChannelHandleChange(raw ? val : '');
               }}
               placeholder="@techwithalex"
-              className="onboarding-input pl-10"
+              className="h-11 w-full rounded-xl border-[1.5px] border-[#181719] bg-white px-3.5 text-sm text-[#181719] placeholder-[#9B94A5] shadow-[4px_4px_0px_#B197FC] transition-all hover:shadow-[5px_5px_0px_#A78BFA] focus:border-[#181719] focus:outline-none focus:ring-2 focus:ring-[#7C5CD6]/20"
             />
           </div>
         </div>
@@ -111,10 +111,10 @@ export const ManualChannelStep: React.FC<ManualChannelStepProps> = ({
                   type="button"
                   onClick={() => onSubscriberCountChange(tier.value)}
                   className={cn(
-                    'flex flex-col justify-between rounded-xl border p-3.5 text-left transition-all cursor-pointer',
+                    'flex flex-col justify-between rounded-xl p-3.5 text-left transition-all cursor-pointer',
                     isSelected
-                      ? 'onboarding-tile-active'
-                      : 'onboarding-tile'
+                      ? 'rounded-xl border-[1.5px] border-[#181719] bg-[#F0EBFF] text-[#14121a] shadow-[3px_3px_0px_#181719]'
+                      : 'rounded-xl border border-[#DCD7E3] bg-white text-[#2C2834] hover:border-[#181719] hover:bg-[#FAF9FD]'
                   )}
                 >
                   <div className="flex items-center justify-between gap-1">
@@ -136,7 +136,7 @@ export const ManualChannelStep: React.FC<ManualChannelStepProps> = ({
               value={subscriberCount || ''}
               onChange={(e) => onSubscriberCountChange(Math.max(0, parseInt(e.target.value, 10) || 0))}
               placeholder="e.g. 15400"
-              className="onboarding-input pl-10"
+              className="h-11 w-full rounded-xl border-[1.5px] border-[#181719] bg-white pl-10 pr-3.5 text-sm text-[#181719] placeholder-[#9B94A5] shadow-[4px_4px_0px_#B197FC] transition-all hover:shadow-[5px_5px_0px_#A78BFA] focus:border-[#181719] focus:outline-none focus:ring-2 focus:ring-[#7C5CD6]/20"
             />
           </div>
         )}

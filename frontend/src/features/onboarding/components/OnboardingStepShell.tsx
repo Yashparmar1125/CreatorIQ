@@ -39,7 +39,7 @@ export const OnboardingStepShell: React.FC<OnboardingStepShellProps> = ({
     transition={{ duration: 0.2, ease: 'easeOut' }}
     className={cn('w-full', className)}
   >
-    <div className="onboarding-card p-6 sm:p-8 md:p-10">
+    <div className="rounded-[28px] border-[1.5px] border-[#181719] bg-white p-6 sm:p-8 md:p-10 shadow-[8px_8px_0px_#70F4B8]">
       {/* Card Header */}
       <div className={cn('border-b border-[#f0ebff] pb-5', centered ? 'text-center' : 'text-left')}>
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -74,7 +74,7 @@ export const OnboardingStepShell: React.FC<OnboardingStepShellProps> = ({
               <button
                 type="button"
                 onClick={onBack}
-                className="onboarding-btn-secondary"
+                className="inline-flex h-[46px] items-center justify-center gap-2 rounded-full border-[1.5px] border-[#DCD7E3] bg-white px-5 text-sm font-bold text-[#2C2834] transition-all hover:border-[#181719] hover:bg-[#F8F7FA] hover:text-[#181719] cursor-pointer"
               >
                 <ArrowLeft className="h-4 w-4" />
                 <span>Back</span>
@@ -89,7 +89,7 @@ export const OnboardingStepShell: React.FC<OnboardingStepShellProps> = ({
               type="button"
               onClick={onNext}
               disabled={nextDisabled || isLoading}
-              className="onboarding-btn-primary"
+              className="inline-flex h-[46px] items-center justify-center gap-2 rounded-full border-[1.5px] border-[#181719] bg-[#FFA2C8] px-6 text-sm font-bold text-[#181719] transition-all hover:-translate-y-0.5 hover:bg-[#FF90BD] hover:shadow-[0_4px_12px_rgba(255,145,190,0.25)] active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               {isLoading ? (
                 <>

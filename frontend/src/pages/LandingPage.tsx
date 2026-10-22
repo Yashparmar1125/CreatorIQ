@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { ArrowRight, ChevronRight, Lightbulb, Sparkles, Youtube } from 'lucide-react';
 import { useAuthStore } from '../stores/useAuthStore';
 import { PublicLayout } from '../components/organisms/PublicLayout';
+import { cn } from '../lib/utils';
 
 const featureCards = [
   {
@@ -51,7 +52,7 @@ function OpportunitySparkline({ path, tone }: { path: string; tone: 'mint' | 'li
   const stroke = tone === 'mint' ? '#167A59' : '#7C5CD6';
   return (
     <svg
-      className="opportunity-sparkline"
+      className="h-11 w-full"
       viewBox="0 0 140 44"
       preserveAspectRatio="none"
       role="img"
@@ -71,26 +72,44 @@ function OpportunitySparkline({ path, tone }: { path: string; tone: 'mint' | 'li
 }
 
 function OpportunityCard({ opportunity }: { opportunity: (typeof opportunities)[number] }) {
+  const isMint = opportunity.tone === 'mint';
   return (
-    <article className="opportunity-card">
-      <div className="opportunity-card-top">
-        <span className={`status-badge ${opportunity.tone}`}>
-          <span className="status-dot" />
-          {opportunity.tag}
-        </span>
+    <article className="flex flex-col justify-between rounded-2xl border border-[#E5E0E8] bg-white p-6 shadow-xs transition-all duration-200 hover:-translate-y-1 hover:shadow-md">
+      <div>
+        <div className="mb-4">
+          <span
+            className={cn(
+              'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold',
+              isMint ? 'bg-[#91F5D3]/25 text-[#167A59]' : 'bg-[#F1ECFF] text-[#7C5CD6]'
+            )}
+          >
+            <span
+              className={cn(
+                'h-1.5 w-1.5 rounded-full',
+                isMint ? 'bg-[#167A59]' : 'bg-[#7C5CD6]'
+              )}
+            />
+            {opportunity.tag}
+          </span>
+        </div>
+
+        <h3 className="text-xl font-bold tracking-tight text-[#171717]">{opportunity.title}</h3>
+        <p className="mt-2 text-sm leading-relaxed text-[#625D68]">{opportunity.description}</p>
+
+        <div className="my-6 rounded-xl border border-[#E5E0E8]/60 bg-[#FBFAF8] p-4">
+          <OpportunitySparkline path={opportunity.path} tone={opportunity.tone} />
+          <span className="mt-2 block text-center text-[11px] text-[#77717F]">
+            Illustrative trend shape
+          </span>
+        </div>
       </div>
 
-      <h3>{opportunity.title}</h3>
-      <p>{opportunity.description}</p>
-
-      <div className="opportunity-chart">
-        <OpportunitySparkline path={opportunity.path} tone={opportunity.tone} />
-        <span className="opportunity-chart-label">Illustrative trend shape</span>
-      </div>
-
-      <div className="opportunity-footer">
+      <div className="flex items-center justify-between border-t border-[#E5E0E8]/70 pt-4 text-xs text-[#77717F]">
         <span>Illustrative example, not live results</span>
-        <Link to="/login" className="opportunity-link">
+        <Link
+          to="/login"
+          className="inline-flex items-center gap-1 font-bold text-[#171717] transition-colors hover:text-[#7C5CD6]"
+        >
           View details <ChevronRight size={14} aria-hidden="true" />
         </Link>
       </div>
@@ -104,52 +123,89 @@ export const LandingPage: React.FC = () => {
 
   return (
     <PublicLayout>
-      <section className="landing-hero" aria-labelledby="hero-title">
-        <div className="hero-decoration" aria-hidden="true">
-          <div className="hero-shape hero-shape-mint" />
-          <div className="hero-shape hero-shape-pink" />
+      {/* Hero Section — fully consumes screen viewport */}
+      <section
+        className="relative isolate flex min-h-[calc(100vh-76px)] min-h-[calc(100dvh-76px)] flex-col items-center justify-center overflow-hidden bg-[#FBFAF8] bg-cover bg-center bg-no-repeat py-14 text-center"
+        style={{ backgroundImage: 'url(/background.png)' }}
+        aria-labelledby="hero-title"
+      >
+        <div className="pointer-events-none absolute inset-0 z-0" aria-hidden="true">
+          <div className="absolute -left-44 top-10 h-[480px] w-[480px] rounded-full bg-[#91F5D3]/40 blur-[60px]" />
+          <div className="absolute -right-36 -top-28 h-[420px] w-[420px] rounded-full bg-[#FF98C1]/35 blur-[60px]" />
         </div>
 
-        <div className="landing-container hero-content">
-          <h1 id="hero-title">Find your next YouTube content based on trends</h1>
-          <p className="hero-subtitle">
+        <div className="relative z-10 mx-auto flex w-full max-w-[1180px] flex-col items-center px-6 sm:px-8">
+          <h1
+            id="hero-title"
+            className="mx-auto max-w-[17ch] text-balance text-4xl font-bold tracking-tight text-[#171717] leading-[1.05] sm:text-5xl lg:text-7xl"
+          >
+            Find your next YouTube content based on trends
+          </h1>
+          <p className="mx-auto mt-6 max-w-[58ch] text-base leading-relaxed text-[#625D68] sm:text-lg">
             CreatorIQ turns public YouTube signals into a ranked shortlist for your niche — then
             shows the evidence behind every opportunity.
           </p>
-          <div className="hero-actions">
-            <Link to={primaryPath} className="pink-button">
+          <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
+            <Link
+              to={primaryPath}
+              className="inline-flex h-[52px] items-center justify-center gap-2 rounded-full bg-[#FF98C1] px-7 text-[15px] font-bold text-[#171717] shadow-[0_8px_22px_rgba(224,84,138,0.18)] transition-all hover:bg-[#FF86B7] hover:-translate-y-0.5 hover:shadow-[0_10px_26px_rgba(224,84,138,0.24)]"
+            >
               Explore CreatorIQ
               <ArrowRight size={17} aria-hidden="true" />
             </Link>
-            <a href="#how" className="outline-button">
+            <a
+              href="#how"
+              className="inline-flex h-[52px] items-center justify-center gap-2 rounded-full border border-[#D9D2E0] bg-white/90 px-7 text-[15px] font-bold text-[#171717] transition-all hover:border-[#BDB2C9] hover:bg-white hover:-translate-y-0.5"
+            >
               How it works
             </a>
           </div>
         </div>
       </section>
 
-      <section className="landing-section value-section" id="how" aria-labelledby="value-title">
-        <div className="landing-container">
-          <div className="section-heading">
-            <h2 id="value-title">Less noise. A traceable path to insight.</h2>
-            <p className="section-lead">
+      {/* Value Section */}
+      <section
+        className="bg-[#F1ECFF] py-20 lg:py-24"
+        id="how"
+        aria-labelledby="value-title"
+      >
+        <div className="mx-auto w-full max-w-[1180px] px-6 sm:px-8">
+          <div className="mb-12 max-w-[760px]">
+            <h2
+              id="value-title"
+              className="text-3xl font-bold tracking-tight text-[#171717] sm:text-4xl lg:text-5xl"
+            >
+              Less noise. A traceable path to insight.
+            </h2>
+            <p className="mt-4 text-base leading-relaxed text-[#625D68] sm:text-lg">
               Three connected steps take you from raw channel activity to a decision you can act on.
             </p>
           </div>
 
-          <div className="feature-grid">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
             {featureCards.map((feature) => {
               const Icon = feature.icon;
               return (
-                <article className="feature-card" key={feature.title}>
-                  <div className="feature-topline">
-                    <span className="feature-icon">
-                      <Icon size={18} aria-hidden="true" />
-                    </span>
-                    <span className="feature-step">{feature.step}</span>
+                <article
+                  className="flex flex-col justify-between rounded-2xl border border-[#E5E0E8] bg-white p-7 shadow-xs transition-all duration-200 hover:-translate-y-1 hover:shadow-md"
+                  key={feature.title}
+                >
+                  <div>
+                    <div className="mb-5 flex items-center justify-between">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F6F3FF] text-[#4A2E8F]">
+                        <Icon size={18} aria-hidden="true" />
+                      </span>
+                      <span className="font-mono text-xs font-bold text-[#77717F]">
+                        {feature.step}
+                      </span>
+                    </div>
+                    <h3 className="text-xl font-bold tracking-tight text-[#171717]">
+                      {feature.title}
+                    </h3>
+                    <p className="mt-2 text-sm leading-relaxed text-[#625D68]">
+                      {feature.description}
+                    </p>
                   </div>
-                  <h3>{feature.title}</h3>
-                  <p>{feature.description}</p>
                 </article>
               );
             })}
@@ -157,19 +213,28 @@ export const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      <section className="landing-section opportunities-section" aria-labelledby="opportunities-title">
-        <div className="landing-container">
-          <div className="section-heading section-heading-row">
+      {/* Opportunities Section */}
+      <section
+        className="py-20 lg:py-24"
+        aria-labelledby="opportunities-title"
+      >
+        <div className="mx-auto w-full max-w-[1180px] px-6 sm:px-8">
+          <div className="mb-12 flex flex-col justify-between gap-4 md:flex-row md:items-end">
             <div>
-              <h2 id="opportunities-title">See what&apos;s gathering momentum.</h2>
+              <h2
+                id="opportunities-title"
+                className="text-3xl font-bold tracking-tight text-[#171717] sm:text-4xl lg:text-5xl"
+              >
+                See what&apos;s gathering momentum.
+              </h2>
             </div>
-            <p className="section-note">
+            <p className="max-w-[420px] text-sm text-[#77717F]">
               Examples of the CreatorIQ format. Sign in to see live opportunities ranked for your
               niche.
             </p>
           </div>
 
-          <div className="opportunity-grid">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             {opportunities.map((opportunity) => (
               <OpportunityCard key={opportunity.title} opportunity={opportunity} />
             ))}
@@ -177,14 +242,30 @@ export const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      <section className="landing-cta" aria-labelledby="cta-title">
-        <div className="landing-container">
-          <h2 id="cta-title">Your next content plan starts with the right ideas.</h2>
-          <p>Bring an idea. Follow the signals. Decide what deserves a deeper look.</p>
-          <Link to={primaryPath} className="pink-button">
-            Start exploring
-            <ArrowRight size={17} aria-hidden="true" />
-          </Link>
+      {/* CTA Section */}
+      <section
+        className="border-t border-[#EFEAF3] bg-[#FBFAF8] py-20 text-center"
+        aria-labelledby="cta-title"
+      >
+        <div className="mx-auto w-full max-w-[1180px] px-6 sm:px-8">
+          <h2
+            id="cta-title"
+            className="text-3xl font-bold tracking-tight text-[#171717] sm:text-4xl lg:text-5xl"
+          >
+            Your next content plan starts with the right ideas.
+          </h2>
+          <p className="mx-auto mt-4 max-w-[500px] text-base text-[#625D68]">
+            Bring an idea. Follow the signals. Decide what deserves a deeper look.
+          </p>
+          <div className="mt-8 flex justify-center">
+            <Link
+              to={primaryPath}
+              className="inline-flex h-[52px] items-center justify-center gap-2 rounded-full bg-[#FF98C1] px-7 text-[15px] font-bold text-[#171717] shadow-[0_8px_22px_rgba(224,84,138,0.18)] transition-all hover:bg-[#FF86B7] hover:-translate-y-0.5 hover:shadow-[0_10px_26px_rgba(224,84,138,0.24)]"
+            >
+              Start exploring
+              <ArrowRight size={17} aria-hidden="true" />
+            </Link>
+          </div>
         </div>
       </section>
     </PublicLayout>

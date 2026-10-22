@@ -32,7 +32,7 @@ export const WelcomeStep: React.FC<WelcomeStepProps> = ({ onNext }) => (
     transition={{ duration: 0.2 }}
     className="w-full"
   >
-    <div className="onboarding-card p-6 sm:p-9 md:p-11">
+    <div className="rounded-[28px] border-[1.5px] border-[#181719] bg-white p-6 sm:p-9 md:p-11 shadow-[8px_8px_0px_#70F4B8]">
       {/* Top Hero Header */}
       <div className="flex items-start sm:items-center gap-4 border-b border-[#f0ebff] pb-6">
         <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border-[1.5px] border-[#181719] bg-[#f0ebff] shadow-[4px_4px_0px_#70f4b8]">
@@ -82,7 +82,7 @@ export const WelcomeStep: React.FC<WelcomeStepProps> = ({ onNext }) => (
         <button
           type="button"
           onClick={onNext}
-          className="onboarding-btn-primary"
+          className="inline-flex h-[46px] items-center justify-center gap-2 rounded-full border-[1.5px] border-[#181719] bg-[#FFA2C8] px-6 text-sm font-bold text-[#181719] transition-all hover:-translate-y-0.5 hover:bg-[#FF90BD] hover:shadow-[0_4px_12px_rgba(255,145,190,0.25)] active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         >
           <span>Start Profile Setup</span>
           <ArrowRight className="h-4 w-4 stroke-[2.5]" />

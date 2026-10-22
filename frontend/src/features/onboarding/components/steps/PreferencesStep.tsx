@@ -99,8 +99,8 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
                   className={cn(
                     'flex flex-col items-center justify-center rounded-xl p-2.5 text-center transition-all cursor-pointer',
                     active
-                      ? 'onboarding-tile-active'
-                      : 'onboarding-tile'
+                      ? 'rounded-xl border-[1.5px] border-[#181719] bg-[#F0EBFF] text-[#14121a] shadow-[3px_3px_0px_#181719]'
+                      : 'rounded-xl border border-[#DCD7E3] bg-white text-[#2C2834] hover:border-[#181719] hover:bg-[#FAF9FD]'
                   )}
                 >
                   <span className="text-xs font-bold text-[#14121a]">{f.label}</span>
@@ -129,8 +129,8 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
                   className={cn(
                     'flex flex-col items-center justify-center rounded-xl p-2.5 text-center transition-all cursor-pointer',
                     active
-                      ? 'onboarding-tile-active'
-                      : 'onboarding-tile'
+                      ? 'rounded-xl border-[1.5px] border-[#181719] bg-[#F0EBFF] text-[#14121a] shadow-[3px_3px_0px_#181719]'
+                      : 'rounded-xl border border-[#DCD7E3] bg-white text-[#2C2834] hover:border-[#181719] hover:bg-[#FAF9FD]'
                   )}
                 >
                   <span className="text-xs font-bold text-[#14121a]">{freq.label}</span>
@@ -162,8 +162,8 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
                   className={cn(
                     'flex items-center justify-between rounded-xl px-3 py-2.5 text-left text-xs font-bold transition-all cursor-pointer',
                     active
-                      ? 'onboarding-tile-active'
-                      : 'onboarding-tile'
+                      ? 'rounded-xl border-[1.5px] border-[#181719] bg-[#F0EBFF] text-[#14121a] shadow-[3px_3px_0px_#181719]'
+                      : 'rounded-xl border border-[#DCD7E3] bg-white text-[#2C2834] hover:border-[#181719] hover:bg-[#FAF9FD]'
                   )}
                 >
                   <span className="truncate">{t.label}</span>
@@ -193,8 +193,8 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
                   className={cn(
                     'flex items-center justify-between rounded-xl px-2.5 py-2.5 text-left text-xs font-bold transition-all cursor-pointer',
                     active
-                      ? 'onboarding-tile-active'
-                      : 'onboarding-tile'
+                      ? 'rounded-xl border-[1.5px] border-[#181719] bg-[#F0EBFF] text-[#14121a] shadow-[3px_3px_0px_#181719]'
+                      : 'rounded-xl border border-[#DCD7E3] bg-white text-[#2C2834] hover:border-[#181719] hover:bg-[#FAF9FD]'
                   )}
                 >
                   <span className="truncate">{c.label}</span>

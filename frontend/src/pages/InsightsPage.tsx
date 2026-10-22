@@ -3,7 +3,6 @@ import { Link } from 'react-router';
 import { ArrowRight, BarChart3, Globe, Shield, TrendingUp, Zap } from 'lucide-react';
 import { PublicLayout } from '../components/organisms/PublicLayout';
 import { MarketingHero, MarketingSection, MarketingCta } from '../components/marketing/MarketingSections';
-import './PublicPages.css';
 
 const steps = [
   {
@@ -92,21 +91,21 @@ export const InsightsPage: React.FC = () => {
         title="From public uploads to an opportunity"
         description="Four steps happen before a trend reaches your shortlist."
       >
-        <div className="public-grid public-grid-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {steps.map((step, index) => {
             const Icon = step.icon;
             return (
-              <article key={step.title} className="public-card is-compact">
+              <article key={step.title} className="flex flex-col p-6 sm:p-7 border border-[#E5E0E8] rounded-[18px] bg-white shadow-[0_1px_2px_rgba(23,23,23,0.03)]">
                 <div className="flex items-center justify-between">
-                  <span className="public-icon-tile is-inline">
+                  <span className="grid place-items-center w-10 h-10 rounded-xl bg-[#F1ECFF] text-[#4A2E8F]">
                     <Icon size={18} aria-hidden="true" />
                   </span>
                   <span className="font-mono text-[12px] font-bold tracking-[0.08em] text-[#9B94A5]">
                     0{index + 1}
                   </span>
                 </div>
-                <h3 className="mt-5">{step.title}</h3>
-                <p>{step.body}</p>
+                <h3 className="mt-5 mb-2 font-sora text-[17px] font-bold tracking-[-0.015em] text-[#171717]">{step.title}</h3>
+                <p className="text-sm leading-relaxed text-[#625D68]">{step.body}</p>
               </article>
             );
           })}
@@ -118,11 +117,11 @@ export const InsightsPage: React.FC = () => {
         description="Each term below matches a value shown in the product."
         className="border-t border-[#EFEAF2] bg-white"
       >
-        <div className="public-grid public-grid-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {signals.map((signal) => (
-            <article key={signal.title} className="public-card is-compact">
-              <h3>{signal.title}</h3>
-              <p>{signal.body}</p>
+            <article key={signal.title} className="flex flex-col p-6 sm:p-7 border border-[#E5E0E8] rounded-[18px] bg-white shadow-[0_1px_2px_rgba(23,23,23,0.03)]">
+              <h3 className="mb-2 font-sora text-[17px] font-bold tracking-[-0.015em] text-[#171717]">{signal.title}</h3>
+              <p className="text-sm leading-relaxed text-[#625D68]">{signal.body}</p>
               <p className="mt-4 border-t border-[#F0EDF3] pt-3 text-[12px] leading-relaxed text-[#9B94A5]">
                 {signal.caveat}
               </p>
@@ -132,16 +131,16 @@ export const InsightsPage: React.FC = () => {
       </MarketingSection>
 
       <MarketingSection title="Our editorial principles">
-        <div className="public-grid public-grid-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {principles.map((p) => {
             const Icon = p.icon;
             return (
-              <article key={p.title} className="public-card">
-                <span className="public-icon-tile">
+              <article key={p.title} className="flex flex-col p-7 border border-[#E5E0E8] rounded-[18px] bg-white shadow-[0_1px_2px_rgba(23,23,23,0.03)]">
+                <span className="grid place-items-center w-10 h-10 rounded-xl bg-[#F1ECFF] text-[#4A2E8F] mb-5">
                   <Icon size={18} aria-hidden="true" />
                 </span>
-                <h3>{p.title}</h3>
-                <p>{p.body}</p>
+                <h3 className="mb-2.5 font-sora text-xl font-bold tracking-[-0.015em] text-[#171717]">{p.title}</h3>
+                <p className="text-[15px] leading-[1.65] text-[#625D68]">{p.body}</p>
               </article>
             );
           })}
@@ -152,7 +151,7 @@ export const InsightsPage: React.FC = () => {
         title="Put the evidence to work"
         description="Open your own shortlist and see which signals are strongest for your niche."
       >
-        <div className="public-cta-actions">
+        <div className="flex flex-wrap justify-center gap-3">
           <Link to="/signup" className="pink-button">
             Get started free
             <ArrowRight size={17} aria-hidden="true" />

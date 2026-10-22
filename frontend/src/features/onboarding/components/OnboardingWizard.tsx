@@ -10,7 +10,6 @@ import { PreferencesStep } from './steps/PreferencesStep';
 import { ProfileReviewStep } from './steps/ProfileReviewStep';
 import { ReadyStep } from './steps/ReadyStep';
 import { cn } from '../../../lib/utils';
-import './Onboarding.css';
 
 const stepsConfig = [
   { id: 1, name: 'Welcome' },
@@ -160,7 +159,7 @@ export const OnboardingWizard: React.FC = () => {
   };
 
   return (
-    <div className="onboarding-page min-h-screen flex flex-col justify-between bg-[#fbfbfe] text-[#181719]">
+    <div className="min-h-screen flex flex-col justify-between bg-[#FBFBFE] text-[#181719] font-sans">
       {/* Top Navigation Bar */}
       <header className="relative z-10 grid h-16 w-full shrink-0 grid-cols-2 items-center border-b border-[#ede9f2] bg-white px-6 sm:px-10 lg:grid-cols-3">
         {/* Left: Brand Logo */}

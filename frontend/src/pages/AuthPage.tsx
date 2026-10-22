@@ -16,7 +16,6 @@ import {
   AlertCircle,
   Loader2,
 } from 'lucide-react';
-import './AuthPage.css';
 
 const authSchema = z.object({
   name: z.string().optional(),
@@ -82,7 +81,7 @@ export const AuthPage: React.FC = () => {
   };
 
   return (
-    <div className="auth-page min-h-screen flex flex-col justify-between bg-white text-[#181719]">
+    <div className="min-h-screen flex flex-col justify-between bg-white text-[#181719] font-sans">
       {/* Top Header */}
       <header className="w-full max-w-[1340px] mx-auto px-6 sm:px-10 lg:px-12 pt-6 sm:pt-8 pb-4 flex items-center justify-between">
         <BrandLogo to="/" size="md" />
@@ -100,7 +99,7 @@ export const AuthPage: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 xl:gap-20 items-center w-full">
           {/* Left Column: Lavender Visual Card */}
           <div className="lg:col-span-7 flex justify-center lg:justify-start w-full">
-            <div className="auth-lavender-box w-full max-w-[580px] p-8 sm:p-11 lg:p-12 flex flex-col justify-between">
+            <div className="w-full max-w-[580px] p-8 sm:p-11 lg:p-12 flex flex-col justify-between rounded-3xl lg:rounded-[36px] bg-[#F0EBFF] shadow-[0_4px_20px_-2px_rgba(112,60,240,0.04)]">
               <div>
                 <p className="text-[10px] sm:text-[10.5px] font-bold tracking-[0.14em] text-[#716c7d] uppercase mb-4 sm:mb-5">
                   YOUR PLANNING, A LITTLE CLEARER.
@@ -113,7 +112,7 @@ export const AuthPage: React.FC = () => {
               </div>
 
               {/* Floating White Trend Metric Card with Neobrutalist Mint Drop Shadow */}
-              <div className="auth-metric-card p-6 sm:p-7">
+              <div className="rounded-[20px] border-[1.5px] border-[#181719] bg-white p-6 sm:p-7 shadow-[7px_7px_0px_#70F4B8] transition-all hover:-translate-y-0.5 hover:shadow-[8px_8px_0px_#70F4B8]">
                 {/* Booming pill tag */}
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#e8faf3] text-[#059669] text-xs font-bold border border-[#a7f3d0]/60">
                   <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
@@ -177,7 +176,7 @@ export const AuthPage: React.FC = () => {
                     <input
                       {...registerField('name')}
                       placeholder="Asha Sharma"
-                      className="auth-page-input"
+                      className="h-12 w-full rounded-xl border-[1.5px] border-[#181719] bg-white px-4 text-sm text-[#181719] placeholder-[#9B94A5] shadow-[4px_4px_0px_#B197FC] transition-all hover:shadow-[5px_5px_0px_#A78BFA] focus:border-[#181719] focus:outline-none focus:ring-2 focus:ring-[#7C5CD6]/20"
                     />
                     {errors.name && (
                       <p className="text-xs text-red-500 mt-1">{errors.name.message}</p>
@@ -193,7 +192,7 @@ export const AuthPage: React.FC = () => {
                     {...registerField('email')}
                     type="email"
                     placeholder="asha@example.com"
-                    className="auth-page-input"
+                    className="h-12 w-full rounded-xl border-[1.5px] border-[#181719] bg-white px-4 text-sm text-[#181719] placeholder-[#9B94A5] shadow-[4px_4px_0px_#B197FC] transition-all hover:shadow-[5px_5px_0px_#A78BFA] focus:border-[#181719] focus:outline-none focus:ring-2 focus:ring-[#7C5CD6]/20"
                   />
                   {errors.email && (
                     <p className="text-xs text-red-500 mt-1">{errors.email.message}</p>
@@ -209,7 +208,7 @@ export const AuthPage: React.FC = () => {
                       {...registerField('password')}
                       type={showPassword ? 'text' : 'password'}
                       placeholder="••••••••••••"
-                      className="auth-page-input pr-11"
+                      className="h-12 w-full rounded-xl border-[1.5px] border-[#181719] bg-white pl-4 pr-11 text-sm text-[#181719] placeholder-[#9B94A5] shadow-[4px_4px_0px_#B197FC] transition-all hover:shadow-[5px_5px_0px_#A78BFA] focus:border-[#181719] focus:outline-none focus:ring-2 focus:ring-[#7C5CD6]/20"
                     />
                     <button
                       type="button"
@@ -254,7 +253,7 @@ export const AuthPage: React.FC = () => {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="auth-cta-btn mt-5"
+                  className="mt-5 flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-full border-[1.5px] border-[#181719] bg-[#FFA2C8] text-sm font-bold text-[#181719] transition-all hover:-translate-y-0.5 hover:bg-[#FF91BE] hover:shadow-[0_4px_12px_rgba(255,145,190,0.25)] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isLoading ? (
                     <Loader2 className="w-4 h-4 animate-spin text-[#181719]" />
@@ -275,13 +274,13 @@ export const AuthPage: React.FC = () => {
                   className="text-xs sm:text-[13px] font-semibold text-[#181719] hover:underline cursor-pointer"
                 >
                   {mode === 'login'
-                    ? 'New to Orbit? Create an account →'
+                    ? 'New to CreatorIQ? Create an account →'
                     : 'Already have an account? Sign in →'}
                 </button>
               </div>
 
               {/* Privacy Badge */}
-              <div className="auth-privacy-box p-3.5 flex items-center gap-2.5">
+              <div className="flex items-center gap-2.5 rounded-xl border border-emerald-500/20 bg-[#ECFAF2] p-3.5">
                 <ShieldCheck className="w-4 h-4 text-[#059669] shrink-0" />
                 <p className="text-[11.5px] sm:text-xs text-[#4b5563] leading-snug">
                   Your activity is private. You control which channel analytics you connect.

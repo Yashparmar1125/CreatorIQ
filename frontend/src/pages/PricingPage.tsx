@@ -12,7 +12,6 @@ import {
 } from 'lucide-react';
 import { PublicLayout } from '../components/organisms/PublicLayout';
 import { MarketingHero, MarketingSection, MarketingCta } from '../components/marketing/MarketingSections';
-import './PublicPages.css';
 import type { LucideIcon } from 'lucide-react';
 
 const plans: {
@@ -122,7 +121,7 @@ function FeatureCell({ value }: { value: boolean | string }) {
   }
   if (value === false) {
     return (
-      <span className="is-empty" aria-label="Not included">
+      <span className="text-[#B0A9B6]" aria-label="Not included">
         —
       </span>
     );
@@ -140,15 +139,15 @@ export const PricingPage: React.FC = () => {
       />
 
       <MarketingSection>
-        <div className="public-grid public-grid-3 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
           {highlights.map((h) => {
             const Icon = h.icon;
             return (
               <div
                 key={h.title}
-                className="flex items-start gap-3 rounded-2xl border border-[#E5E0E8] bg-white p-5"
+                className="flex items-start gap-3 rounded-2xl border border-[#E5E0E8] bg-white p-5 shadow-[0_1px_2px_rgba(23,23,23,0.03)]"
               >
-                <span className="public-icon-tile is-inline">
+                <span className="grid place-items-center w-10 h-10 rounded-xl bg-[#F1ECFF] text-[#4A2E8F] shrink-0">
                   <Icon size={17} aria-hidden="true" />
                 </span>
                 <div>
@@ -160,33 +159,45 @@ export const PricingPage: React.FC = () => {
           })}
         </div>
 
-        <div className="public-grid public-grid-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {plans.map((plan) => {
             const Icon = plan.icon;
             return (
               <article
                 key={plan.name}
-                className={`plan-card${plan.popular ? ' is-popular' : ''}`}
+                className={`relative flex flex-col p-7 border rounded-[18px] bg-white transition-all ${
+                  plan.popular
+                    ? 'border-[#C9B8EE] shadow-[0_14px_34px_rgba(74,46,143,0.1)]'
+                    : 'border-[#E5E0E8] shadow-[0_1px_2px_rgba(23,23,23,0.03)]'
+                }`}
               >
-                {plan.popular && <span className="plan-badge">Most popular</span>}
+                {plan.popular && (
+                  <span className="absolute -top-3 left-6 px-3 py-1 rounded-full bg-[#FF98C1] text-[#171717] text-[11px] font-bold tracking-wide uppercase">
+                    Most popular
+                  </span>
+                )}
 
-                <div className="plan-head">
-                  <span className="plan-icon">
+                <div className="flex items-center gap-3">
+                  <span
+                    className={`grid place-items-center w-[42px] h-[42px] rounded-xl ${
+                      plan.popular ? 'bg-[#FFE3EE] text-[#A32458]' : 'bg-[#F1ECFF] text-[#4A2E8F]'
+                    }`}
+                  >
                     <Icon size={19} aria-hidden="true" />
                   </span>
-                  <h2 className="plan-name">{plan.name}</h2>
+                  <h2 className="m-0 font-sora text-[17px] font-bold text-[#171717]">{plan.name}</h2>
                 </div>
 
-                <div className="plan-price">
-                  <strong>{plan.price}</strong>
-                  {plan.period && <span>{plan.period}</span>}
+                <div className="flex items-baseline gap-1.5 mt-5">
+                  <strong className="font-sora text-4xl font-bold tracking-tight text-[#171717]">{plan.price}</strong>
+                  {plan.period && <span className="text-[13px] font-semibold text-[#77717F]">{plan.period}</span>}
                 </div>
-                <p className="plan-desc">{plan.description}</p>
+                <p className="mt-3 text-sm leading-relaxed text-[#625D68]">{plan.description}</p>
 
-                <ul className="plan-features">
+                <ul className="my-6 pt-5 border-t border-[#EFEAF2] list-none grid gap-2.5 flex-1">
                   {plan.features.map((feature) => (
-                    <li key={feature}>
-                      <Check size={15} aria-hidden="true" />
+                    <li key={feature} className="flex items-start gap-2.5 text-sm leading-normal text-[#3F3A45]">
+                      <Check size={15} aria-hidden="true" className="shrink-0 mt-0.5 text-[#167A59]" />
                       {feature}
                     </li>
                   ))}
@@ -195,7 +206,9 @@ export const PricingPage: React.FC = () => {
                 {plan.external ? (
                   <a
                     href={plan.href}
-                    className={plan.popular ? 'pink-button' : 'outline-button'}
+                    className={`w-full h-11 px-4 text-xs font-bold shadow-none ${
+                      plan.popular ? 'pink-button' : 'outline-button'
+                    }`}
                   >
                     <Mail size={15} aria-hidden="true" />
                     {plan.cta}
@@ -203,7 +216,9 @@ export const PricingPage: React.FC = () => {
                 ) : (
                   <Link
                     to={plan.href}
-                    className={plan.popular ? 'pink-button' : 'outline-button'}
+                    className={`w-full h-11 px-4 text-xs font-bold shadow-none ${
+                      plan.popular ? 'pink-button' : 'outline-button'
+                    }`}
                   >
                     {plan.cta}
                   </Link>
@@ -213,7 +228,7 @@ export const PricingPage: React.FC = () => {
           })}
         </div>
 
-        <p className="public-note mt-6">
+        <p className="mt-6 p-3.5 sm:px-4 border border-[#E5E0E8] rounded-xl bg-white text-[13px] leading-relaxed text-[#625D68]">
           Analytics and the content planner are still in development. Current workspaces include
           trend discovery, trend detail, strategy briefs and channel overview.
         </p>
@@ -224,29 +239,29 @@ export const PricingPage: React.FC = () => {
         description="See what is included at each tier."
         className="border-t border-[#EFEAF2] bg-white"
       >
-        <div className="public-table-wrap">
-          <table className="public-table">
+        <div className="overflow-x-auto rounded-2xl border border-[#E5E0E8] bg-white">
+          <table className="w-full min-w-[560px] border-collapse text-left text-sm">
             <thead>
               <tr>
-                <th scope="col">Feature</th>
-                <th scope="col">Free</th>
-                <th scope="col" className="is-pro">
+                <th scope="col" className="bg-[#FAF8FC] px-5 py-3.5 border-b border-[#F0EDF3] text-xs font-bold tracking-wider uppercase text-[#625D68]">Feature</th>
+                <th scope="col" className="bg-[#FAF8FC] px-5 py-3.5 border-b border-[#F0EDF3] text-xs font-bold tracking-wider uppercase text-[#625D68] text-center">Free</th>
+                <th scope="col" className="bg-[#FAF8FC] px-5 py-3.5 border-b border-[#F0EDF3] text-xs font-bold tracking-wider uppercase text-[#4A2E8F] text-center">
                   Pro
                 </th>
-                <th scope="col">Agency</th>
+                <th scope="col" className="bg-[#FAF8FC] px-5 py-3.5 border-b border-[#F0EDF3] text-xs font-bold tracking-wider uppercase text-[#625D68] text-center">Agency</th>
               </tr>
             </thead>
             <tbody>
               {comparison.map((row) => (
-                <tr key={row.feature}>
-                  <td>{row.feature}</td>
-                  <td>
+                <tr key={row.feature} className="last:[&>td]:border-b-0">
+                  <td className="px-5 py-3.5 border-b border-[#F0EDF3] text-[#3F3A45] font-medium text-left">{row.feature}</td>
+                  <td className="px-5 py-3.5 border-b border-[#F0EDF3] text-center text-[#171717]">
                     <FeatureCell value={row.free} />
                   </td>
-                  <td className="is-pro-col">
+                  <td className="px-5 py-3.5 border-b border-[#F0EDF3] text-center text-[#171717] bg-[#FAF7FF]">
                     <FeatureCell value={row.pro} />
                   </td>
-                  <td>
+                  <td className="px-5 py-3.5 border-b border-[#F0EDF3] text-center text-[#171717]">
                     <FeatureCell value={row.agency} />
                   </td>
                 </tr>
@@ -257,9 +272,9 @@ export const PricingPage: React.FC = () => {
       </MarketingSection>
 
       <MarketingSection title="Frequently asked questions">
-        <div className="public-grid public-grid-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {faqs.map((faq) => (
-            <article key={faq.q} className="public-card is-faq">
+            <article key={faq.q} className="p-6 border border-[#E5E0E8] rounded-[18px] bg-white shadow-[0_1px_2px_rgba(23,23,23,0.03)]">
               <div className="flex items-start gap-3">
                 <HelpCircle
                   size={17}
@@ -267,8 +282,8 @@ export const PricingPage: React.FC = () => {
                   aria-hidden="true"
                 />
                 <div>
-                  <h3>{faq.q}</h3>
-                  <p>{faq.a}</p>
+                  <h3 className="mb-2 text-[15px] font-bold text-[#171717]">{faq.q}</h3>
+                  <p className="text-sm leading-relaxed text-[#625D68]">{faq.a}</p>
                 </div>
               </div>
             </article>

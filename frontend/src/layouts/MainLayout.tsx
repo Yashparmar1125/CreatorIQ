@@ -23,7 +23,6 @@ import {
 import { useAuthStore } from '../stores/useAuthStore';
 import { useStrategyStore } from '../stores/useStrategyStore';
 import { cn } from '../lib/utils';
-import './MainLayout.css';
 
 const navItems = [
   { name: 'Overview', icon: LayoutGrid, href: '/app/dashboard' },
@@ -74,7 +73,9 @@ function SidebarNav({
     cn(
       'group relative flex items-center gap-3 rounded-xl px-3 py-2 text-[13px] font-medium transition-all duration-150',
       collapsed && 'mx-auto h-9 w-9 justify-center px-0 py-0',
-      isActive ? 'app-nav-active' : 'app-nav-inactive'
+      isActive
+        ? 'bg-white border border-[#E5E0E8] text-[#171717] font-bold shadow-xs'
+        : 'bg-transparent border border-transparent text-[#625D68] hover:bg-[#F1ECFF] hover:text-[#171717]'
     );
 
   return (
@@ -92,7 +93,7 @@ function SidebarNav({
           title="Start a new research session"
           aria-label="Start a new research session"
           className={cn(
-            'app-btn-pink text-[13px]',
+            'inline-flex items-center justify-center gap-1.5 rounded-full font-bold bg-[#FF98C1] border border-[#F27DA8] text-[#171717] transition-all hover:bg-[#FF8AB8] hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-55 disabled:cursor-not-allowed cursor-pointer text-[13px]',
             collapsed ? 'h-9 w-9 p-0' : 'h-11 w-full px-3'
           )}
         >
@@ -101,7 +102,11 @@ function SidebarNav({
         </button>
       </div>
 
-      {!collapsed && <div className="app-section-label mb-1.5 px-2">Workspace</div>}
+      {!collapsed && (
+        <div className="mb-1.5 px-2 text-[10px] font-bold tracking-[0.14em] uppercase text-[#77717F]">
+          Workspace
+        </div>
+      )}
 
       {navItems.map((item) => (
         <NavLink
@@ -128,7 +133,9 @@ function SidebarNav({
       {/* Planning history — real sessions from the API */}
       {!collapsed ? (
         <div className="mt-6 flex min-h-0 flex-1 flex-col border-t border-[#E5E0E8] pt-4">
-          <div className="app-section-label mb-2 px-2">Your planning history</div>
+          <div className="mb-2 px-2 text-[10px] font-bold tracking-[0.14em] uppercase text-[#77717F]">
+            Your planning history
+          </div>
 
           <div className="max-h-64 space-y-0.5 overflow-y-auto pr-1 custom-scrollbar">
             {sessions.length === 0 ? (
@@ -256,11 +263,11 @@ export const MainLayout: React.FC = () => {
   const isDashboard = location.pathname.startsWith('/app/dashboard');
 
   return (
-    <div className="app-shell app-shell-light flex min-h-screen bg-[#FBFAF8] text-[#171717]">
+    <div className="flex min-h-screen bg-[#FBFAF8] text-[#171717]">
       {/* Desktop sidebar */}
       <aside
         className={cn(
-          'app-sidebar-light fixed inset-y-0 left-0 z-40 hidden flex-col border-r border-[#E5E0E8] transition-all duration-200 ease-in-out lg:flex',
+          'fixed inset-y-0 left-0 z-40 hidden flex-col bg-[#F6F3FF] border-r border-[#E5E0E8] transition-all duration-200 ease-in-out lg:flex',
           collapsed ? 'w-[68px]' : 'w-64'
         )}
       >
@@ -346,7 +353,7 @@ export const MainLayout: React.FC = () => {
             aria-label="Close menu"
             onClick={() => setMobileOpen(false)}
           />
-          <aside className="app-sidebar-light absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col border-r border-[#E5E0E8] shadow-xl">
+          <aside className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col bg-[#F6F3FF] border-r border-[#E5E0E8] shadow-xl">
             <div className="flex h-16 items-center justify-between border-b border-[#E5E0E8] px-4">
               <BrandLogo
                 to="/"
@@ -381,7 +388,7 @@ export const MainLayout: React.FC = () => {
       {/* Main column */}
       <div
         className={cn(
-          'app-main flex min-h-screen flex-1 flex-col transition-all duration-200 ease-in-out',
+          'flex min-h-screen flex-1 flex-col bg-[#FBFAF8] transition-all duration-200 ease-in-out',
           collapsed ? 'lg:pl-[68px]' : 'lg:pl-64'
         )}
       >
@@ -418,7 +425,7 @@ export const MainLayout: React.FC = () => {
                 <input
                   type="search"
                   placeholder="Search trends, topics, concepts..."
-                  className="app-field h-9 w-full pl-9 pr-3 text-xs text-[#171717] placeholder-[#9B94A5] focus:outline-none"
+                  className="h-9 w-full rounded-xl border border-[#E5E0E8] bg-white pl-9 pr-3 text-xs text-[#171717] placeholder-[#9B94A5] transition-colors focus:border-[#7C5CD6] focus:outline-none focus:ring-2 focus:ring-[#7C5CD6]/20"
                 />
               </div>
             </div>

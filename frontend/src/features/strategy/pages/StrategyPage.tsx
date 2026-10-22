@@ -31,7 +31,6 @@ import {
   RefreshCw,
   Radio,
 } from 'lucide-react';
-import './StrategyPage.css';
 
 /* â”€â”€ Inline Research Steps Accordion â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 const ResearchStepsAccordion: React.FC<{ steps: AgentStep[] }> = ({ steps }) => {
@@ -509,18 +508,18 @@ export const StrategyPage: React.FC = () => {
   const streamError = error && error !== historyError ? error : null;
 
   return (
-    <div className="strategy-page min-h-screen flex w-full bg-[#FBFAF8] text-[#171717] overflow-hidden">
-      {/* â”€â”€ Left Sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-      <aside className="strategy-sidebar hidden lg:flex flex-col justify-between shrink-0 p-5 z-20">
+    <div className="min-h-screen flex w-full bg-[#FBFAF8] text-[#171717] overflow-hidden font-sans">
+      {/* ── Left Sidebar ──────────────────────────────────────────────── */}
+      <aside className="hidden lg:flex w-64 flex-col justify-between shrink-0 p-5 z-20 bg-[#F6F3FF] border-r border-[#E5E0E8]">
         <div>
-          {/* Top Logo â€” same lockup as every other page header */}
+          {/* Top Logo — same lockup as every other page header */}
           <BrandLogo to="/" size="sm" className="mb-7" />
 
           {/* '+ New research' Button */}
           <button
             type="button"
             onClick={handleNewResearch}
-            className="strategy-btn-pink w-full h-11 text-xs sm:text-[13px] mb-3"
+            className="inline-flex items-center justify-center gap-1.5 rounded-full font-bold bg-[#FF98C1] border border-[#F27DA8] text-[#171717] transition-all hover:bg-[#FF8AB8] hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-55 disabled:cursor-not-allowed cursor-pointer w-full h-11 text-xs sm:text-[13px] mb-3"
           >
             <Plus className="h-4 w-4 stroke-[3]" />
             <span>New research</span>
@@ -530,7 +529,7 @@ export const StrategyPage: React.FC = () => {
           <button
             type="button"
             onClick={() => navigate('/app/dashboard')}
-            className="strategy-nav-overview w-full h-11 px-4 flex items-center gap-2.5 text-xs sm:text-[13px] cursor-pointer mb-7"
+            className="w-full h-11 px-4 flex items-center gap-2.5 text-xs sm:text-[13px] font-bold text-[#171717] bg-[#F1ECFF] hover:bg-[#E7E0FF] border border-[#E5E0E8] rounded-xl transition-colors cursor-pointer mb-7"
           >
             <LayoutGrid className="h-4 w-4 stroke-[2.5]" />
             <span>Overview</span>
@@ -666,7 +665,7 @@ export const StrategyPage: React.FC = () => {
                       key={p}
                       type="button"
                       onClick={() => sendResearchMessage(p)}
-                      className="strategy-lavender-box p-4 text-left flex items-center justify-between gap-3 cursor-pointer hover:border-[#C9BCF0] transition-colors"
+                      className="rounded-[18px] border border-[#E9E2F7] bg-[#F6F3FF] p-4 text-left flex items-center justify-between gap-3 cursor-pointer hover:border-[#C9BCF0] transition-colors"
                     >
                       <span className="text-xs sm:text-[13px] font-semibold text-[#171717] leading-relaxed">
                         {p}
@@ -676,7 +675,7 @@ export const StrategyPage: React.FC = () => {
                   ))}
                 </div>
 
-                {/* Scope picker â€” sends a real request */}
+                {/* Scope picker — sends a real request */}
                 <div className="rounded-2xl border border-[#E5E0E8] bg-white p-6 sm:p-7 shadow-xs space-y-4">
                   <div>
                     <h3 className="font-cal-sans text-lg sm:text-[20px] font-bold text-[#171717]">
@@ -692,30 +691,36 @@ export const StrategyPage: React.FC = () => {
                       type="button"
                       onClick={() => setSelectedScope('practical')}
                       className={`rounded-full px-3.5 py-1.5 text-xs transition-all cursor-pointer ${
-                        selectedScope === 'practical' ? 'strategy-chip-active' : 'strategy-chip-inactive'
+                        selectedScope === 'practical'
+                          ? 'border border-[#D9CEF5] bg-[#F1ECFF] text-[#171717] font-bold'
+                          : 'border border-[#E5E0E8] bg-white text-[#625D68] font-semibold hover:bg-[#F6F3FF] hover:text-[#171717] hover:border-[#C9BCF0]'
                       }`}
                     >
-                      {selectedScope === 'practical' ? 'âœ“ ' : ''}Practical explainers
+                      {selectedScope === 'practical' ? '✓ ' : ''}Practical explainers
                     </button>
 
                     <button
                       type="button"
                       onClick={() => setSelectedScope('compare')}
                       className={`rounded-full px-3.5 py-1.5 text-xs transition-all cursor-pointer ${
-                        selectedScope === 'compare' ? 'strategy-chip-active' : 'strategy-chip-inactive'
+                        selectedScope === 'compare'
+                          ? 'border border-[#D9CEF5] bg-[#F1ECFF] text-[#171717] font-bold'
+                          : 'border border-[#E5E0E8] bg-white text-[#625D68] font-semibold hover:bg-[#F6F3FF] hover:text-[#171717] hover:border-[#C9BCF0]'
                       }`}
                     >
-                      {selectedScope === 'compare' ? 'âœ“ ' : ''}Compare every angle
+                      {selectedScope === 'compare' ? '✓ ' : ''}Compare every angle
                     </button>
 
                     <button
                       type="button"
                       onClick={() => setSelectedScope('channel')}
                       className={`rounded-full px-3.5 py-1.5 text-xs transition-all cursor-pointer ${
-                        selectedScope === 'channel' ? 'strategy-chip-active' : 'strategy-chip-inactive'
+                        selectedScope === 'channel'
+                          ? 'border border-[#D9CEF5] bg-[#F1ECFF] text-[#171717] font-bold'
+                          : 'border border-[#E5E0E8] bg-white text-[#625D68] font-semibold hover:bg-[#F6F3FF] hover:text-[#171717] hover:border-[#C9BCF0]'
                       }`}
                     >
-                      {selectedScope === 'channel' ? 'âœ“ ' : ''}Start from my channel
+                      {selectedScope === 'channel' ? '✓ ' : ''}Start from my channel
                     </button>
                   </div>
 
@@ -723,7 +728,7 @@ export const StrategyPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => sendResearchMessage(SCOPE_PROMPTS[selectedScope])}
-                      className="strategy-btn-pink px-5 py-2 text-xs"
+                      className="inline-flex items-center justify-center gap-1.5 rounded-full font-bold bg-[#FF98C1] border border-[#F27DA8] text-[#171717] transition-all hover:bg-[#FF8AB8] hover:-translate-y-0.5 active:translate-y-0 px-5 py-2 text-xs cursor-pointer"
                     >
                       <span>Shape my brief</span>
                       <ArrowRight className="h-3.5 w-3.5 stroke-[2.5]" />
@@ -874,15 +879,15 @@ export const StrategyPage: React.FC = () => {
             )}
 
             {/* Composer Box */}
-            <form onSubmit={handleSend} className="strategy-composer-bar p-3.5">
+            <form onSubmit={handleSend} className="rounded-[20px] border border-[#E5E0E8] bg-white p-3.5 shadow-[0_12px_32px_rgba(23,23,23,0.08)] transition-shadow focus-within:shadow-[0_14px_36px_rgba(23,23,23,0.12)]">
               <textarea
                 ref={textareaRef}
                 rows={1}
                 value={inputPrompt}
                 onChange={(e) => setInputPrompt(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask about your next videos, angles, hooks or a content planâ€¦"
-                className="app-field w-full resize-none px-3 py-2 text-sm sm:text-[14.5px] text-[#171717] placeholder-[#9B94A5] focus:outline-none font-normal leading-relaxed max-h-32 min-h-[30px] [--field-radius:10px]"
+                placeholder="Ask about your next videos, angles, hooks or a content plan…"
+                className="w-full resize-none rounded-xl border border-[#E5E0E8] bg-white px-3 py-2 text-sm sm:text-[14.5px] text-[#171717] placeholder-[#9B94A5] transition-colors focus:border-[#7C5CD6] focus:outline-none focus:ring-2 focus:ring-[#7C5CD6]/20 font-normal leading-relaxed max-h-32 min-h-[30px]"
               />
 
               {/* Bottom Toolbar */}
@@ -901,12 +906,12 @@ export const StrategyPage: React.FC = () => {
                     <Radio className="h-3 w-3" />
                     <span>
                       {activeConnectors.length > 0
-                        ? `Live research Â· ${activeConnectors.length}`
+                        ? `Live research · ${activeConnectors.length}`
                         : 'Live research off'}
                     </span>
                     <ChevronDown className="h-3 w-3" />
                   </button>
-                  <span className="text-[#DCD6E2]">Â·</span>
+                  <span className="text-[#DCD6E2]">·</span>
                   <button
                     type="button"
                     onClick={() => setInputPrompt((p) => `${p} @source `)}
@@ -914,7 +919,7 @@ export const StrategyPage: React.FC = () => {
                   >
                     @ source
                   </button>
-                  <span className="text-[#DCD6E2]">Â·</span>
+                  <span className="text-[#DCD6E2]">·</span>
                   <button
                     type="button"
                     onClick={() => setInputPrompt((p) => `${p} #idea `)}
@@ -928,7 +933,7 @@ export const StrategyPage: React.FC = () => {
                   <button
                     type="submit"
                     disabled={!inputPrompt.trim() || isSending}
-                    className="strategy-btn-pink px-4 py-1.5 text-xs font-bold"
+                    className="inline-flex items-center justify-center gap-1.5 rounded-full font-bold bg-[#FF98C1] border border-[#F27DA8] text-[#171717] transition-all hover:bg-[#FF8AB8] hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-55 disabled:cursor-not-allowed px-4 py-1.5 text-xs cursor-pointer"
                   >
                     <span>Send</span>
                     <ArrowRight className="h-3.5 w-3.5 stroke-[2.5]" />

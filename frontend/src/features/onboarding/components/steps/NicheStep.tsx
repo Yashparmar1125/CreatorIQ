@@ -87,10 +87,10 @@ export const NicheStep: React.FC<NicheStepProps> = ({
               className={cn(
                 'relative flex items-center justify-between rounded-xl px-3.5 py-3 text-left text-xs sm:text-[13px] font-bold transition-all cursor-pointer',
                 isSelected
-                  ? 'onboarding-tile-active'
+                  ? 'rounded-xl border-[1.5px] border-[#181719] bg-[#F0EBFF] text-[#14121a] shadow-[3px_3px_0px_#181719]'
                   : isMaxReached
                     ? 'border border-[#ede9f2] bg-neutral-100/60 text-[#a39fa9] opacity-60 cursor-not-allowed'
-                    : 'onboarding-tile'
+                    : 'rounded-xl border border-[#DCD7E3] bg-white text-[#2C2834] hover:border-[#181719] hover:bg-[#FAF9FD]'
               )}
             >
               <span className="truncate">{n}</span>
@@ -125,7 +125,7 @@ export const NicheStep: React.FC<NicheStepProps> = ({
               value={customNiche || ''}
               onChange={(e) => onCustomNicheChange(e.target.value)}
               placeholder="e.g. AI Coding Agents, Sim Racing, Indie Game Dev..."
-              className="onboarding-input"
+              className="h-11 w-full rounded-xl border-[1.5px] border-[#181719] bg-white px-3.5 text-sm text-[#181719] placeholder-[#9B94A5] shadow-[4px_4px_0px_#B197FC] transition-all hover:shadow-[5px_5px_0px_#A78BFA] focus:border-[#181719] focus:outline-none focus:ring-2 focus:ring-[#7C5CD6]/20"
               autoFocus
             />
           </motion.div>

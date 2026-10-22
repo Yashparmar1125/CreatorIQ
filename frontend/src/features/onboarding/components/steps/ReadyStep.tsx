@@ -13,7 +13,7 @@ export const ReadyStep: React.FC<ReadyStepProps> = ({ onEnter }) => (
     transition={{ duration: 0.22 }}
     className="w-full"
   >
-    <div className="onboarding-card p-8 sm:p-12 text-center">
+    <div className="rounded-[28px] border-[1.5px] border-[#181719] bg-white p-8 sm:p-12 text-center shadow-[8px_8px_0px_#70F4B8]">
       <div className="relative mx-auto mb-6 flex h-20 w-20 items-center justify-center">
         <motion.div
           animate={{ rotate: 360 }}
@@ -41,7 +41,7 @@ export const ReadyStep: React.FC<ReadyStepProps> = ({ onEnter }) => (
         <button
           type="button"
           onClick={onEnter}
-          className="onboarding-btn-primary px-8"
+          className="inline-flex h-[46px] items-center justify-center gap-2 rounded-full border-[1.5px] border-[#181719] bg-[#FFA2C8] px-8 text-sm font-bold text-[#181719] transition-all hover:-translate-y-0.5 hover:bg-[#FF90BD] hover:shadow-[0_4px_12px_rgba(255,145,190,0.25)] active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         >
           <span>Explore My Top Trends</span>
           <ArrowRight className="h-4 w-4 stroke-[2.5]" />
