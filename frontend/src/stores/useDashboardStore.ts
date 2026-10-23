@@ -27,6 +27,8 @@ export interface ConnectedChannel {
   view_count: number;
   video_count: number;
   niches: string[];
+  youtube_channel_id?: string;
+  is_oauth_connected: boolean;
 }
 
 interface DashboardState {
@@ -68,6 +70,11 @@ export const useDashboardStore = create<DashboardState>((set) => ({
             view_count: Number(primary.view_count ?? 0),
             video_count: Number(primary.video_count ?? 0),
             niches: Array.isArray(primary.niches) ? primary.niches : [],
+            youtube_channel_id: primary.youtube_channel_id ?? '',
+            is_oauth_connected: Boolean(
+              primary.is_oauth_connected ??
+              (primary.youtube_channel_id && !primary.youtube_channel_id.startsWith('manual-'))
+            ),
           }
         : null;
 

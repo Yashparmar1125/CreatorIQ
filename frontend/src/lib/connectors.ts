@@ -1,36 +1,57 @@
-import { Database, Flame, Globe } from 'lucide-react';
+import { Calendar, FileText, Globe, Youtube } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export interface ConnectorOption {
   id: string;
   label: string;
+  shortLabel: string;
   description: string;
+  category: 'channel' | 'planning' | 'knowledge' | 'web';
   icon: LucideIcon;
+  badge?: string;
+  requiresAuth?: boolean;
 }
 
 /**
- * Live research sources that the copilot agent can query.
- * The ids map to the backend tool groups (see copilot_agent._TOOL_CONNECTORS),
- * so toggling one here only changes which real sources are used.
+ * Real-time copilot connectors that inject evidence, memory, and actions.
  */
 export const CONNECTOR_OPTIONS: ConnectorOption[] = [
   {
-    id: 'trends',
-    label: 'CreatorIQ Concept Radar',
-    description: 'Your personalised trend feed and ranking signals.',
-    icon: Database,
+    id: 'youtube',
+    label: 'YouTube Channel Context',
+    shortLabel: 'YouTube',
+    description: 'Audience retention, upload metrics & competitor signals',
+    category: 'channel',
+    icon: Youtube,
+    badge: 'Core',
+    requiresAuth: true,
   },
   {
-    id: 'youtube',
-    label: 'Live YouTube Outliers',
-    description: 'Outlier videos and reach ratios from YouTube.',
-    icon: Flame,
+    id: 'calendar',
+    label: 'Google Calendar',
+    shortLabel: 'Calendar',
+    description: 'Schedule video release slots, filming days & deadlines',
+    category: 'planning',
+    icon: Calendar,
+    badge: 'Workflow',
+  },
+  {
+    id: 'vault',
+    label: 'Knowledge Vault (Notion / Drive)',
+    shortLabel: 'Vault',
+    description: 'Past scripts, outlines, voice guidelines & creator notes',
+    category: 'knowledge',
+    icon: FileText,
+    badge: 'Memory',
   },
   {
     id: 'web',
-    label: 'Live Web Search',
-    description: 'Current web sources for the topic you research.',
+    label: 'Web & Trend Intelligence',
+    shortLabel: 'Web Intel',
+    description: 'Live Google Trends, breakout search terms & web signals',
+    category: 'web',
     icon: Globe,
+    badge: 'Real-Time',
   },
 ];
 

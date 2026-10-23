@@ -35,6 +35,7 @@ class ChannelService:
                         "engagement_rate": float(c.engagement_rate) if c.engagement_rate is not None else None,
                         "niches": c.niches,
                         "is_primary": c.is_primary,
+                        "is_oauth_connected": bool(c.youtube_channel_id and not c.youtube_channel_id.startswith("manual-")),
                     }
                     for c in channels
                 ]
@@ -203,6 +204,7 @@ class ChannelService:
                     "engagement_rate": float(channel.engagement_rate) if channel.engagement_rate is not None else None,
                     "niches": channel.niches,
                     "is_primary": channel.is_primary,
+                    "is_oauth_connected": bool(channel.youtube_channel_id and not channel.youtube_channel_id.startswith("manual-")),
                     "profile_maturity": maturity.value,
                 },
             },

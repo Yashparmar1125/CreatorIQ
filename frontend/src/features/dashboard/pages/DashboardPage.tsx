@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { useDashboardStore } from '../../../stores/useDashboardStore';
 import { useTrendsStore } from '../../../stores/useTrendsStore';
@@ -9,13 +9,15 @@ import { cleanTrendText, cleanTrendTitle } from '../../../lib/cleanTrendTitle';
 import { ALL_CONNECTORS, CONNECTOR_OPTIONS } from '../../../lib/connectors';
 import {
   ArrowRight,
-  Check,
   ChevronDown,
   Plus,
   Sparkles,
   TrendingUp,
   UserRound,
+  X,
 } from 'lucide-react';
+import { ConnectorPopover } from '../components/ConnectorPopover';
+import { YouTubeConnectModal } from '../components/YouTubeConnectModal';
 
 /** Prompt starters — they only fill the composer, the creator edits before sending. */
 const SUGGESTED_PROMPTS = [
@@ -41,6 +43,7 @@ export const DashboardPage: React.FC = () => {
 
   const [prompt, setPrompt] = useState('');
   const [showConnectors, setShowConnectors] = useState(false);
+  const [showConnectModal, setShowConnectModal] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const connectorPanelRef = useRef<HTMLFormElement>(null);
 
@@ -117,15 +120,36 @@ export const DashboardPage: React.FC = () => {
           <span className="text-[#4A2E8F]">{firstName}</span>?
         </h1>
         <p className="mt-2 text-[13px] leading-relaxed text-[#625D68] sm:text-sm">
-          {channelSummary ? (
-            <>
-              Researching for <span className="font-semibold text-[#171717]">{channelSummary}</span>.
-              Ask for ideas, hooks or a content plan and CreatorIQ will bring live evidence.
-            </>
+          {primaryChannel ? (
+            primaryChannel.is_oauth_connected ? (
+              <>
+                Live channel sync active for <span className="font-semibold text-[#171717]">{channelSummary}</span>.
+                Copilot research is grounded in your real audience metrics and retention data.
+              </>
+            ) : (
+              <>
+                Researching with profile DNA for <span className="font-semibold text-[#171717]">{channelSummary}</span> (manual draft).{' '}
+                <button
+                  type="button"
+                  onClick={() => setShowConnectModal(true)}
+                  className="cursor-pointer font-semibold text-[#D81B60] underline underline-offset-2 hover:text-[#B4144B]"
+                >
+                  Connect YouTube OAuth
+                </button>{' '}
+                to unlock live viewer retention and subscriber baselines.
+              </>
+            )
           ) : (
             <>
-              Ask for ideas, hooks or a content plan and CreatorIQ will bring live evidence.
-              Connect your channel to personalise every answer.
+              Ask for ideas, hooks or a content plan and CreatorIQ will bring live evidence.{' '}
+              <button
+                type="button"
+                onClick={() => setShowConnectModal(true)}
+                className="cursor-pointer font-semibold text-[#4A2E8F] underline underline-offset-2 hover:text-[#331C6B]"
+              >
+                Connect your channel
+              </button>{' '}
+              to personalise every answer.
             </>
           )}
         </p>
@@ -150,42 +174,119 @@ export const DashboardPage: React.FC = () => {
             className="w-full resize-none border-0 bg-transparent text-[15px] leading-relaxed text-[#171717] placeholder-[#9B94A5] focus:outline-none"
           />
 
-          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-[#EFEBF2] pt-3.5">
-            <button
-              type="button"
-              onClick={() => setShowConnectors((v) => !v)}
-              aria-expanded={showConnectors}
-              aria-controls="dashboard-connector-panel"
-              className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[#E5E0E8] bg-white px-3 py-1.5 text-xs font-semibold text-[#625D68] transition-colors hover:border-[#C9BCF0] hover:bg-[#F6F3FF] hover:text-[#171717]"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              add connectors
-              {activeConnectors.length > 0 && (
-                <span className="rounded-full bg-[#F1ECFF] px-1.5 py-0.5 text-[10px] font-bold text-[#4A2E8F]">
-                  {activeConnectors.length}
-                </span>
-              )}
-              <ChevronDown
-                className={`h-3 w-3 transition-transform ${showConnectors ? 'rotate-180' : ''}`}
+          {/* Active connector micro-pills inside composer */}
+          {activeConnectors.length > 0 && (
+            <div className="mt-2.5 flex flex-wrap items-center gap-1.5 pt-2 border-t border-[#F1ECFF]/80">
+              <span className="text-[10px] font-mono text-[#77717F] uppercase tracking-wider mr-1">
+                Context:
+              </span>
+              {activeConnectors.map((cId) => {
+                const opt = CONNECTOR_OPTIONS.find((c) => c.id === cId);
+                if (!opt) return null;
+                const Icon = opt.icon;
+                return (
+                  <span
+                    key={cId}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-[#D9CEF5] bg-[#F8F6FF] px-2 py-0.5 text-[11px] font-medium text-[#4A2E8F] transition-all hover:bg-[#F1ECFF]"
+                  >
+                    <Icon className="h-3 w-3 text-[#7C5CD6]" />
+                    <span>{opt.shortLabel}</span>
+                    <button
+                      type="button"
+                      onClick={() => toggleConnector(cId)}
+                      className="cursor-pointer rounded p-0.5 text-[#4A2E8F]/70 hover:bg-[#E2D8FB] hover:text-[#4A2E8F]"
+                      aria-label={`Remove ${opt.shortLabel} connector`}
+                    >
+                      <X className="h-2.5 w-2.5" />
+                    </button>
+                  </span>
+                );
+              })}
+            </div>
+          )}
+
+          <div className="relative mt-3 flex flex-wrap items-center gap-2 border-t border-[#EFEBF2] pt-3.5">
+            {/* Popover trigger container */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowConnectors((v) => !v)}
+                aria-expanded={showConnectors}
+                aria-label="Add connectors"
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[#E5E0E8] bg-white px-3 py-1.5 text-xs font-semibold text-[#625D68] transition-colors hover:border-[#C9BCF0] hover:bg-[#F6F3FF] hover:text-[#171717]"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                add connectors
+                {activeConnectors.length > 0 && (
+                  <span className="rounded-full bg-[#F1ECFF] px-1.5 py-0.5 text-[10px] font-bold text-[#4A2E8F]">
+                    {activeConnectors.length}
+                  </span>
+                )}
+                <ChevronDown
+                  className={`h-3 w-3 transition-transform ${showConnectors ? 'rotate-180' : ''}`}
+                />
+              </button>
+
+              {/* Sleek Floating Popover Flyout */}
+              <ConnectorPopover
+                isOpen={showConnectors}
+                onClose={() => setShowConnectors(false)}
+                activeConnectors={activeConnectors}
+                onToggle={toggleConnector}
+                onSelectAll={() => setConnectors(CONNECTOR_OPTIONS.map((c) => c.id))}
+                onClearAll={() => setConnectors([])}
+                primaryChannel={primaryChannel}
+                onConnectYouTube={() => {
+                  setShowConnectors(false);
+                  setShowConnectModal(true);
+                }}
               />
-            </button>
+            </div>
 
             {/* Connected account chip — real channel state only */}
-            {primaryChannel ? (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-[#B8EED8] bg-[#E8FBF4] px-3 py-1.5 text-xs font-semibold text-[#0F5C43]">
+            {primaryChannel?.is_oauth_connected ? (
+              <span
+                className="inline-flex items-center gap-1.5 rounded-full border border-[#B8EED8] bg-[#E8FBF4] px-3 py-1.5 text-xs font-semibold text-[#0F5C43]"
+                title="Live OAuth Synced Channel"
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-[#167A59] animate-pulse" />
                 <UserRound className="h-3.5 w-3.5" />
                 {primaryChannel.handle
                   ? `@${primaryChannel.handle.replace(/^@/, '')}`
                   : primaryChannel.name}
+                <span className="rounded bg-[#D0F5E7] px-1 py-0.2 text-[9.5px] font-mono font-bold text-[#0F5C43]">
+                  LIVE SYNC
+                </span>
               </span>
+            ) : primaryChannel ? (
+              <button
+                type="button"
+                onClick={() => setShowConnectModal(true)}
+                className="group inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[#E5E0E8] bg-[#FBFAF8] px-3 py-1.5 text-xs font-medium text-[#625D68] transition-all hover:border-[#FF98C1] hover:bg-[#FFF5F8] hover:text-[#171717]"
+                title="Channel context is in manual profile mode. Click to connect YouTube OAuth for live data."
+              >
+                <UserRound className="h-3.5 w-3.5 text-[#77717F] group-hover:text-[#171717]" />
+                <span className="font-semibold text-[#171717]">
+                  {primaryChannel.handle
+                    ? `@${primaryChannel.handle.replace(/^@/, '')}`
+                    : primaryChannel.name}
+                </span>
+                <span className="rounded bg-[#F1ECFF] px-1.5 py-0.5 text-[10px] font-semibold text-[#4A2E8F]">
+                  Unsynced
+                </span>
+                <span className="inline-flex items-center text-[10px] font-bold text-[#D81B60] group-hover:underline">
+                  Connect ⚡
+                </span>
+              </button>
             ) : (
-              <Link
-                to="/app/settings"
-                className="inline-flex items-center gap-1.5 rounded-full border border-[#E5E0E8] bg-[#FBFAF8] px-3 py-1.5 text-xs font-semibold text-[#625D68] transition-colors hover:border-[#C9BCF0] hover:text-[#171717]"
+              <button
+                type="button"
+                onClick={() => setShowConnectModal(true)}
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[#E5E0E8] bg-[#FBFAF8] px-3 py-1.5 text-xs font-semibold text-[#625D68] transition-colors hover:border-[#C9BCF0] hover:text-[#171717]"
               >
                 <UserRound className="h-3.5 w-3.5" />
-                Connect a channel
-              </Link>
+                Connect YouTube
+              </button>
             )}
 
             <div className="ml-auto flex items-center gap-3">
@@ -198,67 +299,6 @@ export const DashboardPage: React.FC = () => {
               </button>
             </div>
           </div>
-
-          {/* Inline connector picker — expands the composer instead of floating over it */}
-          <AnimatePresence>
-            {showConnectors && (
-              <motion.div
-                id="dashboard-connector-panel"
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-                className="mt-3 w-full min-w-0 overflow-hidden rounded-xl border border-[#E5E0E8] bg-[#FBFAF8] p-3"
-              >
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#EFEBF2] pb-2">
-                <span className="font-sora text-xs font-bold text-[#171717]">Live research</span>
-                <span className="text-[10px] font-mono text-[#77717F]">REAL-TIME SOURCES</span>
-              </div>
-              <p className="mt-2 max-w-prose text-[11px] leading-relaxed text-[#625D68]">
-                Pick the sources the research request may query. Nothing is sent anywhere until you
-                press Research.
-              </p>
-              <div className="mt-2.5 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {CONNECTOR_OPTIONS.map((c) => {
-                  const isOn = activeConnectors.includes(c.id);
-                  const Icon = c.icon;
-                  return (
-                    <button
-                      key={c.id}
-                      type="button"
-                      onClick={() => toggleConnector(c.id)}
-                      aria-pressed={isOn}
-                      className={`flex w-full min-w-0 cursor-pointer items-start gap-2.5 overflow-hidden rounded-xl border p-2.5 text-left transition-colors ${
-                        isOn
-                          ? 'border-[#D9CEF5] bg-white'
-                          : 'border-[#EFEBF2] bg-white hover:bg-[#F6F3FF]'
-                      }`}
-                    >
-                      <span
-                        className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border ${
-                          isOn
-                            ? 'border-[#D9CEF5] bg-[#F1ECFF] text-[#4A2E8F]'
-                            : 'border-[#E5E0E8] bg-[#FBFAF8] text-[#77717F]'
-                        }`}
-                      >
-                        <Icon className="h-3.5 w-3.5" />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="flex items-center gap-1.5 text-xs font-bold text-[#171717]">
-                          {c.label}
-                          {isOn && <Check className="h-3 w-3 shrink-0 text-[#167A59]" />}
-                        </span>
-                        <span className="mt-0.5 block break-words text-[11px] leading-relaxed text-[#77717F]">
-                          {c.description}
-                        </span>
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </form>
 
         {/* Suggested prompts */}
@@ -387,6 +427,13 @@ export const DashboardPage: React.FC = () => {
           </div>
         )}
       </section>
+
+      {/* YouTube Channel OAuth Connection Dialog */}
+      <YouTubeConnectModal
+        isOpen={showConnectModal}
+        onClose={() => setShowConnectModal(false)}
+        primaryChannel={primaryChannel}
+      />
     </div>
   );
 };

@@ -19,17 +19,21 @@ logger = logging.getLogger(__name__)
 
 CONVERSATIONAL_GREETINGS = {"hi", "hello", "hey", "hii", "hiii", "yo", "sup", "thanks", "thank you"}
 
-# Tool -> connector id. Tools that read the creator's own profile or memory are
-# always available because they never hit an external source.
+# Tool -> connector id. Tools that read the creator's own profile, memory or
+# CreatorIQ's internal trend catalog are always available natively.
 _TOOL_CONNECTORS: dict[str, str] = {
-    "get_my_saved_trends": "trends",
-    "search_trends": "trends",
-    "get_trend_detail": "trends",
-    "find_small_channel_outliers": "trends",
     "search_web": "web",
     "search_youtube_live": "youtube",
 }
-_ALWAYS_AVAILABLE_TOOLS = {"get_my_channel", "remember", "recall"}
+_ALWAYS_AVAILABLE_TOOLS = {
+    "get_my_channel",
+    "remember",
+    "recall",
+    "get_my_saved_trends",
+    "search_trends",
+    "get_trend_detail",
+    "find_small_channel_outliers",
+}
 
 
 def _filter_tools_by_connectors(
