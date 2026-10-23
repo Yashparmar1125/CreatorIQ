@@ -1,3 +1,4 @@
+import { api } from '../../../lib/api';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { motion } from 'framer-motion';
@@ -184,6 +185,14 @@ export const DashboardPage: React.FC = () => {
                 onConnectYouTube={() => {
                   setShowConnectors(false);
                   setShowConnectModal(true);
+                }}
+                onDisconnectYouTube={async () => {
+                  try {
+                    await api.post('/auth/youtube/disconnect');
+                    await fetchDashboard();
+                  } catch (e) {
+                    console.error('Failed to disconnect YouTube:', e);
+                  }
                 }}
               />
             </div>

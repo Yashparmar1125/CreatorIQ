@@ -1,3 +1,7 @@
+import { useDashboardStore } from '../../../stores/useDashboardStore';
+import { ConnectorPopover } from '../../dashboard/components/ConnectorPopover';
+import { YouTubeConnectModal } from '../../dashboard/components/YouTubeConnectModal';
+import { api } from '../../../lib/api';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams, Link } from 'react-router';
 import { motion } from 'framer-motion';
@@ -9,7 +13,7 @@ import { TopicStrategyCard, type TopicStrategyItem } from '../components/TopicSt
 import { ScriptStudioModal } from '../components/ScriptStudioModal';
 import { StrategyResearchLoader } from '../components/StrategyResearchLoader';
 import { parseStrategyTopics } from '../utils/parseStrategyTopics';
-import { ALL_CONNECTORS, CONNECTOR_OPTIONS } from '../../../lib/connectors';
+import { ALL_CONNECTORS } from '../../../lib/connectors';
 import { BrandLogo } from '../../../components/brand/BrandLogo';
 import {
   Sparkles,
@@ -30,7 +34,6 @@ import {
   Trash2,
   AlertCircle,
   RefreshCw,
-  Radio,
 } from 'lucide-react';
 
 /* â”€â”€ Inline Research Steps Accordion â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
@@ -354,7 +357,6 @@ export const StrategyPage: React.FC = () => {
     isLoadingSessions,
     isLoadingMessages,
     activeConnectors,
-    toggleConnector,
     setConnectors,
     sendMessage,
     selectSession,
@@ -369,6 +371,14 @@ export const StrategyPage: React.FC = () => {
   const [inputPrompt, setInputPrompt] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showConnectorsMenu, setShowConnectorsMenu] = useState(false);
+  const [showConnectModal, setShowConnectModal] = useState(false);
+  const { primaryChannel, fetchDashboard } = useDashboardStore();
+
+  useEffect(() => {
+    if (!primaryChannel) {
+      fetchDashboard();
+    }
+  }, [primaryChannel, fetchDashboard]);
   const [studioTopic, setStudioTopic] = useState<TopicStrategyItem | null>(null);
   const [selectedScope, setSelectedScope] = useState('practical');
   const [historyError, setHistoryError] = useState<string | null>(null);
@@ -847,45 +857,26 @@ export const StrategyPage: React.FC = () => {
         {/* â”€â”€ Floating Bottom Composer Bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <div className="fixed bottom-5 left-0 right-0 px-4 sm:px-6 pointer-events-none z-30 lg:pl-64">
           <div className="max-w-3xl mx-auto w-full pointer-events-auto">
-            {/* Connectors Popup Menu */}
-            {showConnectorsMenu && (
-              <div className="mb-2 w-80 rounded-2xl border border-[#E5E0E8] bg-white p-3.5 shadow-lg space-y-2.5 animate-in fade-in zoom-in-95 duration-150">
-                <div className="flex items-center justify-between pb-1.5 border-b border-[#EFEBF2]">
-                  <span className="text-xs font-bold text-[#171717] font-cal-sans">Live research</span>
-                  <span className="text-[10px] font-mono text-[#77717F]">Real-Time</span>
-                </div>
-                <p className="text-[11px] text-[#625D68] leading-relaxed">
-                  Off by default so a normal question is answered straight away. Turn a source on
-                  only when you want live evidence.
-                </p>
-                <div className="space-y-1.5 text-xs">
-                  {CONNECTOR_OPTIONS.map((c) => {
-                    const isOn = activeConnectors.includes(c.id);
-                    return (
-                      <button
-                        key={c.id}
-                        type="button"
-                        onClick={() => toggleConnector(c.id)}
-                        aria-pressed={isOn}
-                        className="w-full flex items-center justify-between gap-2 p-2 rounded-lg hover:bg-[#F6F3FF] transition-colors cursor-pointer"
-                      >
-                        <span className="flex items-center gap-2 text-[#171717] min-w-0">
-                          <c.icon className="h-3.5 w-3.5 text-[#625D68] shrink-0" />
-                          <span className="font-semibold truncate">{c.label}</span>
-                        </span>
-                        <span
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded shrink-0 ${
-                            isOn ? 'bg-[#E4FBF2] text-[#167A59]' : 'bg-[#F6F3FF] text-[#77717F]'
-                          }`}
-                        >
-                          {isOn ? 'ON' : 'OFF'}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+            {/* Sleek Floating Connector Popover Flyout */}
+            <div className="relative">
+              <ConnectorPopover
+                isOpen={showConnectorsMenu}
+                onClose={() => setShowConnectorsMenu(false)}
+                primaryChannel={primaryChannel}
+                onConnectYouTube={() => {
+                  setShowConnectorsMenu(false);
+                  setShowConnectModal(true);
+                }}
+                onDisconnectYouTube={async () => {
+                  try {
+                    await api.post('/auth/youtube/disconnect');
+                    await fetchDashboard();
+                  } catch (e) {
+                    console.error('Failed to disconnect YouTube:', e);
+                  }
+                }}
+              />
+            </div>
 
             {/* Composer Box */}
             <form onSubmit={handleSend} className="rounded-[20px] border border-[#E5E0E8] bg-white p-3.5 shadow-[0_12px_32px_rgba(23,23,23,0.08)] transition-shadow focus-within:shadow-[0_14px_36px_rgba(23,23,23,0.12)]">
@@ -906,19 +897,18 @@ export const StrategyPage: React.FC = () => {
                     type="button"
                     onClick={() => setShowConnectorsMenu(!showConnectorsMenu)}
                     aria-expanded={showConnectorsMenu}
-                    className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 transition-colors cursor-pointer ${
-                      activeConnectors.length > 0
-                        ? 'border-[#B9EFDD] bg-[#E4FBF2] text-[#167A59]'
-                        : 'border-[#E5E0E8] bg-white text-[#625D68] hover:text-[#171717]'
+                    aria-label="Manage external integrations"
+                    className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold transition-all cursor-pointer ${
+                      showConnectorsMenu
+                        ? 'border-[#7C5CD6] bg-[#F1ECFF] text-[#4A2E8F]'
+                        : 'border-[#E5E0E8] bg-white text-[#625D68] hover:border-[#D5CFDE] hover:text-[#171717]'
                     }`}
                   >
-                    <Radio className="h-3 w-3" />
-                    <span>
-                      {activeConnectors.length > 0
-                        ? `Live research · ${activeConnectors.length}`
-                        : 'Live research off'}
-                    </span>
-                    <ChevronDown className="h-3 w-3" />
+                    <Plus className="h-3 w-3" />
+                    <span>Connectors</span>
+                    <ChevronDown
+                      className={`h-3 w-3 transition-transform ${showConnectorsMenu ? 'rotate-180' : ''}`}
+                    />
                   </button>
                   <span className="text-[#DCD6E2]">·</span>
                   <button
@@ -959,6 +949,13 @@ export const StrategyPage: React.FC = () => {
         topic={studioTopic}
         isOpen={!!studioTopic}
         onClose={() => setStudioTopic(null)}
+      />
+
+      {/* YouTube Connect Modal */}
+      <YouTubeConnectModal
+        isOpen={showConnectModal}
+        onClose={() => setShowConnectModal(false)}
+        primaryChannel={primaryChannel}
       />
     </div>
   );

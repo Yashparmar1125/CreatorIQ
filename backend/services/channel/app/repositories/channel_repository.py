@@ -1,9 +1,11 @@
 import uuid
+from datetime import datetime
+from typing import Any
 
-from sqlalchemy import desc, select, func
+from sqlalchemy import desc, select, func, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.channel_models import Channel, ChannelMetric
+from app.models.channel_models import Channel, ChannelMetric, ChannelHistoricalSnapshot, ChannelVideoOutlier
 
 
 class ChannelRepository:
@@ -11,15 +13,27 @@ class ChannelRepository:
         return {"service": "channel", "status": "ok"}
 
     async def list_channels_for_user(self, db: AsyncSession, user_id: uuid.UUID) -> list[Channel]:
-        res = await db.execute(select(Channel).where(Channel.user_id == user_id, Channel.deleted_at.is_(None)).order_by(desc(Channel.created_at)))
+        res = await db.execute(
+            select(Channel)
+            .where(Channel.user_id == user_id, Channel.deleted_at.is_(None))
+            .order_by(desc(Channel.created_at))
+        )
         return list(res.scalars().all())
 
     async def get_channel_for_user(self, db: AsyncSession, user_id: uuid.UUID, channel_id: uuid.UUID) -> Channel | None:
-        res = await db.execute(select(Channel).where(Channel.id == channel_id, Channel.user_id == user_id, Channel.deleted_at.is_(None)))
+        res = await db.execute(
+            select(Channel)
+            .where(Channel.id == channel_id, Channel.user_id == user_id, Channel.deleted_at.is_(None))
+        )
         return res.scalar_one_or_none()
 
     async def latest_metrics(self, db: AsyncSession, channel_id: uuid.UUID) -> ChannelMetric | None:
-        res = await db.execute(select(ChannelMetric).where(ChannelMetric.channel_id == channel_id).order_by(desc(ChannelMetric.recorded_at)).limit(1))
+        res = await db.execute(
+            select(ChannelMetric)
+            .where(ChannelMetric.channel_id == channel_id)
+            .order_by(desc(ChannelMetric.recorded_at))
+            .limit(1)
+        )
         return res.scalar_one_or_none()
 
     async def upsert_channel_from_oauth(
@@ -132,3 +146,61 @@ class ChannelRepository:
         channel.audience_geo_weights = audience_geo_weights
         await db.flush()
         return channel
+
+    async def replace_channel_outliers(
+        self,
+        db: AsyncSession,
+        channel_id: uuid.UUID,
+        outliers_data: list[dict[str, Any]],
+    ) -> None:
+        """Purge and replace the top breakout outlier videos for a channel."""
+        await db.execute(delete(ChannelVideoOutlier).where(ChannelVideoOutlier.channel_id == channel_id))
+
+        for o in outliers_data:
+            pub_date = None
+            if o.get("published_at"):
+                try:
+                    pub_date = datetime.fromisoformat(str(o["published_at"]).replace("Z", "+00:00"))
+                except Exception:
+                    pass
+
+            outlier_entry = ChannelVideoOutlier(
+                channel_id=channel_id,
+                youtube_video_id=str(o.get("youtube_video_id") or o.get("id") or "unknown"),
+                title=str(o.get("title") or "Untitled Outlier"),
+                published_at=pub_date,
+                view_count=int(o.get("view_count") or o.get("views") or 0),
+                reach_ratio=float(o.get("reach_ratio") or 0.0),
+                is_outlier=bool(o.get("is_outlier", True)),
+                format_type=str(o.get("format_type", "long_form")),
+            )
+            db.add(outlier_entry)
+        await db.flush()
+
+    async def get_channel_outliers(
+        self,
+        db: AsyncSession,
+        channel_id: uuid.UUID,
+        limit: int = 5,
+    ) -> list[ChannelVideoOutlier]:
+        """Fetch historical breakout outliers for a channel sorted by reach ratio descending."""
+        res = await db.execute(
+            select(ChannelVideoOutlier)
+            .where(ChannelVideoOutlier.channel_id == channel_id)
+            .order_by(desc(ChannelVideoOutlier.reach_ratio))
+            .limit(limit)
+        )
+        return list(res.scalars().all())
+
+    async def get_latest_snapshot(
+        self,
+        db: AsyncSession,
+        channel_id: uuid.UUID,
+    ) -> ChannelHistoricalSnapshot | None:
+        res = await db.execute(
+            select(ChannelHistoricalSnapshot)
+            .where(ChannelHistoricalSnapshot.channel_id == channel_id)
+            .order_by(desc(ChannelHistoricalSnapshot.calibrated_at))
+            .limit(1)
+        )
+        return res.scalar_one_or_none()

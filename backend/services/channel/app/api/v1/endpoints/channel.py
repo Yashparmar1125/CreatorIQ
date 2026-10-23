@@ -1,4 +1,5 @@
 import uuid
+from typing import Any
 
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
@@ -53,6 +54,18 @@ class BuildProfileRequest(BaseModel):
     subscriber_count: int | None = None
 
 
+class DeepSyncRequest(BaseModel):
+    median_reach_ratio: float = 0.35
+    dominant_traffic_source: str = "browse"
+    speech_tempo_wpm: int = 155
+    median_retention_30s_pct: float = 55.0
+    analyzed_video_count: int = 0
+    engagement_rate: float | None = None
+    niches: list[str] = []
+    top_geos: dict[str, float] = {}
+    outliers: list[dict[str, Any]] = []
+
+
 @router.get("/health")
 async def health() -> dict:
     return service.health()
@@ -66,6 +79,16 @@ async def list_channels(user: UserContext = Depends(get_user_context), db: Async
 @router.get("/channels/me")
 async def get_my_channel(user: UserContext = Depends(get_user_context), db: AsyncSession = Depends(get_db)) -> dict:
     return await service.get_my_channel(db, user.user_id)
+
+
+@router.get("/channels/me/outliers")
+async def get_my_outliers(
+    limit: int = 5,
+    user: UserContext = Depends(get_user_context),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Fetch top breakout outlier uploads for creator's connected channel."""
+    return await service.get_my_outliers(db, user.user_id, limit=limit)
 
 
 @router.get("/channels/me/analysis-status")
@@ -186,9 +209,41 @@ async def build_creator_profile(
     return {"data": profile, "meta": {"request_id": "local-dev"}}
 
 
+@router.post("/internal/channels/user/{user_id}/deep-sync")
+async def save_deep_sync(
+    user_id: str,
+    payload: DeepSyncRequest,
+    db: AsyncSession = Depends(get_db),
+    _: None = Depends(require_internal_token),
+) -> dict:
+    """Store quota-efficient deep YouTube ingestion context (reach baseline, outliers, tempo)."""
+    return await service.save_deep_sync(
+        db,
+        uuid.UUID(user_id),
+        median_reach_ratio=payload.median_reach_ratio,
+        dominant_traffic_source=payload.dominant_traffic_source,
+        speech_tempo_wpm=payload.speech_tempo_wpm,
+        median_retention_30s_pct=payload.median_retention_30s_pct,
+        analyzed_video_count=payload.analyzed_video_count,
+        engagement_rate=payload.engagement_rate,
+        niches=payload.niches,
+        top_geos=payload.top_geos,
+        outliers=payload.outliers,
+    )
+
+
+@router.post("/internal/channels/user/{user_id}/disconnect-oauth")
+async def disconnect_channel_oauth(
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    _: None = Depends(require_internal_token),
+) -> dict:
+    """Unlink YouTube OAuth integration from channel service."""
+    return await service.disconnect_oauth(db, uuid.UUID(user_id))
+
+
 @router.post("/internal/channels/{channel_id}/refresh-metrics")
 async def refresh_metrics(channel_id: str, _: None = Depends(require_internal_token)) -> dict:
-    # Metrics ingestion will be implemented once YouTube integrations are enabled.
     return {"data": {"message": "Queued metrics refresh (dev stub)", "channel_id": channel_id}, "meta": {"request_id": "local-dev"}}
 
 
@@ -198,5 +253,5 @@ async def get_user_channel_context(
     db: AsyncSession = Depends(get_db),
     _: None = Depends(require_internal_token),
 ) -> dict:
-    """Fetch niches, formats, and tone for the user's primary channel (Internal only)."""
+    """Fetch complete creator DNA for the user's primary channel (Internal only)."""
     return await service.get_user_channel_context(db, uuid.UUID(user_id))

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { StatIconKey } from '../lib/stat-icons';
 import { api } from '../lib/api';
 import { cleanTrendTitle } from '../lib/cleanTrendTitle';
+import { useStrategyStore } from './useStrategyStore';
 
 export interface DashboardStat {
   label: string;
@@ -17,7 +18,7 @@ export interface DashboardInsight {
   trendId?: string;
 }
 
-/** The creator's real connected channel — no placeholder values. */
+/** The creator's real connected channel with Phase 2 Performance DNA. */
 export interface ConnectedChannel {
   id: string;
   name: string;
@@ -29,6 +30,11 @@ export interface ConnectedChannel {
   niches: string[];
   youtube_channel_id?: string;
   is_oauth_connected: boolean;
+  median_reach_ratio?: number;
+  dominant_traffic_source?: string;
+  speech_tempo_wpm?: number;
+  median_retention_30s_pct?: number;
+  engagement_rate?: number;
 }
 
 interface DashboardState {
@@ -75,8 +81,20 @@ export const useDashboardStore = create<DashboardState>((set) => ({
               primary.is_oauth_connected ??
               (primary.youtube_channel_id && !primary.youtube_channel_id.startsWith('manual-'))
             ),
+            median_reach_ratio: primary.median_reach_ratio != null ? Number(primary.median_reach_ratio) : undefined,
+            dominant_traffic_source: primary.dominant_traffic_source ?? undefined,
+            speech_tempo_wpm: primary.speech_tempo_wpm != null ? Number(primary.speech_tempo_wpm) : undefined,
+            median_retention_30s_pct: primary.median_retention_30s_pct != null ? Number(primary.median_retention_30s_pct) : undefined,
+            engagement_rate: primary.engagement_rate != null ? Number(primary.engagement_rate) : undefined,
           }
         : null;
+
+      // Keep Copilot connector state aligned with genuine YouTube connection status
+      if (primaryChannel?.is_oauth_connected) {
+        useStrategyStore.getState().connectConnector('youtube');
+      } else {
+        useStrategyStore.getState().disconnectConnector('youtube');
+      }
 
       // Build dynamic AI Priority Insights from top predicted trends
       const dynamicInsights: DashboardInsight[] = trends.slice(0, 3).map((t: any, idx: number) => {

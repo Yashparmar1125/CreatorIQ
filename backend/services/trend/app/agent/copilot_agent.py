@@ -23,6 +23,7 @@ CONVERSATIONAL_GREETINGS = {"hi", "hello", "hey", "hii", "hiii", "yo", "sup", "t
 # CreatorIQ's internal trend catalog are always available natively.
 _TOOL_CONNECTORS: dict[str, str] = {
     "search_youtube_live": "youtube",
+    "get_channel_outliers": "youtube",
 }
 _ALWAYS_AVAILABLE_TOOLS = {
     "get_my_channel",
@@ -148,30 +149,72 @@ class CopilotAgent:
         )
 
         niches = ", ".join(creator_context.get("niches") or ["General"])
+        channel_name = creator_context.get("channel_name")
+        sub_count = creator_context.get("subscriber_count", 0)
+        is_oauth_connected = creator_context.get("is_oauth_connected", False)
+
         channel_desc = (
-            f"{creator_context.get('channel_name')} ({creator_context.get('subscriber_count', 0):,} subscribers)"
-            if creator_context.get("channel_name")
+            f"{channel_name} ({sub_count:,} subscribers) [OAuth Verified]"
+            if is_oauth_connected and channel_name
+            else f"{channel_name} ({sub_count:,} subscribers)"
+            if channel_name
             else "Unconnected channel (relying on manual profile)"
         )
 
+        reach_ratio = float(creator_context.get("median_reach_ratio") or 0.35)
+        dominant_traffic = str(creator_context.get("dominant_traffic_source") or "browse")
+        speech_tempo = int(creator_context.get("speech_tempo_wpm") or 155)
+        retention_30s = float(creator_context.get("median_retention_30s_pct") or 55.0)
+        outliers = creator_context.get("top_outliers", [])
+        outliers_summary = (
+            "; ".join([f"'{o.get('title')}' ({o.get('reach_ratio')}x reach, {o.get('view_count', 0):,} views)" for o in outliers[:3]])
+            if outliers
+            else "No historical outliers recorded yet."
+        )
+
+        traffic_guidance = (
+            "Optimize for high-intent search queries, exact problem titles, and detailed chapter markers."
+            if dominant_traffic == "search"
+            else "Optimize for high visual contrast, curiosity-gap titles, and fast pattern interrupts."
+        )
+
+        search_traffic_advice = (
+            "   • Generate search-intent question titles (e.g. 'How to fix...', 'Complete Guide to...'), keyword-dense chapters, and SEO tags.\n"
+            if dominant_traffic == "search"
+            else "   • Generate high curiosity-gap titles with emotional stakes and visual thumbnail pairings.\n"
+        )
+
         system_prompt = (
-            "You are CreatorIQ Copilot, an elite AI YouTube strategist and real-time research assistant.\n\n"
+            "You are CreatorIQ Copilot, an elite AI YouTube Executive Producer, strategist, and real-time research assistant.\n\n"
             "=== CREATOR PROFILE & PREFERENCES ===\n"
             f"• Channel: {channel_desc}\n"
-            f"• Niches: {niches}\n"
+            f"• Primary Niches: {niches}\n"
             f"• Target Region: {creator_context.get('country', 'India')}\n"
             f"• Preferred Tone: {creator_context.get('tone', 'High energy, authentic, actionable')}\n\n"
+            "=== CONNECTOR 1: YOUTUBE PERFORMANCE DNA ===\n"
+            f"• Channel Reach Baseline: {reach_ratio:.2f}x (median views / subscriber count)\n"
+            f"• Dominant Traffic Source: {dominant_traffic.upper()} ({traffic_guidance})\n"
+            f"• Speech Tempo / Cadence: {speech_tempo} WPM (Budget script words = video duration in minutes * {speech_tempo})\n"
+            f"• 30-Second Hook Survival Baseline: {retention_30s:.1f}%\n"
+            f"• Historical Outlier Precedents: {outliers_summary}\n\n"
             "=== PERSISTENT CREATOR MEMORY (PREFERENCES & RULES) ===\n"
             f"{memory_bullets}\n\n"
-            "=== GUIDELINES ===\n"
-            "1. ALWAYS cite concrete evidence from real data: mention Reach Multipliers (e.g. '14x baseline'), small channel wins, and optimal windows.\n"
-            "2. Never make up fake data or generic templates. If you don't have fresh proof, call the search tools to gather real videos.\n"
-            "3. If the creator shares a new preference (e.g. 'I only make Shorts' or 'my audience hates theory'), call the `remember` tool to store it.\n"
-            "4. Format answers in structured, clean Markdown with bullet points, high-CTR titles, and clear verdicts. When recommending video topics or content concepts, structure each distinct concept starting with '### Priority N: [Topic Title]' (e.g. ### Priority 1: AI Tools) with:\n"
-            "   - **Statistical Evidence:** Virality Probability % (e.g. 92%), Current Momentum Score (e.g. 92/100), Reach Multiplier (e.g. 12.0x baseline), Optimal Window (e.g. Next 3–5 Days)\n"
-            "   - **Target Audience & Demand:** Core pain point and emotional trigger\n"
-            "   - **Educational / Shorts Blueprint:** Title Idea 1, Title Idea 2, Visual Hook [0-3s], Opening Audio Hook / Dialogue, Retention Pacing [0-3s, 3-15s, 15-45s, 45-60s]\n"
-            "5. EFFICIENCY: Call at most 1 to 2 targeted tools. As soon as you gather data from search_trends, search_web, or YouTube, STOP calling tools and synthesize your strategic recommendations.\n"
+            "=== CONNECTOR 1 HYPER-PERSONALIZATION RULES ===\n"
+            "1. CHANNEL-NICHE COMPATIBILITY SCORE (CNCS):\n"
+            "   Whenever evaluating a trend or video concept, grade whether it genuinely fits this channel's core niche and audience. If a trend has high global virality but low niche fit, give an honest warning and provide a strategic niche pivot (e.g. explain why covering it directly will hurt audience retention).\n"
+            "2. ANTI-DROP HOOK ARCHITECTURE:\n"
+            f"   The creator's 30-second retention baseline is {retention_30s:.1f}%. Never suggest rambling greetings, generic introductions, or logo bumpers. Always provide an Immediate Proof Hook:\n"
+            "   • [0:00 - 0:06]: Immediate visual demo or proof of the end result.\n"
+            "   • [0:06 - 0:14]: State the high-stakes problem or curiosity hook.\n"
+            "   • [0:14+]: Cut straight to value delivery.\n"
+            "3. BROWSE VS SEARCH ADAPTATION:\n"
+            f"   Since the channel's dominant traffic source is {dominant_traffic.upper()}:\n"
+            f"{search_traffic_advice}"
+            "4. CADENCE & WORD BUDGET:\n"
+            f"   Clamp all recommended scripts or outlines to the creator's measured speaking pace of {speech_tempo} words per minute.\n"
+            "5. STATISTICAL EVIDENCE & BENCHMARKS:\n"
+            f"   Cite concrete evidence: reference the creator's {reach_ratio:.2f}x baseline vs prospective trend reach multipliers (e.g. '3.5x baseline').\n"
+            "6. EFFICIENCY: Call at most 1 to 2 targeted tools when needed. Synthesize recommendations decisively in clean, structured Markdown.\n"
         )
 
         # 5. Load Session History (Rolling 10 turns)

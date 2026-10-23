@@ -61,7 +61,7 @@ export const ConnectorPopover: React.FC<ConnectorPopoverProps> = ({
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: -6, scale: 0.98 }}
           transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-          className="absolute top-full left-0 mt-2 z-50 w-[380px] sm:w-[430px] rounded-2xl border border-[#E5E0E8] bg-white p-3.5 shadow-[0_18px_42px_rgba(23,23,23,0.14)] max-w-[calc(100vw-2rem)]"
+          className="absolute top-full left-0 mt-2 z-50 w-[380px] sm:w-[450px] rounded-2xl border border-[#E5E0E8] bg-white p-3.5 shadow-[0_18px_42px_rgba(23,23,23,0.14)] max-w-[calc(100vw-2rem)]"
           role="dialog"
           aria-label="Copilot Connectors Menu"
         >
@@ -92,7 +92,7 @@ export const ConnectorPopover: React.FC<ConnectorPopoverProps> = ({
           </div>
 
           {/* Connectors List */}
-          <div className="mt-2.5 space-y-1.5">
+          <div className="mt-2.5 space-y-2">
             {CONNECTOR_OPTIONS.map((c: ConnectorOption) => {
               const Icon = c.icon;
               const isYouTube = c.id === 'youtube';
@@ -103,7 +103,7 @@ export const ConnectorPopover: React.FC<ConnectorPopoverProps> = ({
               return (
                 <div
                   key={c.id}
-                  className={`group relative flex items-center justify-between gap-3 rounded-xl border p-2.5 transition-all ${
+                  className={`group relative flex items-start justify-between gap-3 rounded-xl border p-2.5 transition-all ${
                     isConnected
                       ? 'border-[#D9CEF5]/70 bg-[#FAF8FF]'
                       : 'border-[#EFEBF2] bg-white hover:border-[#E5E0E8] hover:bg-[#FBFAF8]'
@@ -128,11 +128,29 @@ export const ConnectorPopover: React.FC<ConnectorPopoverProps> = ({
                       <p className="mt-0.5 line-clamp-1 text-[11px] leading-relaxed text-[#77717F]">
                         {c.description}
                       </p>
+
+                      {/* YouTube Connector 1 Performance DNA breakdown */}
+                      {isYouTube && isConnected && (
+                        <div className="mt-2 flex flex-wrap items-center gap-1 text-[10px]">
+                          <span className="rounded bg-[#F1ECFF] px-1.5 py-0.5 font-medium text-[#4A2E8F]">
+                            {primaryChannel?.handle || primaryChannel?.name || 'Verified Channel'}
+                          </span>
+                          <span className="rounded border border-[#E5E0E8] bg-white px-1.5 py-0.5 text-[#171717]">
+                            Baseline: {(primaryChannel?.median_reach_ratio ?? 0.35).toFixed(2)}x
+                          </span>
+                          <span className="rounded border border-[#E5E0E8] bg-white px-1.5 py-0.5 text-[#171717] capitalize">
+                            Traffic: {primaryChannel?.dominant_traffic_source || 'Browse'}
+                          </span>
+                          <span className="rounded border border-[#E5E0E8] bg-white px-1.5 py-0.5 text-[#171717]">
+                            Cadence: {primaryChannel?.speech_tempo_wpm || 155} WPM
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
                   {/* Right Action / State: Connect vs Disconnect */}
-                  <div className="flex shrink-0 items-center gap-2">
+                  <div className="flex shrink-0 items-center gap-2 pt-0.5">
                     {isConnected ? (
                       <div className="flex items-center gap-2">
                         <span className="inline-flex items-center gap-1.5 rounded-md bg-[#E8FBF4] px-2 py-0.5 text-[10.5px] font-semibold text-[#167A59]">

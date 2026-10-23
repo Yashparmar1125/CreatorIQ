@@ -46,6 +46,10 @@ class Channel(Base):
     content_formats: Mapped[list[ContentFormat]] = mapped_column(ARRAY(Enum(ContentFormat, name="channel_content_format")), nullable=False)
     tone: Mapped[ChannelTone] = mapped_column(Enum(ChannelTone, name="channel_tone"), default=ChannelTone.mixed, nullable=False)
     audience_geo_weights: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    median_reach_ratio: Mapped[float | None] = mapped_column(Numeric(6, 3), nullable=True)
+    dominant_traffic_source: Mapped[str | None] = mapped_column(String(32), default="browse", nullable=True)
+    speech_tempo_wpm: Mapped[int | None] = mapped_column(INTEGER, default=155, nullable=True)
+    median_retention_30s_pct: Mapped[float | None] = mapped_column(Numeric(5, 2), nullable=True)
     metrics_last_refreshed: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True)
     is_primary: Mapped[bool] = mapped_column(BOOLEAN, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
@@ -78,3 +82,38 @@ class AudienceSnapshot(Base):
     recorded_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), index=True, nullable=False)
     payload: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
+
+
+class ChannelHistoricalSnapshot(Base):
+    __tablename__ = "channel_historical_snapshots"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    channel_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), index=True, nullable=False)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), index=True, nullable=False)
+    total_subscribers: Mapped[int] = mapped_column(BIGINT, default=0, nullable=False)
+    total_views: Mapped[int] = mapped_column(BIGINT, default=0, nullable=False)
+    median_reach_ratio: Mapped[float] = mapped_column(Numeric(6, 3), default=0.35, nullable=False)
+    average_view_duration_seconds: Mapped[int] = mapped_column(INTEGER, default=180, nullable=False)
+    median_retention_30s_pct: Mapped[float] = mapped_column(Numeric(5, 2), default=55.0, nullable=False)
+    speech_tempo_wpm: Mapped[int] = mapped_column(INTEGER, default=155, nullable=False)
+    dominant_traffic_source: Mapped[str] = mapped_column(String(32), default="browse", nullable=False)
+    top_geos: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
+    analyzed_video_count: Mapped[int] = mapped_column(INTEGER, default=0, nullable=False)
+    calibrated_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
+
+
+class ChannelVideoOutlier(Base):
+    __tablename__ = "channel_video_outliers"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    channel_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), index=True, nullable=False)
+    youtube_video_id: Mapped[str] = mapped_column(String(32), nullable=False)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    published_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True)
+    view_count: Mapped[int] = mapped_column(BIGINT, default=0, nullable=False)
+    reach_ratio: Mapped[float] = mapped_column(Numeric(6, 3), default=0.0, nullable=False)
+    is_outlier: Mapped[bool] = mapped_column(BOOLEAN, default=True, nullable=False)
+    format_type: Mapped[str] = mapped_column(String(16), default="long_form", nullable=False)
+    hook_transcript_first_30s: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
+

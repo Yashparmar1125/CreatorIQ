@@ -34,6 +34,23 @@ AGENT_TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "get_channel_outliers",
+            "description": "Fetch the creator's historical breakout outlier uploads (videos that achieved >= 1.5x their channel median reach baseline) to identify winning topics, formats, and hook precedents.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "limit": {
+                        "type": "integer",
+                        "description": "Max outlier videos to return (default: 5)",
+                        "default": 5,
+                    },
+                },
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "get_my_saved_trends",
             "description": "Fetch all concepts and topics the creator has previously saved to their content pipeline.",
             "parameters": {
@@ -195,11 +212,31 @@ class ToolRegistry:
             if tool_name == "get_my_channel":
                 return {
                     "channel_name": creator_context.get("channel_name"),
+                    "handle": creator_context.get("handle"),
                     "subscriber_count": creator_context.get("subscriber_count", 0),
+                    "video_count": creator_context.get("video_count", 0),
+                    "view_count": creator_context.get("view_count", 0),
+                    "engagement_rate": creator_context.get("engagement_rate"),
+                    "median_reach_ratio": creator_context.get("median_reach_ratio", 0.35),
+                    "dominant_traffic_source": creator_context.get("dominant_traffic_source", "browse"),
+                    "speech_tempo_wpm": creator_context.get("speech_tempo_wpm", 155),
+                    "median_retention_30s_pct": creator_context.get("median_retention_30s_pct", 55.0),
                     "niches": creator_context.get("niches", []),
                     "tone": creator_context.get("tone", "conversational"),
                     "content_formats": creator_context.get("content_formats", ["shorts", "long_form"]),
                     "connected": bool(creator_context.get("channel_name")),
+                    "is_oauth_connected": bool(creator_context.get("is_oauth_connected", False)),
+                }
+
+            elif tool_name == "get_channel_outliers":
+                limit = int(arguments.get("limit", 5))
+                outliers = creator_context.get("top_outliers", [])[:limit]
+                baseline = float(creator_context.get("median_reach_ratio", 0.35))
+                return {
+                    "count": len(outliers),
+                    "channel_median_reach_baseline": baseline,
+                    "outlier_threshold": round(baseline * 1.5, 3),
+                    "outlier_videos": outliers,
                 }
 
             elif tool_name == "get_my_saved_trends":

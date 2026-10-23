@@ -14,9 +14,6 @@ router = APIRouter()
 service = AuthService()
 
 
-# Request models removed in favor of app.schemas.auth_schemas
-
-
 @router.get("/auth/health")
 async def health() -> dict:
     return service.health()
@@ -107,6 +104,25 @@ async def youtube_oauth_url(
         except Exception:
             pass
     return service.google_oauth_build_url(user_id=user_id)
+
+
+@router.post("/auth/youtube/sync")
+async def sync_youtube(
+    db: AsyncSession = Depends(get_db),
+    user_id=Depends(get_current_user_id),
+) -> dict:
+    """Manually trigger quota-efficient deep YouTube synchronization."""
+    return await service.sync_channel(db, user_id)
+
+
+@router.post("/auth/youtube/disconnect")
+@router.delete("/auth/youtube/disconnect")
+async def disconnect_youtube(
+    db: AsyncSession = Depends(get_db),
+    user_id=Depends(get_current_user_id),
+) -> dict:
+    """Revoke YouTube OAuth integration for current user."""
+    return await service.disconnect_youtube(db, user_id)
 
 
 @router.patch("/auth/onboarding/complete")
