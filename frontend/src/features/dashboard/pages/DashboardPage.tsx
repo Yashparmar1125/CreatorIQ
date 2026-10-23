@@ -120,25 +120,11 @@ export const DashboardPage: React.FC = () => {
           <span className="text-[#4A2E8F]">{firstName}</span>?
         </h1>
         <p className="mt-2 text-[13px] leading-relaxed text-[#625D68] sm:text-sm">
-          {primaryChannel ? (
-            primaryChannel.is_oauth_connected ? (
-              <>
-                Live channel sync active for <span className="font-semibold text-[#171717]">{channelSummary}</span>.
-                Copilot research is grounded in your real audience metrics and retention data.
-              </>
-            ) : (
-              <>
-                Researching with profile DNA for <span className="font-semibold text-[#171717]">{channelSummary}</span> (manual draft).{' '}
-                <button
-                  type="button"
-                  onClick={() => setShowConnectModal(true)}
-                  className="cursor-pointer font-semibold text-[#D81B60] underline underline-offset-2 hover:text-[#B4144B]"
-                >
-                  Connect YouTube OAuth
-                </button>{' '}
-                to unlock live viewer retention and subscriber baselines.
-              </>
-            )
+          {primaryChannel?.is_oauth_connected ? (
+            <>
+              Live channel sync active for <span className="font-semibold text-[#171717]">{channelSummary}</span>.
+              Copilot research is grounded in your real audience metrics and retention data.
+            </>
           ) : (
             <>
               Ask for ideas, hooks or a content plan and CreatorIQ will bring live evidence.{' '}
@@ -243,7 +229,7 @@ export const DashboardPage: React.FC = () => {
               />
             </div>
 
-            {/* Connected account chip — real channel state only */}
+            {/* Connected account chip — only show handle when real OAuth is connected */}
             {primaryChannel?.is_oauth_connected ? (
               <span
                 className="inline-flex items-center gap-1.5 rounded-full border border-[#B8EED8] bg-[#E8FBF4] px-3 py-1.5 text-xs font-semibold text-[#0F5C43]"
@@ -258,34 +244,14 @@ export const DashboardPage: React.FC = () => {
                   LIVE SYNC
                 </span>
               </span>
-            ) : primaryChannel ? (
-              <button
-                type="button"
-                onClick={() => setShowConnectModal(true)}
-                className="group inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[#E5E0E8] bg-[#FBFAF8] px-3 py-1.5 text-xs font-medium text-[#625D68] transition-all hover:border-[#FF98C1] hover:bg-[#FFF5F8] hover:text-[#171717]"
-                title="Channel context is in manual profile mode. Click to connect YouTube OAuth for live data."
-              >
-                <UserRound className="h-3.5 w-3.5 text-[#77717F] group-hover:text-[#171717]" />
-                <span className="font-semibold text-[#171717]">
-                  {primaryChannel.handle
-                    ? `@${primaryChannel.handle.replace(/^@/, '')}`
-                    : primaryChannel.name}
-                </span>
-                <span className="rounded bg-[#F1ECFF] px-1.5 py-0.5 text-[10px] font-semibold text-[#4A2E8F]">
-                  Unsynced
-                </span>
-                <span className="inline-flex items-center text-[10px] font-bold text-[#D81B60] group-hover:underline">
-                  Connect ⚡
-                </span>
-              </button>
             ) : (
               <button
                 type="button"
                 onClick={() => setShowConnectModal(true)}
-                className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[#E5E0E8] bg-[#FBFAF8] px-3 py-1.5 text-xs font-semibold text-[#625D68] transition-colors hover:border-[#C9BCF0] hover:text-[#171717]"
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[#E5E0E8] bg-white px-3 py-1.5 text-xs font-semibold text-[#625D68] transition-colors hover:border-[#FF98C1] hover:bg-[#FFF5F8] hover:text-[#171717]"
               >
                 <UserRound className="h-3.5 w-3.5" />
-                Connect YouTube
+                Connect channel
               </button>
             )}
 

@@ -56,11 +56,11 @@ export const ConnectorPopover: React.FC<ConnectorPopoverProps> = ({
       {isOpen && (
         <motion.div
           ref={popoverRef}
-          initial={{ opacity: 0, y: 10, scale: 0.97 }}
+          initial={{ opacity: 0, y: -6, scale: 0.98 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 8, scale: 0.97 }}
+          exit={{ opacity: 0, y: -6, scale: 0.98 }}
           transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-          className="absolute bottom-full left-0 mb-2.5 z-50 w-[360px] sm:w-[420px] rounded-2xl border border-[#E5E0E8] bg-white p-3.5 shadow-[0_16px_40px_rgba(23,23,23,0.12)] max-w-[calc(100vw-2rem)]"
+          className="absolute top-full left-0 mt-2 z-50 w-[360px] sm:w-[420px] rounded-2xl border border-[#E5E0E8] bg-white p-3.5 shadow-[0_18px_42px_rgba(23,23,23,0.14)] max-w-[calc(100vw-2rem)]"
           role="dialog"
           aria-label="Copilot Connectors Menu"
         >
@@ -192,9 +192,13 @@ export const ConnectorPopover: React.FC<ConnectorPopoverProps> = ({
                 YT SYNCED
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 text-[10px] text-[#77717F]">
-                Manual Profile Mode
-              </span>
+              <button
+                type="button"
+                onClick={onConnectYouTube}
+                className="cursor-pointer text-[10px] font-semibold text-[#D81B60] hover:underline"
+              >
+                Connect YouTube ⚡
+              </button>
             )}
           </div>
         </motion.div>
