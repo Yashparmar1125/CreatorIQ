@@ -1,5 +1,5 @@
-import { Calendar, FileText, Youtube } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+import React from 'react';
+import { YouTubeLogo, GoogleCalendarLogo, NotionLogo } from '../components/brand/ConnectorIcons';
 
 export interface ConnectorOption {
   id: string;
@@ -7,7 +7,7 @@ export interface ConnectorOption {
   shortLabel: string;
   description: string;
   category: 'channel' | 'planning' | 'knowledge';
-  icon: LucideIcon;
+  icon: React.ComponentType<{ className?: string }>;
   badge?: string;
 }
 
@@ -21,7 +21,7 @@ export const CONNECTOR_OPTIONS: ConnectorOption[] = [
     shortLabel: 'YouTube',
     description: 'Audience retention, upload metrics & competitor signals',
     category: 'channel',
-    icon: Youtube,
+    icon: YouTubeLogo,
     badge: 'OAuth',
   },
   {
@@ -30,7 +30,7 @@ export const CONNECTOR_OPTIONS: ConnectorOption[] = [
     shortLabel: 'Calendar',
     description: 'Schedule video release slots, filming days & deadlines',
     category: 'planning',
-    icon: Calendar,
+    icon: GoogleCalendarLogo,
     badge: 'OAuth',
   },
   {
@@ -39,7 +39,7 @@ export const CONNECTOR_OPTIONS: ConnectorOption[] = [
     shortLabel: 'Vault',
     description: 'Past scripts, outlines, voice guidelines & creator notes',
     category: 'knowledge',
-    icon: FileText,
+    icon: NotionLogo,
     badge: 'Sync',
   },
 ];

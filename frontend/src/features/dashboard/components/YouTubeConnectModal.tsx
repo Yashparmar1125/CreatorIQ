@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertCircle, CheckCircle2, Loader2, Sparkles, X, Youtube } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Loader2, Sparkles, X } from 'lucide-react';
+import { YouTubeLogo } from '../../../components/brand/ConnectorIcons';
 import { api } from '../../../lib/api';
 import type { ConnectedChannel } from '../../../stores/useDashboardStore';
 
@@ -78,8 +79,8 @@ export const YouTubeConnectModal: React.FC<YouTubeConnectModalProps> = ({
 
             {/* Header Icon */}
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#FFD6E5] bg-[#FFF0F5] text-[#D81B60]">
-                <Youtube className="h-6 w-6" />
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#E5E0E8] bg-white p-2 shadow-xs">
+                <YouTubeLogo className="h-6 w-8" />
               </div>
               <div>
                 <h3 className="font-sora text-base font-bold text-[#171717]">
@@ -159,7 +160,7 @@ export const YouTubeConnectModal: React.FC<YouTubeConnectModalProps> = ({
                   </>
                 ) : (
                   <>
-                    <Youtube className="h-4 w-4" />
+                    <YouTubeLogo className="h-4 w-5 shrink-0" />
                     Connect via Google OAuth
                   </>
                 )}

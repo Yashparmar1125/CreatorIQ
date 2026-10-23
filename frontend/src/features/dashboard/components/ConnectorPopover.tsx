@@ -110,14 +110,8 @@ export const ConnectorPopover: React.FC<ConnectorPopoverProps> = ({
                   }`}
                 >
                   <div className="flex min-w-0 flex-1 items-start gap-2.5">
-                    <div
-                      className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition-colors ${
-                        isConnected
-                          ? 'border-[#D9CEF5] bg-[#F1ECFF] text-[#4A2E8F]'
-                          : 'border-[#EFEBF2] bg-[#FBFAF8] text-[#77717F]'
-                      }`}
-                    >
-                      <Icon className="h-4 w-4" />
+                    <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#E5E0E8] bg-white p-1.5 shadow-[0_1px_2px_rgba(23,23,23,0.04)]">
+                      <Icon className="h-5 w-5 object-contain" />
                     </div>
 
                     <div className="min-w-0 flex-1">
