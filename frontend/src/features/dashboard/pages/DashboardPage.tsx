@@ -230,7 +230,7 @@ export const DashboardPage: React.FC = () => {
             </div>
 
             {/* Connected account chip — only show handle when real OAuth is connected */}
-            {primaryChannel?.is_oauth_connected ? (
+            {primaryChannel?.is_oauth_connected && (
               <span
                 className="inline-flex items-center gap-1.5 rounded-full border border-[#B8EED8] bg-[#E8FBF4] px-3 py-1.5 text-xs font-semibold text-[#0F5C43]"
                 title="Live OAuth Synced Channel"
@@ -244,15 +244,6 @@ export const DashboardPage: React.FC = () => {
                   LIVE SYNC
                 </span>
               </span>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setShowConnectModal(true)}
-                className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[#E5E0E8] bg-white px-3 py-1.5 text-xs font-semibold text-[#625D68] transition-colors hover:border-[#FF98C1] hover:bg-[#FFF5F8] hover:text-[#171717]"
-              >
-                <UserRound className="h-3.5 w-3.5" />
-                Connect channel
-              </button>
             )}
 
             <div className="ml-auto flex items-center gap-3">

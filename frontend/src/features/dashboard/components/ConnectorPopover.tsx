@@ -152,10 +152,10 @@ export const ConnectorPopover: React.FC<ConnectorPopoverProps> = ({
                       <button
                         type="button"
                         onClick={onConnectYouTube}
-                        className="inline-flex cursor-pointer items-center gap-1 rounded-full bg-[#FF98C1] px-2.5 py-1 text-[11px] font-bold text-[#171717] shadow-sm transition-all hover:bg-[#FF80B0] hover:shadow"
-                        title="Connect live YouTube account via OAuth"
+                        className="inline-flex cursor-pointer items-center rounded-lg bg-[#FF98C1] px-2.5 py-1 text-xs font-semibold text-[#171717] transition-all hover:bg-[#FF80B0]"
+                        title="Connect YouTube account via OAuth"
                       >
-                        Connect ⚡
+                        Connect
                       </button>
                     ) : (
                       <button
@@ -182,23 +182,15 @@ export const ConnectorPopover: React.FC<ConnectorPopoverProps> = ({
 
           {/* Footer explanation */}
           <div className="mt-3 flex items-center justify-between border-t border-[#EFEBF2] pt-2 text-[11px] text-[#77717F]">
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1.5">
               <Sparkles className="h-3 w-3 text-[#7C5CD6]" />
-              Context is injected only during research
+              Sources are queried only during research
             </span>
-            {isYouTubeSynced ? (
-              <span className="inline-flex items-center gap-1 font-mono text-[10px] font-bold text-[#167A59]">
+            {isYouTubeSynced && (
+              <span className="inline-flex items-center gap-1 font-mono text-[10px] font-semibold text-[#167A59]">
                 <span className="h-1.5 w-1.5 rounded-full bg-[#167A59]" />
-                YT SYNCED
+                Live sync
               </span>
-            ) : (
-              <button
-                type="button"
-                onClick={onConnectYouTube}
-                className="cursor-pointer text-[10px] font-semibold text-[#D81B60] hover:underline"
-              >
-                Connect YouTube ⚡
-              </button>
             )}
           </div>
         </motion.div>
