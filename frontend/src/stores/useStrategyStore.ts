@@ -45,7 +45,11 @@ interface StrategyState {
   isSending: boolean;
   error: string | null;
 
-  // Active connectors in prompt composer
+  // Connected integrations available to copilot reasoning
+  connectedConnectors: string[];
+  connectConnector: (connector: string) => void;
+  disconnectConnector: (connector: string) => void;
+  isConnectorConnected: (connector: string) => boolean;
   activeConnectors: string[];
   toggleConnector: (connector: string) => void;
   setConnectors: (connectors: string[]) => void;
@@ -67,7 +71,27 @@ export const useStrategyStore = create<StrategyState>((set, get) => ({
   isSending: false,
   error: null,
   // Connectors are opt-in: a plain chat message must not trigger live lookups.
-  activeConnectors: [],
+  connectedConnectors: ['web'],
+  activeConnectors: ['web'],
+
+  connectConnector: (connector: string) => {
+    set((state) => {
+      if (state.connectedConnectors.includes(connector)) return state;
+      const next = [...state.connectedConnectors, connector];
+      return { connectedConnectors: next, activeConnectors: next };
+    });
+  },
+
+  disconnectConnector: (connector: string) => {
+    set((state) => {
+      const next = state.connectedConnectors.filter((c) => c !== connector);
+      return { connectedConnectors: next, activeConnectors: next };
+    });
+  },
+
+  isConnectorConnected: (connector: string) => {
+    return get().connectedConnectors.includes(connector);
+  },
 
   toggleConnector: (connector: string) => {
     set((state) => {

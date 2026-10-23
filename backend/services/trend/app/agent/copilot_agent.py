@@ -22,7 +22,6 @@ CONVERSATIONAL_GREETINGS = {"hi", "hello", "hey", "hii", "hiii", "yo", "sup", "t
 # Tool -> connector id. Tools that read the creator's own profile, memory or
 # CreatorIQ's internal trend catalog are always available natively.
 _TOOL_CONNECTORS: dict[str, str] = {
-    "search_web": "web",
     "search_youtube_live": "youtube",
 }
 _ALWAYS_AVAILABLE_TOOLS = {
@@ -33,6 +32,7 @@ _ALWAYS_AVAILABLE_TOOLS = {
     "search_trends",
     "get_trend_detail",
     "find_small_channel_outliers",
+    "search_web",
 }
 
 

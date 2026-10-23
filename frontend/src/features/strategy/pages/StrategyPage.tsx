@@ -31,7 +31,6 @@ import {
   AlertCircle,
   RefreshCw,
   Radio,
-  X,
 } from 'lucide-react';
 
 /* â”€â”€ Inline Research Steps Accordion â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
@@ -899,37 +898,6 @@ export const StrategyPage: React.FC = () => {
                 placeholder="Ask about your next videos, angles, hooks or a content plan…"
                 className="w-full resize-none rounded-xl border border-[#E5E0E8] bg-white px-3 py-2 text-sm sm:text-[14.5px] text-[#171717] placeholder-[#9B94A5] transition-colors focus:border-[#7C5CD6] focus:outline-none focus:ring-2 focus:ring-[#7C5CD6]/20 font-normal leading-relaxed max-h-32 min-h-[30px]"
               />
-
-              {/* Active connector micro-pills inside composer */}
-              {activeConnectors.length > 0 && (
-                <div className="mt-2 flex flex-wrap items-center gap-1.5 pt-1.5 border-t border-[#F1ECFF]/80">
-                  <span className="text-[10px] font-mono text-[#77717F] uppercase tracking-wider mr-1">
-                    Context:
-                  </span>
-                  {activeConnectors.map((cId) => {
-                    const opt = CONNECTOR_OPTIONS.find((c) => c.id === cId);
-                    if (!opt) return null;
-                    const Icon = opt.icon;
-                    return (
-                      <span
-                        key={cId}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-[#D9CEF5] bg-[#F8F6FF] px-2 py-0.5 text-[11px] font-medium text-[#4A2E8F] transition-all hover:bg-[#F1ECFF]"
-                      >
-                        <Icon className="h-3 w-3 text-[#7C5CD6]" />
-                        <span>{opt.shortLabel}</span>
-                        <button
-                          type="button"
-                          onClick={() => toggleConnector(cId)}
-                          className="cursor-pointer rounded p-0.5 text-[#4A2E8F]/70 hover:bg-[#E2D8FB] hover:text-[#4A2E8F]"
-                          aria-label={`Remove ${opt.shortLabel} connector`}
-                        >
-                          <X className="h-2.5 w-2.5" />
-                        </button>
-                      </span>
-                    );
-                  })}
-                </div>
-              )}
 
               {/* Bottom Toolbar */}
               <div className="mt-2 flex items-center justify-between gap-2 pt-1 border-t border-[#EFEBF2]">

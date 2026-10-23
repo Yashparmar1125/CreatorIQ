@@ -1,4 +1,4 @@
-import { Calendar, FileText, Globe, Youtube } from 'lucide-react';
+import { Calendar, FileText, Youtube } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export interface ConnectorOption {
@@ -6,25 +6,23 @@ export interface ConnectorOption {
   label: string;
   shortLabel: string;
   description: string;
-  category: 'channel' | 'planning' | 'knowledge' | 'web';
+  category: 'channel' | 'planning' | 'knowledge';
   icon: LucideIcon;
   badge?: string;
-  requiresAuth?: boolean;
 }
 
 /**
- * Real-time copilot connectors that inject evidence, memory, and actions.
+ * External accounts and services that can be connected to empower Copilot reasoning.
  */
 export const CONNECTOR_OPTIONS: ConnectorOption[] = [
   {
     id: 'youtube',
-    label: 'YouTube Channel Context',
+    label: 'YouTube Channel',
     shortLabel: 'YouTube',
     description: 'Audience retention, upload metrics & competitor signals',
     category: 'channel',
     icon: Youtube,
-    badge: 'Core',
-    requiresAuth: true,
+    badge: 'OAuth',
   },
   {
     id: 'calendar',
@@ -33,7 +31,7 @@ export const CONNECTOR_OPTIONS: ConnectorOption[] = [
     description: 'Schedule video release slots, filming days & deadlines',
     category: 'planning',
     icon: Calendar,
-    badge: 'Workflow',
+    badge: 'OAuth',
   },
   {
     id: 'vault',
@@ -42,16 +40,7 @@ export const CONNECTOR_OPTIONS: ConnectorOption[] = [
     description: 'Past scripts, outlines, voice guidelines & creator notes',
     category: 'knowledge',
     icon: FileText,
-    badge: 'Memory',
-  },
-  {
-    id: 'web',
-    label: 'Web & Trend Intelligence',
-    shortLabel: 'Web Intel',
-    description: 'Live Google Trends, breakout search terms & web signals',
-    category: 'web',
-    icon: Globe,
-    badge: 'Real-Time',
+    badge: 'Sync',
   },
 ];
 

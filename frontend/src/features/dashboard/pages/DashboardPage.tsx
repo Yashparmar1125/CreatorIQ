@@ -6,7 +6,7 @@ import { useDashboardStore } from '../../../stores/useDashboardStore';
 import { useTrendsStore } from '../../../stores/useTrendsStore';
 import { useStrategyStore } from '../../../stores/useStrategyStore';
 import { cleanTrendText, cleanTrendTitle } from '../../../lib/cleanTrendTitle';
-import { ALL_CONNECTORS, CONNECTOR_OPTIONS } from '../../../lib/connectors';
+import { ALL_CONNECTORS } from '../../../lib/connectors';
 import {
   ArrowRight,
   ChevronDown,
@@ -14,7 +14,6 @@ import {
   Sparkles,
   TrendingUp,
   UserRound,
-  X,
 } from 'lucide-react';
 import { ConnectorPopover } from '../components/ConnectorPopover';
 import { YouTubeConnectModal } from '../components/YouTubeConnectModal';
@@ -39,7 +38,7 @@ export const DashboardPage: React.FC = () => {
   const user = useAuthStore((s) => s.user);
   const { primaryChannel, fetchDashboard } = useDashboardStore();
   const { trends, isLoading: isTrendsLoading, fetchTrends } = useTrendsStore();
-  const { activeConnectors, toggleConnector, setConnectors } = useStrategyStore();
+  const { activeConnectors, setConnectors } = useStrategyStore();
 
   const [prompt, setPrompt] = useState('');
   const [showConnectors, setShowConnectors] = useState(false);
@@ -160,37 +159,6 @@ export const DashboardPage: React.FC = () => {
             className="w-full resize-none border-0 bg-transparent text-[15px] leading-relaxed text-[#171717] placeholder-[#9B94A5] focus:outline-none"
           />
 
-          {/* Active connector micro-pills inside composer */}
-          {activeConnectors.length > 0 && (
-            <div className="mt-2.5 flex flex-wrap items-center gap-1.5 pt-2 border-t border-[#F1ECFF]/80">
-              <span className="text-[10px] font-mono text-[#77717F] uppercase tracking-wider mr-1">
-                Context:
-              </span>
-              {activeConnectors.map((cId) => {
-                const opt = CONNECTOR_OPTIONS.find((c) => c.id === cId);
-                if (!opt) return null;
-                const Icon = opt.icon;
-                return (
-                  <span
-                    key={cId}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-[#D9CEF5] bg-[#F8F6FF] px-2 py-0.5 text-[11px] font-medium text-[#4A2E8F] transition-all hover:bg-[#F1ECFF]"
-                  >
-                    <Icon className="h-3 w-3 text-[#7C5CD6]" />
-                    <span>{opt.shortLabel}</span>
-                    <button
-                      type="button"
-                      onClick={() => toggleConnector(cId)}
-                      className="cursor-pointer rounded p-0.5 text-[#4A2E8F]/70 hover:bg-[#E2D8FB] hover:text-[#4A2E8F]"
-                      aria-label={`Remove ${opt.shortLabel} connector`}
-                    >
-                      <X className="h-2.5 w-2.5" />
-                    </button>
-                  </span>
-                );
-              })}
-            </div>
-          )}
-
           <div className="relative mt-3 flex flex-wrap items-center gap-2 border-t border-[#EFEBF2] pt-3.5">
             {/* Popover trigger container */}
             <div className="relative">
@@ -198,16 +166,11 @@ export const DashboardPage: React.FC = () => {
                 type="button"
                 onClick={() => setShowConnectors((v) => !v)}
                 aria-expanded={showConnectors}
-                aria-label="Add connectors"
+                aria-label="Manage connectors"
                 className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[#E5E0E8] bg-white px-3 py-1.5 text-xs font-semibold text-[#625D68] transition-colors hover:border-[#C9BCF0] hover:bg-[#F6F3FF] hover:text-[#171717]"
               >
                 <Plus className="h-3.5 w-3.5" />
-                add connectors
-                {activeConnectors.length > 0 && (
-                  <span className="rounded-full bg-[#F1ECFF] px-1.5 py-0.5 text-[10px] font-bold text-[#4A2E8F]">
-                    {activeConnectors.length}
-                  </span>
-                )}
+                connectors
                 <ChevronDown
                   className={`h-3 w-3 transition-transform ${showConnectors ? 'rotate-180' : ''}`}
                 />
@@ -217,10 +180,6 @@ export const DashboardPage: React.FC = () => {
               <ConnectorPopover
                 isOpen={showConnectors}
                 onClose={() => setShowConnectors(false)}
-                activeConnectors={activeConnectors}
-                onToggle={toggleConnector}
-                onSelectAll={() => setConnectors(CONNECTOR_OPTIONS.map((c) => c.id))}
-                onClearAll={() => setConnectors([])}
                 primaryChannel={primaryChannel}
                 onConnectYouTube={() => {
                   setShowConnectors(false);
