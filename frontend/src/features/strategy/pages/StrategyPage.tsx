@@ -331,6 +331,22 @@ const StrategyMessageContent: React.FC<{
         {children}
       </a>
     ),
+    pre: ({ children }: any) => (
+      <pre className="my-3 w-full overflow-x-auto whitespace-pre-wrap break-words rounded-xl border border-[#E5E0E8] bg-[#FBFAF8] p-3.5 text-xs text-[#2C2834]">
+        {children}
+      </pre>
+    ),
+    code: ({ className, children }: any) => {
+      const isInline = !className;
+      if (isInline) {
+        return (
+          <code className="break-words rounded-md bg-[#F6F3FF] px-1.5 py-0.5 text-[13px] font-medium text-[#4A2E8F]">
+            {children}
+          </code>
+        );
+      }
+      return <code className="whitespace-pre-wrap break-words font-mono text-xs">{children}</code>;
+    },
     table: ({ children }: any) => (
       <div className="my-4 w-full overflow-x-auto rounded-xl border border-[#E5E0E8] bg-white custom-scrollbar">
         <table className="w-full border-collapse text-left text-sm">{children}</table>
@@ -774,7 +790,7 @@ export const StrategyPage: React.FC = () => {
         <div
           ref={scrollContainerRef}
           onScroll={handleScroll}
-          className="flex-1 overflow-y-auto px-4 sm:px-8 pt-6 pb-48"
+          className="flex-1 overflow-y-auto overflow-x-hidden px-4 sm:px-8 pt-6 pb-8"
         >
           <div className="max-w-[740px] mx-auto">
             {isLoadingMessages ? (
@@ -858,7 +874,7 @@ export const StrategyPage: React.FC = () => {
 
                       {/* Editorial Assistant Prose */}
                       {cleanContent && (
-                        <div className="rounded-2xl bg-white border border-[#EFEBF2] px-5 py-4 sm:px-6 sm:py-5 shadow-[0_2px_10px_rgba(23,23,23,0.02)]">
+                        <div className="min-w-0 overflow-hidden rounded-2xl bg-white border border-[#EFEBF2] px-5 py-4 sm:px-6 sm:py-5 shadow-[0_2px_10px_rgba(23,23,23,0.02)]">
                           <StrategyMessageContent
                             content={cleanContent}
                             onOpenStudio={(t) => setStudioTopic(t)}
@@ -926,31 +942,32 @@ export const StrategyPage: React.FC = () => {
           </div>
         </div>
 
-        {/* ── Floating "Jump to bottom" Pill (When User Scrolled Up) ───── */}
-        <AnimatePresence>
-          {showScrollBottomBtn && (
-            <motion.button
-              type="button"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 8 }}
-              onClick={() => scrollToBottom(true)}
-              className="fixed bottom-28 left-1/2 -translate-x-1/2 lg:ml-32 z-30 inline-flex items-center gap-1.5 rounded-full border border-[#E5E0E8] bg-white px-3.5 py-1.5 text-xs font-semibold text-[#171717] shadow-[0_8px_24px_rgba(23,23,23,0.12)] hover:bg-[#F6F3FF] cursor-pointer"
-            >
-              <ArrowDown className="h-3.5 w-3.5 text-[#4A2E8F]" />
-              <span>Scroll to bottom</span>
-            </motion.button>
-          )}
-        </AnimatePresence>
+        {/* ── Dedicated Bottom Dock (Never overlaps scrollbars or messages) ── */}
+        <div className="relative shrink-0 bg-gradient-to-t from-[#FBFAF8] via-[#FBFAF8] to-transparent px-4 sm:px-8 pt-2 pb-4 z-20">
+          {/* Floating "Scroll to bottom" Pill docked cleanly above composer */}
+          <AnimatePresence>
+            {showScrollBottomBtn && (
+              <motion.button
+                type="button"
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 6 }}
+                onClick={() => scrollToBottom(true)}
+                className="absolute -top-10 left-1/2 -translate-x-1/2 z-30 inline-flex items-center gap-1.5 rounded-full border border-[#E5E0E8] bg-white px-3.5 py-1.5 text-xs font-semibold text-[#171717] shadow-[0_6px_18px_rgba(23,23,23,0.10)] hover:border-[#C9BCF0] hover:bg-[#F6F3FF] cursor-pointer"
+              >
+                <ArrowDown className="h-3.5 w-3.5 text-[#4A2E8F]" />
+                <span>Scroll to bottom</span>
+              </motion.button>
+            )}
+          </AnimatePresence>
 
-        {/* ── Floating Bottom Composer Bar ─────────────────────────────── */}
-        <div className="fixed bottom-4 left-0 right-0 px-4 sm:px-6 pointer-events-none z-30 lg:pl-64">
-          <div className="max-w-[740px] mx-auto w-full pointer-events-auto">
+          <div className="max-w-[740px] mx-auto w-full">
             <div className="relative">
               <ConnectorPopover
                 isOpen={showConnectorsMenu}
                 onClose={() => setShowConnectorsMenu(false)}
                 primaryChannel={primaryChannel}
+                placement="top"
                 onConnectYouTube={() => {
                   setShowConnectorsMenu(false);
                   setShowConnectModal(true);

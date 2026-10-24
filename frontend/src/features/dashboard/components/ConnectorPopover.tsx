@@ -12,6 +12,7 @@ interface ConnectorPopoverProps {
   primaryChannel: ConnectedChannel | null;
   onConnectYouTube: () => void;
   onDisconnectYouTube?: () => void;
+  placement?: 'bottom' | 'top';
 }
 
 export const ConnectorPopover: React.FC<ConnectorPopoverProps> = ({
@@ -20,6 +21,7 @@ export const ConnectorPopover: React.FC<ConnectorPopoverProps> = ({
   primaryChannel,
   onConnectYouTube,
   onDisconnectYouTube,
+  placement = 'bottom',
 }) => {
   const popoverRef = useRef<HTMLDivElement>(null);
   const { connectedConnectors, connectConnector, disconnectConnector } = useStrategyStore();
@@ -90,11 +92,13 @@ export const ConnectorPopover: React.FC<ConnectorPopoverProps> = ({
       {isOpen && (
         <motion.div
           ref={popoverRef}
-          initial={{ opacity: 0, y: -6, scale: 0.98 }}
+          initial={{ opacity: 0, y: placement === 'top' ? 6 : -6, scale: 0.98 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -6, scale: 0.98 }}
+          exit={{ opacity: 0, y: placement === 'top' ? 6 : -6, scale: 0.98 }}
           transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-          className="absolute top-full left-0 mt-2 z-50 w-[360px] sm:w-[420px] rounded-2xl border border-[#E5E0E8] bg-white p-3.5 shadow-[0_18px_42px_rgba(23,23,23,0.14)] max-w-[calc(100vw-2rem)]"
+          className={`absolute left-0 z-50 w-[360px] sm:w-[420px] rounded-2xl border border-[#E5E0E8] bg-white p-3.5 shadow-[0_18px_42px_rgba(23,23,23,0.14)] max-w-[calc(100vw-2rem)] ${
+            placement === 'top' ? 'bottom-full mb-2' : 'top-full mt-2'
+          }`}
           role="dialog"
           aria-label="Connectors"
         >
