@@ -108,7 +108,7 @@ class AuthRepository:
             existing.access_token_enc = access_token_enc
             if refresh_token_enc:
                 existing.refresh_token_enc = refresh_token_enc
-            existing.expires_at = expires_at
+            existing.token_expiry = expires_at
             existing.scopes = scopes
             existing.revoked = False
             existing.updated_at = datetime.now(timezone.utc)
@@ -120,7 +120,7 @@ class AuthRepository:
             provider=provider,
             access_token_enc=access_token_enc,
             refresh_token_enc=refresh_token_enc,
-            expires_at=expires_at,
+            token_expiry=expires_at,
             scopes=scopes,
             revoked=False,
         )
