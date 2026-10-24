@@ -111,8 +111,13 @@ class GoogleCalendarClient:
         try:
             res = await client.post(CALENDAR_EVENTS_URL, json=body, headers=headers)
             if res.status_code not in (200, 201):
-                logger.error("Google Calendar create_event failed %s: %s", res.status_code, res.text[:250])
-                return None
+                err_msg = res.text[:400]
+                try:
+                    err_msg = res.json().get("error", {}).get("message") or err_msg
+                except Exception:
+                    pass
+                logger.error("Google Calendar create_event failed %s: %s", res.status_code, err_msg)
+                return {"error": err_msg, "status_code": res.status_code}
             data = res.json()
             return {
                 "id": data.get("id"),

@@ -89,6 +89,17 @@ class AuthRepository:
         )
         return res.scalar_one_or_none()
 
+    async def find_active_session_by_refresh_hash(self, db: AsyncSession, refresh_token_hash: str) -> Session | None:
+        return await self.get_valid_session(db, refresh_token_hash)
+
+    async def rotate_session_refresh_hash(self, db: AsyncSession, session_id: uuid.UUID, new_refresh_hash: str) -> None:
+        await db.execute(
+            update(Session)
+            .where(Session.id == session_id)
+            .values(refresh_token_hash=new_refresh_hash)
+        )
+        await db.flush()
+
     async def upsert_oauth_token(
         self,
         db: AsyncSession,

@@ -484,10 +484,11 @@ class AuthService:
             duration_minutes=duration_minutes,
             description=description,
         )
-        if not created:
+        if not created or created.get("error"):
+            err_detail = created.get("error") if isinstance(created, dict) else "Could not create event in Google Calendar."
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
-                detail={"code": "CALENDAR_API_ERROR", "message": "Could not create event in Google Calendar."},
+                detail={"code": "CALENDAR_API_ERROR", "message": err_detail},
             )
         return {"data": {"event": created}, "meta": {"request_id": "local-dev"}}
 

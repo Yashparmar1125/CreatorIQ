@@ -218,8 +218,10 @@ class CopilotAgent:
             f"   Cite concrete evidence: reference the creator's {reach_ratio:.2f}x baseline vs prospective trend reach multipliers (e.g. '3.5x baseline').\n"
             "6. CONNECTOR 2 (GOOGLE CALENDAR & LAUNCH WINDOW SCHEDULING):\n"
             "   • When the creator asks about their schedule, availability, filming days, or when to release a video, call `get_calendar_schedule` to inspect their live Google Calendar events and audience peak launch windows.\n"
-            "   • When the creator asks to schedule, book, or add a video milestone (script deadline, shoot day, editing slot, or publish date) to their calendar, call `schedule_content_milestone` with an ISO 8601 timestamp (`start_iso`) and share the confirmed Google Calendar event link.\n"
-            "7. EFFICIENCY: Call at most 1 to 2 targeted tools when needed. Synthesize recommendations decisively in clean, structured Markdown.\n"
+            "   • When the creator asks to schedule, book, or add a video milestone (script deadline, shoot day, editing slot, or publish date) to their calendar, call `schedule_content_milestone` with an ISO 8601 timestamp (`start_iso`).\n"
+            "   • If `schedule_content_milestone` returns `scheduled: true`, respond with a clear confirmation of the scheduled Google Calendar event (title, date/time, and the clickable `html_link`) instead of generating a generic strategy table.\n"
+            "   • If `schedule_content_milestone` returns `scheduled: false`, clearly explain the exact error returned by Google Calendar so the creator knows why it could not be booked.\n"
+            "7. EFFICIENCY: Call at most 1 to 2 targeted tools when needed. Match your response format to the user's intent (e.g., if they ask to schedule an event, confirm the calendar booking concisely; if they ask for video ideas/strategy, present title angles and reach evidence) in clean, structured Markdown.\n"
         )
 
         # 5. Load Session History (Rolling 10 turns)
@@ -254,7 +256,7 @@ class CopilotAgent:
             if len(executed_tools_metadata) >= 2 or round_idx >= 2:
                 messages.append({
                     "role": "user",
-                    "content": "You have gathered sufficient evidence. Synthesize your final strategic recommendation directly. Present 3 title angles, reach evidence, and next steps in clean markdown. Do not call any further tools."
+                    "content": "You have gathered sufficient evidence from the tools. Synthesize your final response directly addressing the user's request based on the actual tool outputs above. Do not call any further tools."
                 })
 
             response = await llm_router.chat(messages, tools=active_tools, temperature=0.6)
@@ -289,7 +291,20 @@ class CopilotAgent:
                     args = {}
 
                 step_label = name.replace("_", " ").title()
-                summary = f"Querying {step_label} for '{args.get('query') or args.get('niche') or args.get('trend_id_or_topic') or 'channel'}'"
+                target_label = (
+                    args.get("title")
+                    or args.get("query")
+                    or args.get("niche")
+                    or args.get("trend_id_or_topic")
+                    or "calendar" if "calendar" in name or "schedule" in name else "channel"
+                )
+                summary = (
+                    f"Scheduling '{args.get('title')}' on Google Calendar"
+                    if name == "schedule_content_milestone" and args.get("title")
+                    else f"Checking Google Calendar schedule ({args.get('days_ahead', 14)} days)"
+                    if name == "get_calendar_schedule"
+                    else f"Querying {step_label} for '{target_label}'"
+                )
 
                 yield f"data: {json.dumps({'type': 'step', 'tool': name, 'label': step_label, 'summary': summary, 'status': 'running'})}\n\n"
 
