@@ -450,6 +450,8 @@ class CopilotAgent:
                 elif name == "search_youtube_live" and tool_result.get("videos"):
                     for yv in tool_result["videos"][:2]:
                         yield f"data: {json.dumps({'type': 'card', 'card_type': 'video', 'payload': yv})}\n\n"
+                elif name == "schedule_content_milestone" and tool_result.get("scheduled") and tool_result.get("event"):
+                    yield f"data: {json.dumps({'type': 'card', 'card_type': 'calendar', 'payload': tool_result['event']})}\n\n"
 
                 messages.append({
                     "role": "tool",
