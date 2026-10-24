@@ -790,9 +790,9 @@ export const StrategyPage: React.FC = () => {
         <div
           ref={scrollContainerRef}
           onScroll={handleScroll}
-          className="flex-1 overflow-y-auto overflow-x-hidden px-4 sm:px-8 pt-6 pb-8"
+          className="flex-1 overflow-y-auto overflow-x-hidden px-4 sm:px-8 lg:px-10 pt-5 pb-6"
         >
-          <div className="max-w-[740px] mx-auto">
+          <div className="max-w-5xl mx-auto w-full">
             {isLoadingMessages ? (
               <div className="space-y-4 pt-4" aria-hidden="true">
                 <div className="ml-auto h-12 w-2/3 rounded-2xl bg-[#F1EEF5] animate-pulse" />
@@ -837,10 +837,10 @@ export const StrategyPage: React.FC = () => {
                   const isLastAssistant = !isUser && idx === messages.length - 1;
                   const steps = m.metadata?.steps || [];
                   const cards = m.metadata?.cards || [];
-                  const cleanContent = m.content.replace(
-                    /[\p{Extended_Pictographic}\u{1F300}-\u{1FAFF}]|\u{20E3}|\uFE0F/gu,
-                    ''
-                  );
+                  const cleanContent = m.content
+                    .replace(/[\p{Extended_Pictographic}\u{1F300}-\u{1FAFF}]|\u{20E3}|\uFE0F/gu, '')
+                    .replace(/<br\s*\/?>/gi, ' • ')
+                    .replace(/\*\*\s+([^*\n]+?)\*\*/g, '**$1**');
 
                   if (isUser) {
                     return (
@@ -943,7 +943,7 @@ export const StrategyPage: React.FC = () => {
         </div>
 
         {/* ── Dedicated Bottom Dock (Never overlaps scrollbars or messages) ── */}
-        <div className="relative shrink-0 bg-gradient-to-t from-[#FBFAF8] via-[#FBFAF8] to-transparent px-4 sm:px-8 pt-2 pb-4 z-20">
+        <div className="relative shrink-0 bg-gradient-to-t from-[#FBFAF8] via-[#FBFAF8] to-transparent px-4 sm:px-8 lg:px-10 pt-2 pb-4 z-20">
           {/* Floating "Scroll to bottom" Pill docked cleanly above composer */}
           <AnimatePresence>
             {showScrollBottomBtn && (
@@ -961,7 +961,7 @@ export const StrategyPage: React.FC = () => {
             )}
           </AnimatePresence>
 
-          <div className="max-w-[740px] mx-auto w-full">
+          <div className="max-w-5xl mx-auto w-full">
             <div className="relative">
               <ConnectorPopover
                 isOpen={showConnectorsMenu}
