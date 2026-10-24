@@ -170,6 +170,53 @@ AGENT_TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "get_calendar_schedule",
+            "description": "Fetch the creator's upcoming Google Calendar events, busy slots, and recommended peak audience publish windows for the next N days.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "days_ahead": {
+                        "type": "integer",
+                        "description": "Number of days ahead to check (default: 14)",
+                        "default": 14,
+                    },
+                },
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "schedule_content_milestone",
+            "description": "Book a video production milestone (script, filming, editing, or publish slot) directly onto the creator's connected Google Calendar.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "description": "Event title (e.g. 'Publish: Suzlon Analysis Video', 'Shoot: AI Coding Agents')",
+                    },
+                    "start_iso": {
+                        "type": "string",
+                        "description": "ISO 8601 start timestamp (e.g. '2026-10-26T18:00:00+05:30')",
+                    },
+                    "duration_minutes": {
+                        "type": "integer",
+                        "description": "Event duration in minutes (default: 60)",
+                        "default": 60,
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "Hook outline, production notes, or SEO tags to include in the calendar event description",
+                    },
+                },
+                "required": ["title", "start_iso"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "search_youtube_live",
             "description": "Search YouTube directly in real-time for recent uploads (past 7 days) on any topic to inspect live competitor thumbnails, titles, and view counts.",
             "parameters": {
@@ -227,6 +274,62 @@ class ToolRegistry:
                     "connected": bool(creator_context.get("channel_name")),
                     "is_oauth_connected": bool(creator_context.get("is_oauth_connected", False)),
                 }
+
+            elif tool_name == "get_calendar_schedule":
+                days_ahead = int(arguments.get("days_ahead", 14))
+                top_geos = creator_context.get("audience_geo_weights") or {"IN": 0.6, "US": 0.3}
+                primary_geo = max(top_geos.items(), key=lambda kv: kv[1])[0] if top_geos else "IN"
+                peak_window = (
+                    "6:00 PM – 9:00 PM IST (Peak India & Global overlap)"
+                    if primary_geo == "IN"
+                    else "11:00 AM – 3:00 PM EST / 8:30 PM – 11:30 PM IST (Peak US & Western audience window)"
+                )
+                async with httpx.AsyncClient(timeout=15.0) as client:
+                    r = await client.get(
+                        f"{settings.auth_service_url}/internal/auth/calendar/{user_id}/events",
+                        params={"days_ahead": days_ahead},
+                        headers={"X-Internal-Service-Token": settings.internal_service_token},
+                    )
+                    if r.status_code == 200:
+                        data = r.json().get("data", {})
+                        return {
+                            "calendar_connected": data.get("connected", False),
+                            "upcoming_events": data.get("events", []),
+                            "recommended_peak_publish_window": peak_window,
+                            "primary_audience_geo": primary_geo,
+                        }
+                return {
+                    "calendar_connected": False,
+                    "upcoming_events": [],
+                    "recommended_peak_publish_window": peak_window,
+                }
+
+            elif tool_name == "schedule_content_milestone":
+                title = str(arguments.get("title") or "YouTube Content Milestone")
+                start_iso = str(arguments.get("start_iso") or "")
+                duration_minutes = int(arguments.get("duration_minutes", 60))
+                description = str(arguments.get("description") or "")
+                async with httpx.AsyncClient(timeout=15.0) as client:
+                    r = await client.post(
+                        f"{settings.auth_service_url}/internal/auth/calendar/{user_id}/events",
+                        json={
+                            "title": title,
+                            "start_iso": start_iso,
+                            "duration_minutes": duration_minutes,
+                            "description": description,
+                        },
+                        headers={"X-Internal-Service-Token": settings.internal_service_token},
+                    )
+                    if r.status_code < 400:
+                        ev = r.json().get("data", {}).get("event", {})
+                        return {
+                            "scheduled": True,
+                            "event": ev,
+                        }
+                    return {
+                        "scheduled": False,
+                        "error": f"Calendar API returned {r.status_code}: {r.text[:200]}",
+                    }
 
             elif tool_name == "get_channel_outliers":
                 limit = int(arguments.get("limit", 5))

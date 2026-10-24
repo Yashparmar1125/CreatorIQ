@@ -136,15 +136,20 @@ class AuthRepository:
         )
         return res.scalar_one_or_none() is not None
 
-    async def get_google_token(self, db: AsyncSession, user_id: uuid.UUID) -> OAuthToken | None:
+    async def get_oauth_token(
+        self, db: AsyncSession, user_id: uuid.UUID, provider: OAuthProvider
+    ) -> OAuthToken | None:
         res = await db.execute(
             select(OAuthToken).where(
                 OAuthToken.user_id == user_id,
-                OAuthToken.provider == OAuthProvider.youtube,
-                OAuthToken.revoked.is_(False)
+                OAuthToken.provider == provider,
+                OAuthToken.revoked.is_(False),
             )
         )
         return res.scalar_one_or_none()
+
+    async def get_google_token(self, db: AsyncSession, user_id: uuid.UUID) -> OAuthToken | None:
+        return await self.get_oauth_token(db, user_id, OAuthProvider.youtube)
 
     async def get_all_google_tokens(self, db: AsyncSession) -> list[OAuthToken]:
         res = await db.execute(

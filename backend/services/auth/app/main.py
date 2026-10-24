@@ -15,9 +15,11 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
+        from sqlalchemy import text
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
-        logger.info("[Auth] Database schema initialized successfully.")
+            await conn.execute(text("ALTER TYPE oauth_provider ADD VALUE IF NOT EXISTS 'calendar'"))
+        logger.info("[Auth] Database schema & oauth_provider enum initialized successfully.")
     except Exception as e:
         logger.warning(f"[Auth] Schema auto-sync warning: {e}")
     yield

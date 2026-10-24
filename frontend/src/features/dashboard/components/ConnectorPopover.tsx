@@ -1,8 +1,9 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X } from 'lucide-react';
+import { X, Loader2 } from 'lucide-react';
 import { CONNECTOR_OPTIONS, type ConnectorOption } from '../../../lib/connectors';
-import type { ConnectedChannel } from '../../../stores/useDashboardStore';
+import { api } from '../../../lib/api';
+import { useDashboardStore, type ConnectedChannel } from '../../../stores/useDashboardStore';
 import { useStrategyStore } from '../../../stores/useStrategyStore';
 
 interface ConnectorPopoverProps {
@@ -22,6 +23,38 @@ export const ConnectorPopover: React.FC<ConnectorPopoverProps> = ({
 }) => {
   const popoverRef = useRef<HTMLDivElement>(null);
   const { connectedConnectors, connectConnector, disconnectConnector } = useStrategyStore();
+  const isCalendarConnected = useDashboardStore((s) => s.isCalendarConnected);
+  const fetchDashboard = useDashboardStore((s) => s.fetchDashboard);
+  const [busyConnector, setBusyConnector] = useState<string | null>(null);
+
+  const handleConnectCalendar = async () => {
+    try {
+      setBusyConnector('calendar');
+      sessionStorage.setItem('oauth_return_url', window.location.pathname);
+      const { data } = await api.get('/auth/calendar/oauth-url');
+      const url = data?.data?.url;
+      if (url) {
+        window.location.href = url;
+      } else {
+        setBusyConnector(null);
+      }
+    } catch {
+      setBusyConnector(null);
+    }
+  };
+
+  const handleDisconnectCalendar = async () => {
+    try {
+      setBusyConnector('calendar');
+      await api.post('/auth/calendar/disconnect');
+      disconnectConnector('calendar');
+      await fetchDashboard();
+    } catch {
+      // ignore
+    } finally {
+      setBusyConnector(null);
+    }
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -49,7 +82,8 @@ export const ConnectorPopover: React.FC<ConnectorPopoverProps> = ({
 
   const connectedCount =
     (isYouTubeSynced ? 1 : 0) +
-    connectedConnectors.filter((c) => c !== 'youtube' && c !== 'web').length;
+    (isCalendarConnected ? 1 : 0) +
+    connectedConnectors.filter((c) => c !== 'youtube' && c !== 'calendar' && c !== 'web').length;
 
   return (
     <AnimatePresence>
@@ -92,9 +126,13 @@ export const ConnectorPopover: React.FC<ConnectorPopoverProps> = ({
             {CONNECTOR_OPTIONS.map((c: ConnectorOption) => {
               const Icon = c.icon;
               const isYouTube = c.id === 'youtube';
+              const isCalendar = c.id === 'calendar';
               const isConnected = isYouTube
                 ? isYouTubeSynced
-                : connectedConnectors.includes(c.id);
+                : isCalendar
+                  ? isCalendarConnected
+                  : connectedConnectors.includes(c.id);
+              const isBusy = busyConnector === c.id;
 
               return (
                 <div
@@ -129,29 +167,37 @@ export const ConnectorPopover: React.FC<ConnectorPopoverProps> = ({
                     {isConnected ? (
                       <button
                         type="button"
+                        disabled={isBusy}
                         onClick={() => {
                           if (isYouTube && onDisconnectYouTube) {
                             onDisconnectYouTube();
+                          } else if (isCalendar) {
+                            void handleDisconnectCalendar();
                           } else {
                             disconnectConnector(c.id);
                           }
                         }}
-                        className="cursor-pointer rounded-lg border border-[#E5E0E8] bg-white px-2.5 py-1 text-[11px] font-semibold text-[#625D68] transition-colors hover:border-[#B42332]/30 hover:bg-[#FFF0F3] hover:text-[#B42332]"
+                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[#E5E0E8] bg-white px-2.5 py-1 text-[11px] font-semibold text-[#625D68] transition-colors hover:border-[#B42332]/30 hover:bg-[#FFF0F3] hover:text-[#B42332] disabled:opacity-50"
                       >
+                        {isBusy && <Loader2 className="h-3 w-3 animate-spin" />}
                         Disconnect
                       </button>
                     ) : (
                       <button
                         type="button"
+                        disabled={isBusy}
                         onClick={() => {
                           if (isYouTube) {
                             onConnectYouTube();
+                          } else if (isCalendar) {
+                            void handleConnectCalendar();
                           } else {
                             connectConnector(c.id);
                           }
                         }}
-                        className="inline-flex cursor-pointer items-center rounded-lg bg-[#FF98C1] px-3 py-1 text-xs font-semibold text-[#171717] transition-all hover:bg-[#FF80B0]"
+                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-[#FF98C1] px-3 py-1 text-xs font-semibold text-[#171717] transition-all hover:bg-[#FF80B0] disabled:opacity-50"
                       >
+                        {isBusy && <Loader2 className="h-3 w-3 animate-spin" />}
                         Connect
                       </button>
                     )}

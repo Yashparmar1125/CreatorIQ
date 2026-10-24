@@ -24,6 +24,8 @@ CONVERSATIONAL_GREETINGS = {"hi", "hello", "hey", "hii", "hiii", "yo", "sup", "t
 _TOOL_CONNECTORS: dict[str, str] = {
     "search_youtube_live": "youtube",
     "get_channel_outliers": "youtube",
+    "get_calendar_schedule": "calendar",
+    "schedule_content_milestone": "calendar",
 }
 _ALWAYS_AVAILABLE_TOOLS = {
     "get_my_channel",
@@ -214,7 +216,10 @@ class CopilotAgent:
             f"   Clamp all recommended scripts or outlines to the creator's measured speaking pace of {speech_tempo} words per minute.\n"
             "5. STATISTICAL EVIDENCE & BENCHMARKS:\n"
             f"   Cite concrete evidence: reference the creator's {reach_ratio:.2f}x baseline vs prospective trend reach multipliers (e.g. '3.5x baseline').\n"
-            "6. EFFICIENCY: Call at most 1 to 2 targeted tools when needed. Synthesize recommendations decisively in clean, structured Markdown.\n"
+            "6. CONNECTOR 2 (GOOGLE CALENDAR & LAUNCH WINDOW SCHEDULING):\n"
+            "   • When the creator asks about their schedule, availability, filming days, or when to release a video, call `get_calendar_schedule` to inspect their live Google Calendar events and audience peak launch windows.\n"
+            "   • When the creator asks to schedule, book, or add a video milestone (script deadline, shoot day, editing slot, or publish date) to their calendar, call `schedule_content_milestone` with an ISO 8601 timestamp (`start_iso`) and share the confirmed Google Calendar event link.\n"
+            "7. EFFICIENCY: Call at most 1 to 2 targeted tools when needed. Synthesize recommendations decisively in clean, structured Markdown.\n"
         )
 
         # 5. Load Session History (Rolling 10 turns)

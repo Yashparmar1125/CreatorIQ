@@ -41,6 +41,7 @@ interface DashboardState {
   stats: DashboardStat[];
   insights: DashboardInsight[];
   primaryChannel: ConnectedChannel | null;
+  isCalendarConnected: boolean;
   isLoading: boolean;
   error: string | null;
   fetchDashboard: () => Promise<void>;
@@ -50,21 +51,24 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   stats: [],
   insights: [],
   primaryChannel: null,
+  isCalendarConnected: false,
   isLoading: false,
   error: null,
   fetchDashboard: async () => {
     set({ isLoading: true, error: null });
     try {
-      const [channelsRes, profileRes, trendsRes] = await Promise.all([
+      const [channelsRes, profileRes, trendsRes, calendarRes] = await Promise.all([
         api.get('/channels').catch(() => null),
         api.get('/channels/profile').catch(() => null),
         api.get('/trends').catch(() => null),
+        api.get('/auth/calendar/status').catch(() => null),
       ]);
 
       const channels = channelsRes?.data?.data?.channels || [];
       const primary = channels.find((c: any) => c.is_primary) || channels[0];
       const profile = profileRes?.data?.data;
       const trends: any[] = trendsRes?.data?.data?.trends || [];
+      const isCalendarConnected = Boolean(calendarRes?.data?.data?.connected);
 
       const primaryChannel: ConnectedChannel | null = primary
         ? {
@@ -89,11 +93,17 @@ export const useDashboardStore = create<DashboardState>((set) => ({
           }
         : null;
 
-      // Keep Copilot connector state aligned with genuine YouTube connection status
+      // Keep Copilot connector state aligned with genuine YouTube & Calendar connection status
       if (primaryChannel?.is_oauth_connected) {
         useStrategyStore.getState().connectConnector('youtube');
       } else {
         useStrategyStore.getState().disconnectConnector('youtube');
+      }
+
+      if (isCalendarConnected) {
+        useStrategyStore.getState().connectConnector('calendar');
+      } else {
+        useStrategyStore.getState().disconnectConnector('calendar');
       }
 
       // Build dynamic AI Priority Insights from top predicted trends
@@ -138,7 +148,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
             icon: 'trending',
           },
         ];
-        set({ stats, insights: dynamicInsights, primaryChannel, isLoading: false });
+        set({ stats, insights: dynamicInsights, primaryChannel, isCalendarConnected, isLoading: false });
       } else {
         // Derive live intelligence stats from CreatorProfile + live Trends feed
         const effectiveNiches: string[] =
@@ -177,7 +187,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
             icon: 'users',
           },
         ];
-        set({ stats, insights: dynamicInsights, primaryChannel, isLoading: false });
+        set({ stats, insights: dynamicInsights, primaryChannel, isCalendarConnected, isLoading: false });
       }
     } catch (err: any) {
       console.error('Dashboard fetch failed:', err);

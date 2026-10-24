@@ -18,6 +18,7 @@ from app.models.auth_models import OAuthProvider, PlanTier, User
 from app.repositories.auth_repository import AuthRepository
 from app.schemas.auth_schemas import UserCreate, UserLogin, OnboardingUpdate
 
+from app.integrations.google_calendar_client import GoogleCalendarClient
 from app.integrations.youtube_analytics_client import MIN_VIEWS_FOR_ANALYTICS_GEO, YouTubeAnalyticsClient
 
 logger = logging.getLogger(__name__)
@@ -106,13 +107,17 @@ class AuthService:
             )
         return {"data": {"user": self._user_payload(user)}, "meta": {"request_id": "local-dev"}}
 
-    def google_oauth_build_url(self, user_id: UUID | None = None) -> dict:
+    def google_oauth_build_url(self, user_id: UUID | None = None, *, connector: str = "youtube") -> dict:
         if not settings.google_client_id or not settings.google_client_secret:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail={"code": "GOOGLE_OAUTH_NOT_CONFIGURED", "message": "Google OAuth is not configured.", "details": {}},
             )
-        state_payload = {"exp": int(time.time()) + 600, "n": secrets.token_hex(8)}
+        state_payload = {
+            "exp": int(time.time()) + 600,
+            "n": secrets.token_hex(8),
+            "connector": connector,
+        }
         if user_id:
             state_payload["uid"] = str(user_id)
 
@@ -121,25 +126,34 @@ class AuthService:
             _oauth_state_secret(),
             algorithm="HS256",
         )
-        scope = " ".join(
-            [
+        if connector == "calendar":
+            scope_list = [
+                "openid",
+                "email",
+                "profile",
+                "https://www.googleapis.com/auth/calendar.events",
+            ]
+        else:
+            scope_list = [
                 "openid",
                 "email",
                 "profile",
                 "https://www.googleapis.com/auth/youtube.readonly",
                 "https://www.googleapis.com/auth/yt-analytics.readonly",
             ]
-        )
+        scope = " ".join(scope_list)
         params = {
             "client_id": settings.google_client_id,
             "redirect_uri": settings.google_oauth_redirect_uri,
             "response_type": "code",
             "scope": scope,
             "access_type": "offline",
+            "include_granted_scopes": "true",
+            "prompt": "consent",
             "state": state,
         }
         url = "https://accounts.google.com/o/oauth2/v2/auth?" + urlencode(params)
-        return {"data": {"url": url, "state": state}, "meta": {"request_id": "local-dev"}}
+        return {"data": {"url": url, "state": state, "connector": connector}, "meta": {"request_id": "local-dev"}}
 
     async def google_oauth_callback(
         self,
@@ -159,6 +173,7 @@ class AuthService:
         try:
             state_payload = jose_jwt.decode(state, _oauth_state_secret(), algorithms=["HS256"])
             linked_user_id = state_payload.get("uid")
+            connector_type = state_payload.get("connector") or "youtube"
         except Exception:
             return RedirectResponse(url=f"{fe}/login?error=invalid_state", status_code=302)
 
@@ -214,35 +229,49 @@ class AuthService:
         google_expires_in = token_json.get("expires_in", 3600)
         google_expiry = datetime.now(timezone.utc) + timedelta(seconds=google_expires_in)
 
-        await self.repo.upsert_oauth_token(
-            db,
-            user_id=user.id,
-            provider=OAuthProvider.youtube,
-            access_token_enc=encrypt_token(access_google),
-            refresh_token_enc=encrypt_token(token_json.get("refresh_token")),
-            expires_at=google_expiry,
-            scopes=google_scopes,
-        )
+        has_calendar_scope = any("calendar" in s for s in google_scopes)
+        has_youtube_scope = any("youtube" in s for s in google_scopes)
 
-        # Mark onboarding as completed since OAuth connection auto-provisions channel context
-        user.onboarding_completed = True
-        await db.flush()
+        if connector_type == "calendar" or has_calendar_scope:
+            await self.repo.upsert_oauth_token(
+                db,
+                user_id=user.id,
+                provider=OAuthProvider.calendar,
+                access_token_enc=encrypt_token(access_google),
+                refresh_token_enc=encrypt_token(token_json.get("refresh_token")),
+                expires_at=google_expiry,
+                scopes=google_scopes,
+            )
 
-        # Fast Sync: Fetch channel metadata & topics immediately so dashboard reflects connected channel
-        channel_core = await self._sync_essential(user.id, access_google)
-        if channel_core and channel_core.get("niches"):
-            user.niche = channel_core["niches"][:3]
+        if connector_type == "youtube" or (has_youtube_scope and connector_type != "calendar"):
+            await self.repo.upsert_oauth_token(
+                db,
+                user_id=user.id,
+                provider=OAuthProvider.youtube,
+                access_token_enc=encrypt_token(access_google),
+                refresh_token_enc=encrypt_token(token_json.get("refresh_token")),
+                expires_at=google_expiry,
+                scopes=google_scopes,
+            )
+            # Mark onboarding as completed since OAuth connection auto-provisions channel context
+            user.onboarding_completed = True
             await db.flush()
 
-        # Deep Sync: Fetch historical data, outliers, format & analytics in background (and force-refresh trend feed)
-        background_tasks.add_task(self._sync_deep, user.id, access_google)
+            # Fast Sync: Fetch channel metadata & topics immediately so dashboard reflects connected channel
+            channel_core = await self._sync_essential(user.id, access_google)
+            if channel_core and channel_core.get("niches"):
+                user.niche = channel_core["niches"][:3]
+                await db.flush()
+
+            # Deep Sync: Fetch historical data, outliers, format & analytics in background (and force-refresh trend feed)
+            background_tasks.add_task(self._sync_deep, user.id, access_google)
 
         tokens = await self._issue_tokens(db, user, ip_address=ip_address, user_agent=user_agent)
         await db.commit()
         access = tokens["access_token"]
         refresh = tokens["refresh_token"]
         frag = (
-            f"access_token={quote(access, safe='')}&refresh_token={quote(refresh, safe='')}"
+            f"access_token={quote(access, safe='')}&refresh_token={quote(refresh, safe='')}&connector={quote(connector_type, safe='')}"
         )
         return RedirectResponse(url=f"{fe}/auth/callback#{frag}", status_code=302)
 
@@ -360,6 +389,107 @@ class AuthService:
         await self._sync_deep(user_id, access_token)
         
         return {"data": {"message": "Sync successful"}, "meta": {"request_id": "local-dev"}}
+
+    async def _get_valid_access_token(
+        self, db: AsyncSession, user_id: UUID, provider: OAuthProvider
+    ) -> str | None:
+        """Retrieve a valid OAuth access token for provider, auto-refreshing if expired."""
+        token = await self.repo.get_oauth_token(db, user_id, provider)
+        if not token:
+            return None
+
+        now = datetime.now(timezone.utc)
+        if token.token_expiry and token.token_expiry <= now + timedelta(minutes=2):
+            refresh_dec = decrypt_token(token.refresh_token_enc) if token.refresh_token_enc else None
+            if refresh_dec:
+                try:
+                    async with httpx.AsyncClient(timeout=20.0) as client:
+                        r = await client.post(
+                            "https://oauth2.googleapis.com/token",
+                            data={
+                                "client_id": settings.google_client_id,
+                                "client_secret": settings.google_client_secret,
+                                "refresh_token": refresh_dec,
+                                "grant_type": "refresh_token",
+                            },
+                        )
+                        if r.status_code == 200:
+                            rj = r.json()
+                            new_access = rj.get("access_token")
+                            expires_in = int(rj.get("expires_in", 3600))
+                            if new_access:
+                                token.access_token_enc = encrypt_token(new_access)
+                                token.token_expiry = now + timedelta(seconds=expires_in)
+                                token.updated_at = now
+                                await db.commit()
+                                return new_access
+                except Exception as e:
+                    logger.warning("Failed to refresh %s OAuth token for user %s: %s", provider, user_id, e)
+
+        return decrypt_token(token.access_token_enc)
+
+    async def get_calendar_status(self, db: AsyncSession, user_id: UUID) -> dict:
+        token = await self.repo.get_oauth_token(db, user_id, OAuthProvider.calendar)
+        connected = bool(token and not token.revoked)
+        return {
+            "data": {
+                "connected": connected,
+                "scopes": token.scopes if token and connected else [],
+            },
+            "meta": {"request_id": "local-dev"},
+        }
+
+    async def disconnect_calendar(self, db: AsyncSession, user_id: UUID) -> dict:
+        await self.repo.revoke_oauth_token(db, user_id, OAuthProvider.calendar)
+        await db.commit()
+        return {"data": {"message": "Google Calendar disconnected successfully"}, "meta": {"request_id": "local-dev"}}
+
+    async def list_calendar_events(
+        self, db: AsyncSession, user_id: UUID, *, days_ahead: int = 14
+    ) -> dict:
+        access_token = await self._get_valid_access_token(db, user_id, OAuthProvider.calendar)
+        if not access_token:
+            return {
+                "data": {"connected": False, "events": []},
+                "meta": {"request_id": "local-dev"},
+            }
+        cal_client = GoogleCalendarClient()
+        events = await cal_client.list_upcoming_events(access_token, days_ahead=days_ahead)
+        return {
+            "data": {"connected": True, "events": events},
+            "meta": {"request_id": "local-dev"},
+        }
+
+    async def create_calendar_event(
+        self,
+        db: AsyncSession,
+        user_id: UUID,
+        *,
+        title: str,
+        start_iso: str,
+        duration_minutes: int = 60,
+        description: str = "",
+    ) -> dict:
+        access_token = await self._get_valid_access_token(db, user_id, OAuthProvider.calendar)
+        if not access_token:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={"code": "CALENDAR_NOT_CONNECTED", "message": "Google Calendar is not connected."},
+            )
+        cal_client = GoogleCalendarClient()
+        created = await cal_client.create_event(
+            access_token,
+            title=title,
+            start_iso=start_iso,
+            duration_minutes=duration_minutes,
+            description=description,
+        )
+        if not created:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail={"code": "CALENDAR_API_ERROR", "message": "Could not create event in Google Calendar."},
+            )
+        return {"data": {"event": created}, "meta": {"request_id": "local-dev"}}
 
     async def disconnect_youtube(self, db: AsyncSession, user_id: UUID) -> dict:
         """Revoke YouTube OAuth integration and notify channel service."""

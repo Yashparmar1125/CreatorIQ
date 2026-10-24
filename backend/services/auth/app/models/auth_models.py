@@ -17,6 +17,7 @@ class PlanTier(str, enum.Enum):
 
 class OAuthProvider(str, enum.Enum):
     youtube = "youtube"
+    calendar = "calendar"
 
 
 class User(Base):

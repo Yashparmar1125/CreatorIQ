@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     internal_service_token: str = "change-me"
     ml_service_url: str = "http://127.0.0.1:8007"
     channel_service_url: str = "http://127.0.0.1:8002"
+    auth_service_url: str = "http://auth:8001"
 
 
     # Qdrant Vector Database
