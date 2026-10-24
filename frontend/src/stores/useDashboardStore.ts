@@ -116,7 +116,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
           {
             label: 'Total Views',
             value: formatNumber(primary.view_count || 0),
-            trend: '+Live Sync',
+            trend: 'Channel total',
             icon: 'eye',
           },
           {

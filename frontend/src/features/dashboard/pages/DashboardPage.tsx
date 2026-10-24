@@ -197,20 +197,15 @@ export const DashboardPage: React.FC = () => {
               />
             </div>
 
-            {/* Connected account chip — only show handle when real OAuth is connected */}
+            {/* Connected account chip — clean handle display without AI badges */}
             {primaryChannel?.is_oauth_connected && (
               <span
-                className="inline-flex items-center gap-1.5 rounded-full border border-[#B8EED8] bg-[#E8FBF4] px-3 py-1.5 text-xs font-semibold text-[#0F5C43]"
-                title="Live OAuth Synced Channel"
+                className="inline-flex items-center gap-1.5 rounded-full border border-[#E5E0E8] bg-[#FBFAF8] px-3 py-1.5 text-xs font-medium text-[#171717]"
               >
-                <span className="h-1.5 w-1.5 rounded-full bg-[#167A59] animate-pulse" />
-                <UserRound className="h-3.5 w-3.5" />
+                <UserRound className="h-3.5 w-3.5 text-[#625D68]" />
                 {primaryChannel.handle
                   ? `@${primaryChannel.handle.replace(/^@/, '')}`
                   : primaryChannel.name}
-                <span className="rounded bg-[#D0F5E7] px-1 py-0.2 text-[9.5px] font-mono font-bold text-[#0F5C43]">
-                  LIVE SYNC
-                </span>
               </span>
             )}
 

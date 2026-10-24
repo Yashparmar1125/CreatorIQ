@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { CONNECTOR_OPTIONS, type ConnectorOption } from '../../../lib/connectors';
 import type { ConnectedChannel } from '../../../stores/useDashboardStore';
 import { useStrategyStore } from '../../../stores/useStrategyStore';
@@ -47,7 +47,6 @@ export const ConnectorPopover: React.FC<ConnectorPopoverProps> = ({
 
   const isYouTubeSynced = Boolean(primaryChannel?.is_oauth_connected);
 
-  // Total connected count
   const connectedCount =
     (isYouTubeSynced ? 1 : 0) +
     connectedConnectors.filter((c) => c !== 'youtube' && c !== 'web').length;
@@ -61,24 +60,21 @@ export const ConnectorPopover: React.FC<ConnectorPopoverProps> = ({
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: -6, scale: 0.98 }}
           transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-          className="absolute top-full left-0 mt-2 z-50 w-[380px] sm:w-[450px] rounded-2xl border border-[#E5E0E8] bg-white p-3.5 shadow-[0_18px_42px_rgba(23,23,23,0.14)] max-w-[calc(100vw-2rem)]"
+          className="absolute top-full left-0 mt-2 z-50 w-[360px] sm:w-[420px] rounded-2xl border border-[#E5E0E8] bg-white p-3.5 shadow-[0_18px_42px_rgba(23,23,23,0.14)] max-w-[calc(100vw-2rem)]"
           role="dialog"
-          aria-label="Copilot Connectors Menu"
+          aria-label="Connectors"
         >
           {/* Header */}
           <div className="flex items-center justify-between border-b border-[#EFEBF2] pb-2.5">
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className="font-sora text-[13px] font-bold text-[#171717]">
-                  Copilot Connectors
-                </span>
-                <span className="rounded-full bg-[#F1ECFF] px-2 py-0.5 text-[10px] font-bold text-[#4A2E8F]">
+            <div className="flex items-center gap-2">
+              <span className="font-sora text-[13px] font-bold text-[#171717]">
+                Connectors
+              </span>
+              {connectedCount > 0 && (
+                <span className="rounded-full bg-[#F1ECFF] px-2 py-0.5 text-[10px] font-semibold text-[#4A2E8F]">
                   {connectedCount} connected
                 </span>
-              </div>
-              <p className="mt-0.5 text-[11px] text-[#77717F]">
-                Connected tools are queried autonomously by Copilot reasoning when needed.
-              </p>
+              )}
             </div>
 
             <button
@@ -103,14 +99,14 @@ export const ConnectorPopover: React.FC<ConnectorPopoverProps> = ({
               return (
                 <div
                   key={c.id}
-                  className={`group relative flex items-start justify-between gap-3 rounded-xl border p-2.5 transition-all ${
+                  className={`group relative flex items-center justify-between gap-3 rounded-xl border p-2.5 transition-all ${
                     isConnected
-                      ? 'border-[#D9CEF5]/70 bg-[#FAF8FF]'
+                      ? 'border-[#E5E0E8] bg-[#FBFAF8]'
                       : 'border-[#EFEBF2] bg-white hover:border-[#E5E0E8] hover:bg-[#FBFAF8]'
                   }`}
                 >
-                  <div className="flex min-w-0 flex-1 items-start gap-2.5">
-                    <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#E5E0E8] bg-white p-1.5 shadow-[0_1px_2px_rgba(23,23,23,0.04)]">
+                  <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#E5E0E8] bg-white p-1.5 shadow-[0_1px_2px_rgba(23,23,23,0.04)]">
                       <Icon className="h-5 w-5 object-contain" />
                     </div>
 
@@ -119,58 +115,31 @@ export const ConnectorPopover: React.FC<ConnectorPopoverProps> = ({
                         <span className="text-xs font-bold text-[#171717]">
                           {c.label}
                         </span>
-                        {c.badge && (
-                          <span className="rounded bg-[#F6F3FF] px-1.5 py-0.5 text-[9.5px] font-semibold text-[#625D68]">
-                            {c.badge}
-                          </span>
-                        )}
                       </div>
-                      <p className="mt-0.5 line-clamp-1 text-[11px] leading-relaxed text-[#77717F]">
-                        {c.description}
+                      <p className="mt-0.5 truncate text-[11px] text-[#77717F]">
+                        {isYouTube && isConnected && (primaryChannel?.handle || primaryChannel?.name)
+                          ? `${primaryChannel.name}${primaryChannel.handle ? ` (${primaryChannel.handle})` : ''}`
+                          : c.description}
                       </p>
-
-                      {/* YouTube Connector 1 Performance DNA breakdown */}
-                      {isYouTube && isConnected && (
-                        <div className="mt-2 flex flex-wrap items-center gap-1 text-[10px]">
-                          <span className="rounded bg-[#F1ECFF] px-1.5 py-0.5 font-medium text-[#4A2E8F]">
-                            {primaryChannel?.handle || primaryChannel?.name || 'Verified Channel'}
-                          </span>
-                          <span className="rounded border border-[#E5E0E8] bg-white px-1.5 py-0.5 text-[#171717]">
-                            Baseline: {(primaryChannel?.median_reach_ratio ?? 0.35).toFixed(2)}x
-                          </span>
-                          <span className="rounded border border-[#E5E0E8] bg-white px-1.5 py-0.5 text-[#171717] capitalize">
-                            Traffic: {primaryChannel?.dominant_traffic_source || 'Browse'}
-                          </span>
-                          <span className="rounded border border-[#E5E0E8] bg-white px-1.5 py-0.5 text-[#171717]">
-                            Cadence: {primaryChannel?.speech_tempo_wpm || 155} WPM
-                          </span>
-                        </div>
-                      )}
                     </div>
                   </div>
 
-                  {/* Right Action / State: Connect vs Disconnect */}
-                  <div className="flex shrink-0 items-center gap-2 pt-0.5">
+                  {/* Right Action: Connect vs Disconnect */}
+                  <div className="flex shrink-0 items-center gap-2">
                     {isConnected ? (
-                      <div className="flex items-center gap-2">
-                        <span className="inline-flex items-center gap-1.5 rounded-md bg-[#E8FBF4] px-2 py-0.5 text-[10.5px] font-semibold text-[#167A59]">
-                          <span className="h-1.5 w-1.5 rounded-full bg-[#167A59]" />
-                          Connected
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (isYouTube && onDisconnectYouTube) {
-                              onDisconnectYouTube();
-                            } else {
-                              disconnectConnector(c.id);
-                            }
-                          }}
-                          className="cursor-pointer text-[10.5px] font-medium text-[#77717F] hover:text-[#B42332] hover:underline"
-                        >
-                          Disconnect
-                        </button>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (isYouTube && onDisconnectYouTube) {
+                            onDisconnectYouTube();
+                          } else {
+                            disconnectConnector(c.id);
+                          }
+                        }}
+                        className="cursor-pointer rounded-lg border border-[#E5E0E8] bg-white px-2.5 py-1 text-[11px] font-semibold text-[#625D68] transition-colors hover:border-[#B42332]/30 hover:bg-[#FFF0F3] hover:text-[#B42332]"
+                      >
+                        Disconnect
+                      </button>
                     ) : (
                       <button
                         type="button"
@@ -182,7 +151,6 @@ export const ConnectorPopover: React.FC<ConnectorPopoverProps> = ({
                           }
                         }}
                         className="inline-flex cursor-pointer items-center rounded-lg bg-[#FF98C1] px-3 py-1 text-xs font-semibold text-[#171717] transition-all hover:bg-[#FF80B0]"
-                        title={`Connect ${c.label}`}
                       >
                         Connect
                       </button>
@@ -191,14 +159,6 @@ export const ConnectorPopover: React.FC<ConnectorPopoverProps> = ({
                 </div>
               );
             })}
-          </div>
-
-          {/* Footer explanation */}
-          <div className="mt-3 flex items-center justify-between border-t border-[#EFEBF2] pt-2 text-[11px] text-[#77717F]">
-            <span className="flex items-center gap-1.5">
-              <Sparkles className="h-3 w-3 text-[#7C5CD6]" />
-              Copilot reasoning engine queries tools only when needed
-            </span>
           </div>
         </motion.div>
       )}
