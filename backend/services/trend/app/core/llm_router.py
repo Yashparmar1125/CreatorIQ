@@ -8,7 +8,7 @@ from typing import Any, AsyncGenerator
 import httpx
 
 from app.core.config import settings
-from app.core.key_pool import groq_pool, gemini_pool
+from app.core.key_pool import groq_pool, gemini_pool, openrouter_pool
 
 logger = logging.getLogger(__name__)
 
@@ -22,9 +22,7 @@ class LLMRouter:
     """
 
     def __init__(self) -> None:
-        self.openrouter_keys = [
-            k.strip() for k in settings.openrouter_api_key.split(",") if k.strip()
-        ]
+        pass
 
     async def chat(
         self,
@@ -91,16 +89,26 @@ class LLMRouter:
                         ttl = 86400 if "daily" in err_str else 60
                         await gemini_pool.mark_exhausted(key, cooldown_seconds=ttl, reason="rate_limit")
 
-        # 3. Try OpenRouter fallback
-        if self.openrouter_keys:
-            try:
-                res = await self._call_openrouter(self.openrouter_keys[0], messages, tools=tools, temperature=temperature)
-                res["provider"] = "openrouter"
-                res["model"] = settings.llm_model
-                return res
-            except Exception as exc:
-                errors.append(f"OpenRouter error: {exc}")
-                logger.warning("OpenRouter fallback failed: %s", exc)
+        # 3. Try OpenRouter fallback across all pooled keys
+        openrouter_all_keys = openrouter_pool.get_all_keys()
+        if openrouter_all_keys:
+            for _ in range(len(openrouter_all_keys)):
+                key = await openrouter_pool.get_active_key()
+                if not key:
+                    break
+                try:
+                    res = await self._call_openrouter(key, messages, tools=tools, temperature=temperature)
+                    await openrouter_pool.record_usage(key)
+                    res["provider"] = "openrouter"
+                    res["model"] = settings.llm_model
+                    return res
+                except Exception as exc:
+                    errors.append(f"OpenRouter error: {exc}")
+                    logger.warning("OpenRouter call failed with key ending in %s: %s", key[-6:], exc)
+                    err_str = str(exc).lower()
+                    if "429" in err_str or "rate limit" in err_str or "quota" in err_str:
+                        ttl = 86400 if ("daily" in err_str or "quota" in err_str) else 60
+                        await openrouter_pool.mark_exhausted(key, cooldown_seconds=ttl, reason="rate_limit")
 
         raise RuntimeError(f"All LLM providers failed. Errors: {'; '.join(errors)}")
 

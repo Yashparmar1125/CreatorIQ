@@ -69,6 +69,7 @@ class Settings(BaseSettings):
     collector_interval_hours: int = 6
 
     # OpenRouter — AI enrichment for feed cards (https://openrouter.ai)
+    openrouter_api_keys: str = ""
     openrouter_api_key: str = ""
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
     openrouter_http_referer: str = ""

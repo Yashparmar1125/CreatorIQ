@@ -217,6 +217,7 @@ class RedisKeyPool:
 # Global pool singletons
 groq_pool = RedisKeyPool("groq", ["GROQ_API_KEYS", "GROQ_API_KEY"], default_rate_limit_cooldown=60, default_quota_cooldown=86400)
 gemini_pool = RedisKeyPool("gemini", ["GEMINI_API_KEYS", "GEMINI_API_KEY"], default_rate_limit_cooldown=60, default_quota_cooldown=86400)
+openrouter_pool = RedisKeyPool("openrouter", ["OPENROUTER_API_KEYS", "OPENROUTER_API_KEY"], default_rate_limit_cooldown=60, default_quota_cooldown=86400)
 tavily_pool = RedisKeyPool("tavily", ["TAVILY_API_KEYS", "TAVILY_API_KEY"], default_rate_limit_cooldown=60, default_quota_cooldown=86400)
 serpapi_pool = RedisKeyPool("serpapi", ["SERPAPI_API_KEYS", "SERPAPI_API_KEY"], default_rate_limit_cooldown=60, default_quota_cooldown=86400)
 youtube_pool = RedisKeyPool(
@@ -232,6 +233,7 @@ async def get_all_pool_stats() -> dict[str, Any]:
         "youtube": await youtube_pool.get_stats(),
         "groq": await groq_pool.get_stats(),
         "gemini": await gemini_pool.get_stats(),
+        "openrouter": await openrouter_pool.get_stats(),
         "tavily": await tavily_pool.get_stats(),
         "serpapi": await serpapi_pool.get_stats(),
     }
