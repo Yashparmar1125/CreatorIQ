@@ -198,7 +198,7 @@ AGENT_TOOLS = [
                     },
                     "start_iso": {
                         "type": "string",
-                        "description": "ISO 8601 start timestamp (e.g. '2026-10-26T18:00:00+05:30')",
+                        "description": "ISO 8601 start timestamp in 2026 (e.g. '2026-10-25T19:30:00+05:30'). If omitted, automatically picks the next open 7:30 PM IST peak publish slot.",
                     },
                     "duration_minutes": {
                         "type": "integer",
@@ -210,7 +210,7 @@ AGENT_TOOLS = [
                         "description": "Hook outline, production notes, or SEO tags to include in the calendar event description",
                     },
                 },
-                "required": ["title", "start_iso"],
+                "required": ["title"],
             },
         },
     },
@@ -305,8 +305,17 @@ class ToolRegistry:
                 }
 
             elif tool_name == "schedule_content_milestone":
+                from datetime import datetime, timedelta, timezone
+                ist = timezone(timedelta(hours=5, minutes=30))
+                now_ist = datetime.now(ist)
+
                 title = str(arguments.get("title") or "YouTube Content Milestone")
-                start_iso = str(arguments.get("start_iso") or "")
+                start_iso = str(arguments.get("start_iso") or "").strip()
+                # If omitted or LLM passed a stale 2024/2025 year, default to tomorrow 7:30 PM IST peak window
+                if not start_iso or start_iso.startswith("2024") or start_iso.startswith("2025"):
+                    next_slot = (now_ist + timedelta(days=1)).replace(hour=19, minute=30, second=0, microsecond=0)
+                    start_iso = next_slot.isoformat()
+
                 duration_minutes = int(arguments.get("duration_minutes", 60))
                 description = str(arguments.get("description") or "")
                 async with httpx.AsyncClient(timeout=15.0) as client:
@@ -326,9 +335,14 @@ class ToolRegistry:
                             "scheduled": True,
                             "event": ev,
                         }
+                    err_msg = r.text[:250]
+                    try:
+                        err_msg = r.json().get("detail", {}).get("message") or err_msg
+                    except Exception:
+                        pass
                     return {
                         "scheduled": False,
-                        "error": f"Calendar API returned {r.status_code}: {r.text[:200]}",
+                        "error": err_msg,
                     }
 
             elif tool_name == "get_channel_outliers":

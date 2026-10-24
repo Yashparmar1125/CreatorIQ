@@ -12,8 +12,8 @@ from app.core.config import settings
 from app.core.llm_router import llm_router
 from app.integrations.youtube_data_client import YouTubeDataClient
 from app.models.chat_models import ChatMessage, ChatSession
-from app.models.concept_models import TrendConcept
-from app.models.trend_models import Trend
+from app.models.concept_models import TrendConcept, TrendFeedSnapshot
+from app.models.trend_models import Trend, SavedTrend
 from app.agent.copilot_agent import CopilotAgent, CONVERSATIONAL_GREETINGS
 from app.agent.tool_registry import AGENT_TOOLS
 
@@ -130,7 +130,7 @@ class StrategyService:
         *,
         active_connectors: list[str] | None = None,
     ):
-        creator_ctx = await self._get_creator_context(user_id)
+        creator_ctx = await self._get_creator_context(user_id, db=db, current_session_id=session_id)
         return self.copilot.run_chat_stream(
             db,
             user_id=user_id,
@@ -218,8 +218,19 @@ class StrategyService:
         await db.commit()
         return True
 
-    async def _get_creator_context(self, user_id: uuid.UUID) -> dict[str, Any]:
-        """Fetch creator niche, country, formats from channel service."""
+    async def _get_creator_context(
+        self,
+        user_id: uuid.UUID,
+        *,
+        db: AsyncSession | None = None,
+        current_session_id: uuid.UUID | None = None,
+    ) -> dict[str, Any]:
+        """Fetch creator niche, channel DNA, live Top-5 dashboard trends, saved trends, and cross-session continuity."""
+        ctx: dict[str, Any] = {
+            "niches": ["Tech & AI", "Finance"],
+            "tone": "energetic & insightful",
+            "country": "India",
+        }
         try:
             async with httpx.AsyncClient(timeout=4.0) as client:
                 res = await client.get(
@@ -227,10 +238,75 @@ class StrategyService:
                     headers={"X-Internal-Service-Token": settings.internal_service_token},
                 )
                 if res.status_code == 200:
-                    return res.json().get("data", {})
+                    ctx = res.json().get("data", {}) or ctx
         except Exception:
             pass
-        return {"niches": ["Tech & AI", "Fitness", "Entertainment"], "tone": "energetic & insightful", "country": "India"}
+
+        if db is not None:
+            # 1. Inject active Top 5 dashboard trends from latest TrendFeedSnapshot
+            try:
+                snap_res = await db.execute(
+                    select(TrendFeedSnapshot)
+                    .where(TrendFeedSnapshot.user_id == user_id)
+                    .order_by(desc(TrendFeedSnapshot.created_at))
+                    .limit(1)
+                )
+                snap = snap_res.scalar_one_or_none()
+                if snap and isinstance(snap.items, list):
+                    ctx["dashboard_trends"] = [
+                        {
+                            "rank": idx + 1,
+                            "topic": item.get("topic") or item.get("canonical_title"),
+                            "opportunity_score": item.get("opportunity_score") or item.get("tvs_score"),
+                            "lifecycle": item.get("lifecycle") or item.get("status"),
+                            "why_predicted": (item.get("why_predicted") or item.get("why_trending") or "")[:160],
+                        }
+                        for idx, item in enumerate(snap.items[:5])
+                        if isinstance(item, dict)
+                    ]
+            except Exception as e:
+                logger.debug("Could not load dashboard trends into creator_context: %s", e)
+
+            # 2. Inject Saved Trends
+            try:
+                saved_res = await db.execute(
+                    select(SavedTrend, Trend.topic)
+                    .outerjoin(Trend, SavedTrend.trend_id == Trend.id)
+                    .where(SavedTrend.user_id == user_id)
+                    .order_by(desc(SavedTrend.created_at))
+                    .limit(5)
+                )
+                ctx["saved_trends"] = [
+                    topic for _, topic in saved_res.all() if topic
+                ]
+            except Exception as e:
+                logger.debug("Could not load saved trends into creator_context: %s", e)
+
+            # 3. Cross-Session Episodic Continuity (recent sessions & conclusions)
+            try:
+                sess_q = select(ChatSession).where(ChatSession.user_id == user_id)
+                if current_session_id:
+                    sess_q = sess_q.where(ChatSession.id != current_session_id)
+                sess_q = sess_q.order_by(desc(ChatSession.updated_at)).limit(3)
+                recent_sessions = list((await db.execute(sess_q)).scalars().all())
+                episodic_notes: list[str] = []
+                for rs in recent_sessions:
+                    last_asst_res = await db.execute(
+                        select(ChatMessage)
+                        .where(ChatMessage.session_id == rs.id, ChatMessage.role == "assistant")
+                        .order_by(desc(ChatMessage.created_at))
+                        .limit(1)
+                    )
+                    last_asst = last_asst_res.scalar_one_or_none()
+                    snippet = (last_asst.content[:180].replace("\n", " ") + "...") if last_asst and last_asst.content else ""
+                    episodic_notes.append(
+                        f"Session '{rs.title}' ({rs.updated_at.strftime('%d %b')}): {snippet}"
+                    )
+                ctx["recent_sessions_summary"] = episodic_notes
+            except Exception as e:
+                logger.debug("Could not load recent sessions summary: %s", e)
+
+        return ctx
 
     async def execute_youtube_trends(
         self,
