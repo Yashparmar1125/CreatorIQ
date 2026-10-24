@@ -26,6 +26,7 @@ export const YouTubeConnectModal: React.FC<YouTubeConnectModalProps> = ({
     try {
       const res = await api.get<{ data: { url: string } }>('/auth/google/oauth-url');
       if (res.data?.data?.url) {
+        sessionStorage.setItem('oauth_return_url', window.location.pathname);
         window.location.href = res.data.data.url;
         return;
       }

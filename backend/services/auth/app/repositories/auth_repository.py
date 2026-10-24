@@ -179,8 +179,8 @@ class AuthRepository:
             update(User)
             .where(User.id == user_id)
             .values(
-                niche_onboarding=niche,
-                format_preference=primary_format,
+                niche=niche,
+                primary_format=primary_format,
                 posting_frequency=posting_frequency,
                 channel_tone=channel_tone,
                 country=country,

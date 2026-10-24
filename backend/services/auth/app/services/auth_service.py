@@ -221,11 +221,16 @@ class AuthService:
             scopes=google_scopes,
         )
 
+        # Mark onboarding as completed since OAuth connection auto-provisions channel context
+        user.onboarding_completed = True
+        await db.flush()
+
         # Fast Sync: Fetch minimal channel metadata (Core Info)
         channel_core = await self._sync_essential(user.id, access_google)
         
         # Deep Sync: Fetch historical data & analytics in background
         background_tasks.add_task(self._sync_deep, user.id, access_google)
+        background_tasks.add_task(self._trigger_first_feed, user.id)
 
         tokens = await self._issue_tokens(db, user, ip_address=ip_address, user_agent=user_agent)
         await db.commit()
@@ -627,6 +632,17 @@ class AuthService:
             if topic_slug in mapping:
                 detected.add(mapping[topic_slug])
         return list(detected)
+
+    async def _trigger_first_feed(self, user_id: UUID) -> None:
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                await client.post(
+                    f"{settings.trend_service_url}/internal/trends/feeds/generate-first",
+                    json={"user_id": str(user_id)},
+                    headers={"X-Internal-Service-Token": settings.internal_service_token},
+                )
+        except Exception as e:
+            logger.warning("First trend feed trigger skipped: %s", e)
 
     async def _issue_tokens(self, db: AsyncSession, user: User, *, ip_address: str | None, user_agent: str | None) -> dict:
         access = self._create_user_access_token(user)

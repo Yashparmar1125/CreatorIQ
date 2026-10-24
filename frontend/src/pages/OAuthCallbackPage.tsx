@@ -18,6 +18,12 @@ export const OAuthCallbackPage: React.FC = () => {
       try {
         await applyHashTokens(hash);
         window.history.replaceState(null, '', window.location.pathname);
+        const returnUrl = sessionStorage.getItem('oauth_return_url');
+        sessionStorage.removeItem('oauth_return_url');
+        if (returnUrl && returnUrl.startsWith('/app')) {
+          navigate(returnUrl, { replace: true });
+          return;
+        }
         const u = useAuthStore.getState().user;
         navigate(u?.onboarding_completed ? '/app/dashboard' : '/onboarding', { replace: true });
       } catch {
