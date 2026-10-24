@@ -95,7 +95,7 @@ class YouTubeAnalyticsClient:
             "ids": "channel==MINE",
             "startDate": start.isoformat(),
             "endDate": end.isoformat(),
-            "metrics": "views,estimatedMinutesWatched,subscribersGained,subscribersLost",
+            "metrics": "views,estimatedMinutesWatched,averageViewDuration,averageViewPercentage,subscribersGained,subscribersLost",
             "dimensions": "day",
             "sort": "day",
         }
@@ -111,14 +111,31 @@ class YouTubeAnalyticsClient:
             data = res.json()
             headers_list = [h.get("name") for h in data.get("columnHeaders", [])]
             totals = {"views": 0, "estimatedMinutesWatched": 0, "subscribersGained": 0, "subscribersLost": 0}
+            weighted_pct_sum = 0.0
             for row in data.get("rows", []):
+                row_views = 0
+                row_pct = None
                 for idx, name in enumerate(headers_list):
-                    if name in totals and idx < len(row):
+                    if idx >= len(row):
+                        continue
+                    if name in totals:
                         try:
-                            totals[name] += int(row[idx])
+                            val = int(row[idx])
+                            totals[name] += val
+                            if name == "views":
+                                row_views = val
                         except (TypeError, ValueError):
                             pass
+                    elif name == "averageViewPercentage":
+                        try:
+                            row_pct = float(row[idx])
+                        except (TypeError, ValueError):
+                            pass
+                if row_views > 0 and row_pct is not None:
+                    weighted_pct_sum += row_views * row_pct
             totals["days"] = len(data.get("rows", []))
+            if totals["views"] > 0 and weighted_pct_sum > 0:
+                totals["averageViewPercentage"] = round(weighted_pct_sum / totals["views"], 1)
             return totals
         except Exception:
             logger.exception("YouTube Analytics summary request error")

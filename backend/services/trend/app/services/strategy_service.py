@@ -129,8 +129,11 @@ class StrategyService:
         prompt: str,
         *,
         active_connectors: list[str] | None = None,
+        trend_context: dict[str, Any] | None = None,
     ):
         creator_ctx = await self._get_creator_context(user_id, db=db, current_session_id=session_id)
+        if trend_context:
+            creator_ctx["attached_trend_context"] = trend_context
         return self.copilot.run_chat_stream(
             db,
             user_id=user_id,
@@ -267,17 +270,20 @@ class StrategyService:
             except Exception as e:
                 logger.debug("Could not load dashboard trends into creator_context: %s", e)
 
-            # 2. Inject Saved Trends
+            # 2. Inject Saved Trends (join both TrendConcept and legacy Trend tables)
             try:
                 saved_res = await db.execute(
-                    select(SavedTrend, Trend.topic)
+                    select(SavedTrend, TrendConcept.canonical_title, Trend.topic)
+                    .outerjoin(TrendConcept, SavedTrend.trend_id == TrendConcept.id)
                     .outerjoin(Trend, SavedTrend.trend_id == Trend.id)
                     .where(SavedTrend.user_id == user_id)
                     .order_by(desc(SavedTrend.created_at))
-                    .limit(5)
+                    .limit(8)
                 )
                 ctx["saved_trends"] = [
-                    topic for _, topic in saved_res.all() if topic
+                    (concept_title or legacy_topic)
+                    for _, concept_title, legacy_topic in saved_res.all()
+                    if (concept_title or legacy_topic)
                 ]
             except Exception as e:
                 logger.debug("Could not load saved trends into creator_context: %s", e)

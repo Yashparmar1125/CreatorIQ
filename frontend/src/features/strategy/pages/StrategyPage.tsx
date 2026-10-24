@@ -30,6 +30,7 @@ import {
   Calendar,
   FileText,
   Loader2,
+  X,
 } from 'lucide-react';
 
 /* ── Unified Claude-Style Inline Reasoning Pill ─────────────────────────── */
@@ -505,10 +506,15 @@ export const StrategyPage: React.FC = () => {
     sessions,
     currentSessionId,
     error,
+    attachedTrendContext,
+    setAttachedTrendContext,
   } = useStrategyStore();
 
   const [inputPrompt, setInputPrompt] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [exportingId, setExportingId] = useState<string | null>(null);
+  const [exportedLinks, setExportedLinks] = useState<Record<string, { url: string; source: string }>>({});
+  const [exportErrorId, setExportErrorId] = useState<Record<string, string>>({});
   const [showConnectorsMenu, setShowConnectorsMenu] = useState(false);
   const [showConnectModal, setShowConnectModal] = useState(false);
   const [showScrollBottomBtn, setShowScrollBottomBtn] = useState(false);
@@ -622,15 +628,22 @@ export const StrategyPage: React.FC = () => {
 
   useEffect(() => {
     if (initialTriggered.current) return;
-    const state = location.state as { prompt?: string; topic?: string } | null;
+    const state = location.state as {
+      prompt?: string;
+      topic?: string;
+      trendContext?: Record<string, any>;
+    } | null;
+    if (state?.trendContext) {
+      setAttachedTrendContext(state.trendContext);
+    }
     if (state?.prompt || state?.topic) {
       initialTriggered.current = true;
       const initialText = state.prompt || (state.topic ? `Strategy and hooks for: ${state.topic}` : '');
       if (initialText) {
-        sendMessage(initialText);
+        sendMessage(initialText, undefined, state.trendContext || null);
       }
     }
-  }, [location.state, sendMessage]);
+  }, [location.state, sendMessage, setAttachedTrendContext]);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -683,6 +696,69 @@ export const StrategyPage: React.FC = () => {
     navigator.clipboard.writeText(text);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleExportToVault = async (msgId: string, text: string) => {
+    if (exportingId === msgId) return;
+    setExportingId(msgId);
+    setExportErrorId((prev) => {
+      const next = { ...prev };
+      delete next[msgId];
+      return next;
+    });
+    try {
+      const titleMatch = text.match(/^#+\s*(.+)$/m);
+      const docTitle =
+        (titleMatch?.[1] ? titleMatch[1].replace(/[*`#]/g, '').trim().slice(0, 80) : '') ||
+        attachedTrendContext?.topic ||
+        sessionTitle ||
+        'CreatorIQ Strategy Brief';
+      const target = isNotionConnected && !isDriveConnected ? 'notion' : 'auto';
+      const { data } = await api.post('/auth/vault/export', {
+        title: docTitle,
+        content: text,
+        target,
+      });
+      const resData = data?.data || data;
+      if (resData?.exported && resData?.document?.url) {
+        setExportedLinks((prev) => ({
+          ...prev,
+          [msgId]: {
+            url: resData.document.url,
+            source: resData.document.source || 'google_docs',
+          },
+        }));
+      } else {
+        setExportErrorId((prev) => ({
+          ...prev,
+          [msgId]: resData?.error || 'Connect Google Drive or Notion in Connectors to export.',
+        }));
+      }
+    } catch (err: any) {
+      setExportErrorId((prev) => ({
+        ...prev,
+        [msgId]:
+          err?.response?.data?.detail?.message ||
+          err?.response?.data?.error?.message ||
+          'Connect Google Drive or Notion in Connectors to export.',
+      }));
+    } finally {
+      setExportingId(null);
+    }
+  };
+
+  const handleQuickSchedule = async (text: string) => {
+    if (isSending) return;
+    if (!activeConnectors.includes('calendar')) {
+      setConnectors([...activeConnectors, 'calendar']);
+    }
+    const titleMatch = text.match(/“([^”]{8,90})”|"([^"]{8,90})"|^#+\s*(.+)$/m);
+    const extractedTitle =
+      (titleMatch?.[1] || titleMatch?.[2] || titleMatch?.[3] || attachedTrendContext?.topic || sessionTitle)
+        ?.replace(/[*`#]/g, '')
+        .trim()
+        .slice(0, 75) || 'New YouTube Video';
+    await sendMessage(`Schedule "${extractedTitle}" on my Google Calendar for the next optimal 7:30 PM IST slot.`);
   };
 
   const hasMessages = messages.length > 0;
@@ -931,24 +1007,76 @@ export const StrategyPage: React.FC = () => {
                           />
 
                           {/* Action Bar */}
-                          <div className="mt-3 pt-2.5 border-t border-[#F4F1F8] flex items-center justify-between gap-2">
-                            <button
-                              type="button"
-                              onClick={() => handleCopy(m.id, cleanContent)}
-                              className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium text-[#77717F] hover:bg-[#F6F3FF] hover:text-[#171717] transition-colors cursor-pointer"
-                            >
-                              {copiedId === m.id ? (
-                                <>
-                                  <Check className="h-3.5 w-3.5 text-[#167A59]" />
-                                  <span className="text-[#167A59] font-semibold">Copied</span>
-                                </>
+                          <div className="mt-3 pt-2.5 border-t border-[#F4F1F8] flex flex-wrap items-center justify-between gap-2">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => handleCopy(m.id, cleanContent)}
+                                className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium text-[#77717F] hover:bg-[#F6F3FF] hover:text-[#171717] transition-colors cursor-pointer"
+                              >
+                                {copiedId === m.id ? (
+                                  <>
+                                    <Check className="h-3.5 w-3.5 text-[#167A59]" />
+                                    <span className="text-[#167A59] font-semibold">Copied</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Copy className="h-3.5 w-3.5" />
+                                    <span>Copy</span>
+                                  </>
+                                )}
+                              </button>
+
+                              {exportedLinks[m.id] ? (
+                                <a
+                                  href={exportedLinks[m.id].url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex items-center gap-1.5 rounded-lg border border-[#D9CEF5] bg-[#F6F3FF] px-2.5 py-1 text-xs font-semibold text-[#4A2E8F] hover:bg-[#EFEAFD] transition-colors"
+                                >
+                                  <FileText className="h-3.5 w-3.5" />
+                                  <span>
+                                    Open in {exportedLinks[m.id].source === 'notion' ? 'Notion' : 'Google Docs'}
+                                  </span>
+                                  <ExternalLink className="h-3 w-3" />
+                                </a>
                               ) : (
-                                <>
-                                  <Copy className="h-3.5 w-3.5" />
-                                  <span>Copy</span>
-                                </>
+                                <button
+                                  type="button"
+                                  disabled={exportingId === m.id}
+                                  onClick={() => handleExportToVault(m.id, cleanContent)}
+                                  className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium text-[#77717F] hover:bg-[#F6F3FF] hover:text-[#171717] transition-colors cursor-pointer disabled:opacity-50"
+                                >
+                                  {exportingId === m.id ? (
+                                    <>
+                                      <Loader2 className="h-3.5 w-3.5 animate-spin text-[#4A2E8F]" />
+                                      <span>Saving…</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <FileText className="h-3.5 w-3.5" />
+                                      <span>Save to Docs / Notion</span>
+                                    </>
+                                  )}
+                                </button>
                               )}
-                            </button>
+
+                              <button
+                                type="button"
+                                disabled={isSending}
+                                onClick={() => handleQuickSchedule(cleanContent)}
+                                className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium text-[#77717F] hover:bg-[#F6F3FF] hover:text-[#171717] transition-colors cursor-pointer disabled:opacity-50"
+                              >
+                                <Calendar className="h-3.5 w-3.5" />
+                                <span>Schedule on Calendar</span>
+                              </button>
+                            </div>
+
+                            {exportErrorId[m.id] && (
+                              <span className="text-[11px] font-medium text-[#B42332]">
+                                {exportErrorId[m.id]}
+                              </span>
+                            )}
                           </div>
                         </div>
                       )}
@@ -1029,6 +1157,44 @@ export const StrategyPage: React.FC = () => {
                 }}
               />
             </div>
+
+            {/* Attached Trend Evidence Brief Pill (when navigating from TrendDetailPage) */}
+            {attachedTrendContext?.topic && (
+              <div className="mb-2 flex items-center justify-between gap-3 rounded-xl border border-[#D9CEF5] bg-[#F6F3FF] px-3.5 py-2 text-xs">
+                <div className="flex flex-wrap items-center gap-2 min-w-0">
+                  <span className="rounded-md bg-[#4A2E8F] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+                    Trend Brief Attached
+                  </span>
+                  <span className="font-bold text-[#171717] truncate">
+                    {attachedTrendContext.topic}
+                  </span>
+                  {attachedTrendContext.opportunity_score != null && (
+                    <span className="text-[#4A2E8F] font-semibold">
+                      · Score {Math.round(Number(attachedTrendContext.opportunity_score))}/100
+                    </span>
+                  )}
+                  {attachedTrendContext.reach_ratio != null && (
+                    <span className="text-[#167A59] font-semibold">
+                      · {Number(attachedTrendContext.reach_ratio).toFixed(1)}x reach
+                    </span>
+                  )}
+                  {Array.isArray(attachedTrendContext.proof_videos) &&
+                    attachedTrendContext.proof_videos.length > 0 && (
+                      <span className="text-[#625D68]">
+                        · {attachedTrendContext.proof_videos.length} proof videos loaded
+                      </span>
+                    )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAttachedTrendContext(null)}
+                  aria-label="Detach trend context"
+                  className="shrink-0 rounded-lg p-1 text-[#625D68] hover:bg-white hover:text-[#171717] cursor-pointer"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
 
             {/* Clean Claude/ChatGPT Composer Box */}
             <form

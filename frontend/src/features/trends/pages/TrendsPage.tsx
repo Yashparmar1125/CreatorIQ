@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import { motion } from 'framer-motion';
 import { useTrendsStore, type Trend } from '../../../stores/useTrendsStore';
 import { FeedHistoryDrawer } from '../components/FeedHistoryDrawer';
@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 
 /* ------------------------------------------------------------------ *
- * Content-type filters â€” these map to the existing supported formats
+ * Content-type filters — these map to the existing supported formats
  * ------------------------------------------------------------------ */
 const FORMAT_TABS = [
   { key: 'all' as const, label: 'All content types', Icon: Layers },
@@ -36,7 +36,7 @@ const FORMAT_TABS = [
 ];
 
 /* ------------------------------------------------------------------ *
- * Demand filters â€” driven by the real `lifecycle` value the API returns
+ * Demand filters — driven by the real `lifecycle` value the API returns
  * (emerging / growing / peaking / declining / expired)
  * ------------------------------------------------------------------ */
 type DemandKey = 'all' | 'growing' | 'peaking' | 'moderate' | 'declining';
@@ -105,15 +105,19 @@ export const TrendsPage: React.FC = () => {
     setFormatFilter,
   } = useTrendsStore();
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeSearch, setActiveSearch] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
+  const [activeSearch, setActiveSearch] = useState(searchParams.get('q') || '');
   const [historyOpen, setHistoryOpen] = useState(false);
   const [demandFilter, setDemandFilter] = useState<DemandKey>('all');
   const [pendingDetailId, setPendingDetailId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchTrends();
-  }, []);
+    const q = (searchParams.get('q') || '').trim();
+    setSearchQuery(q);
+    setActiveSearch(q);
+    fetchTrends(q || undefined);
+  }, [searchParams, fetchTrends]);
 
   useEffect(() => {
     if (historyOpen) {
@@ -124,12 +128,18 @@ export const TrendsPage: React.FC = () => {
   const handlePredict = () => {
     const q = searchQuery.trim();
     setActiveSearch(q);
-    fetchTrends(q || undefined);
+    if (q) {
+      setSearchParams({ q }, { replace: true });
+    } else {
+      setSearchParams({}, { replace: true });
+      fetchTrends();
+    }
   };
 
   const handleClearSearch = () => {
     setSearchQuery('');
     setActiveSearch('');
+    setSearchParams({}, { replace: true });
     fetchTrends();
   };
 
@@ -145,7 +155,7 @@ export const TrendsPage: React.FC = () => {
     return trends.filter((t) => t.supported_formats?.includes(activeFormatFilter));
   }, [trends, savedTrends, activeFormatFilter]);
 
-  /** Demand filter â€” applied on top of the content-type filter. */
+  /** Demand filter — applied on top of the content-type filter. */
   const filteredTrends = useMemo(() => {
     const active = DEMAND_FILTERS.find((d) => d.key === demandFilter);
     if (!active || !active.lifecycles) return formatFiltered;
@@ -181,7 +191,7 @@ export const TrendsPage: React.FC = () => {
           </h1>
           <p className="mt-1.5 max-w-xl text-[13px] leading-relaxed text-[#625D68]">
             {activeSearch
-              ? `Results for â€œ${activeSearch}â€`
+              ? `Results for “${activeSearch}”`
               : isPersonalized
                 ? 'Ranked for your niche from the live signal feed.'
                 : 'Browse the collected signal feed.'}
@@ -195,7 +205,7 @@ export const TrendsPage: React.FC = () => {
               onClick={() => loadCurrentFeed()}
               className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[#D9CEF5] bg-[#F1ECFF] px-3 py-1.5 text-xs font-semibold text-[#4A2E8F] transition-colors hover:bg-[#E7E0FF]"
             >
-              Past snapshot Â· Back to current
+              Past snapshot · Back to current
             </button>
           )}
           <button
@@ -269,7 +279,7 @@ export const TrendsPage: React.FC = () => {
       </form>
 
       {/* ---------------------------------------------------------- *
-          One filter row â€” demand chips + content-type icons
+          One filter row — demand chips + content-type icons
          ---------------------------------------------------------- */}
       <div className="mt-4 flex flex-wrap items-center gap-2">
         {DEMAND_FILTERS.map((d) => {
@@ -318,14 +328,14 @@ export const TrendsPage: React.FC = () => {
       </div>
 
       {/* ---------------------------------------------------------- *
-          Feed context â€” one quiet line
+          Feed context — one quiet line
          ---------------------------------------------------------- */}
       {(contextParts.length > 0 || snapshotAt) && (
         <p className="mt-4 text-[11px] leading-relaxed text-[#77717F]">
-          {contextParts.join(' Â· ')}
+          {contextParts.join(' · ')}
           {snapshotAt && (
             <>
-              {contextParts.length > 0 ? ' Â· ' : ''}
+              {contextParts.length > 0 ? ' · ' : ''}
               Updated {new Date(snapshotAt).toLocaleString()}
             </>
           )}
@@ -350,7 +360,7 @@ export const TrendsPage: React.FC = () => {
           role="alert"
           className="mt-5 rounded-xl border border-[#F3C9CE] bg-[#FDF1F2] px-4 py-3 text-xs text-[#8A1B26]"
         >
-          Could not load trends â€” {error}. Your search text is kept, try again in a moment.
+          Could not load trends — {error}. Your search text is kept, try again in a moment.
         </div>
       )}
 
@@ -372,7 +382,7 @@ export const TrendsPage: React.FC = () => {
           <TrendingUp className="mx-auto h-6 w-6 text-[#A79FB0]" />
           <h2 className="mt-2 text-sm font-bold text-[#171717]">
             {activeSearch
-              ? `No results for â€œ${activeSearch}â€`
+              ? `No results for “${activeSearch}”`
               : isFiltered
                 ? 'No trends match these filters'
                 : 'No opportunities yet'}
@@ -504,18 +514,18 @@ export const TrendsPage: React.FC = () => {
                       Reach vs channel size
                     </dt>
                     <dd className="mt-0.5 font-mono text-[15px] font-bold text-[#171717]">
-                      {reachValue ?? 'â€”'}
+                      {reachValue ?? '—'}
                     </dd>
                   </div>
                   <div className="min-w-0">
                     <dt className="text-[11px] text-[#77717F]">Search volume</dt>
                     <dd className="mt-0.5 font-mono text-[15px] font-bold text-[#171717]">
-                      {volumeValue ?? 'â€”'}
+                      {volumeValue ?? '—'}
                     </dd>
                   </div>
                 </dl>
 
-                {/* Footer â€” one primary action, one secondary */}
+                {/* Footer — one primary action, one secondary */}
                 <div className="mt-4 flex items-center justify-between gap-3 border-t border-[#EFEBF2] pt-3.5">
                   <button
                     type="button"

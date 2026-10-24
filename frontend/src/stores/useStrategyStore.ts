@@ -54,11 +54,19 @@ interface StrategyState {
   toggleConnector: (connector: string) => void;
   setConnectors: (connectors: string[]) => void;
 
+  // Attached trend context from TrendDetailPage
+  attachedTrendContext: Record<string, any> | null;
+  setAttachedTrendContext: (ctx: Record<string, any> | null) => void;
+
   fetchSessions: () => Promise<ChatSession[]>;
   selectSession: (sessionId: string) => Promise<void>;
   createSession: (title?: string) => Promise<string>;
   deleteSession: (sessionId: string) => Promise<void>;
-  sendMessage: (prompt: string, sessionId?: string) => Promise<string | undefined>;
+  sendMessage: (
+    prompt: string,
+    sessionId?: string,
+    trendContext?: Record<string, any> | null
+  ) => Promise<string | undefined>;
   clearCurrentSession: () => void;
 }
 
@@ -73,6 +81,11 @@ export const useStrategyStore = create<StrategyState>((set, get) => ({
   // Connectors are opt-in: a plain chat message must not trigger live lookups.
   connectedConnectors: ['web'],
   activeConnectors: ['web'],
+  attachedTrendContext: null,
+
+  setAttachedTrendContext: (ctx) => {
+    set({ attachedTrendContext: ctx });
+  },
 
   connectConnector: (connector: string) => {
     set((state) => {
@@ -193,11 +206,16 @@ export const useStrategyStore = create<StrategyState>((set, get) => ({
     }
   },
 
-  sendMessage: async (prompt: string, explicitSessionId?: string) => {
+  sendMessage: async (
+    prompt: string,
+    explicitSessionId?: string,
+    explicitTrendContext?: Record<string, any> | null
+  ) => {
     const trimmed = prompt.trim();
     if (!trimmed) return;
 
     const targetSessionId = explicitSessionId || get().currentSessionId;
+    const activeTrendCtx = explicitTrendContext !== undefined ? explicitTrendContext : get().attachedTrendContext;
     const tempUserMsgId = `user-${Date.now()}`;
     const tempAssistantMsgId = `asst-${Date.now()}`;
 
@@ -229,6 +247,7 @@ export const useStrategyStore = create<StrategyState>((set, get) => ({
         prompt: trimmed,
         session_id: targetSessionId || undefined,
         active_connectors: get().activeConnectors,
+        trend_context: activeTrendCtx || undefined,
       });
 
       let response = await fetch(streamUrl, {
@@ -412,6 +431,6 @@ export const useStrategyStore = create<StrategyState>((set, get) => ({
   },
 
   clearCurrentSession: () => {
-    set({ currentSessionId: null, messages: [], error: null });
+    set({ currentSessionId: null, messages: [], error: null, attachedTrendContext: null });
   },
 }));

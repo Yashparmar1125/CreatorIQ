@@ -22,6 +22,7 @@ class ChatMessageRequest(BaseModel):
     prompt: str
     session_id: str | None = None
     active_connectors: list[str] | None = None
+    trend_context: dict[str, Any] | None = None
 
 
 @router.get("/strategy/sessions")
@@ -97,6 +98,7 @@ async def chat_stream(
         session_id=s_id,
         prompt=payload.prompt.strip(),
         active_connectors=payload.active_connectors,
+        trend_context=payload.trend_context,
     )
 
     return StreamingResponse(

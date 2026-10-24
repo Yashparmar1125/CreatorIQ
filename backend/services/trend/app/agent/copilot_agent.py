@@ -248,8 +248,12 @@ class CopilotAgent:
 
         reach_ratio = float(creator_context.get("median_reach_ratio") or 0.35)
         dominant_traffic = str(creator_context.get("dominant_traffic_source") or "browse")
-        speech_tempo = int(creator_context.get("speech_tempo_wpm") or 155)
-        retention_30s = float(creator_context.get("median_retention_30s_pct") or 55.0)
+        raw_retention = creator_context.get("median_retention_30s_pct")
+        retention_str = (
+            f" | {float(raw_retention):.1f}% measured average view percentage"
+            if raw_retention is not None and float(raw_retention) != 55.0
+            else ""
+        )
         outliers = creator_context.get("top_outliers", [])
         outliers_summary = (
             "; ".join(
@@ -285,6 +289,29 @@ class CopilotAgent:
             else "  No prior chat sessions."
         )
 
+        # Optional attached trend context passed directly from TrendDetailPage
+        attached_trend = creator_context.get("attached_trend_context")
+        attached_trend_block = ""
+        if isinstance(attached_trend, dict) and attached_trend.get("topic"):
+            at_proofs = attached_trend.get("proof_videos") or []
+            proof_lines = "; ".join(
+                [
+                    f"\"{pv.get('title')}\" by {pv.get('channel_title') or pv.get('channel') or 'Creator'} ({pv.get('view_count') or pv.get('views') or 0:,} views, {pv.get('reach_ratio') or pv.get('reach_multiplier') or ''}x reach)"
+                    for pv in at_proofs[:3]
+                    if isinstance(pv, dict)
+                ]
+            )
+            attached_trend_block = (
+                "=== ATTACHED TREND OPPORTUNITY BRIEF (SELECTED BY CREATOR ON TREND DETAIL PAGE) ===\n"
+                f"• Topic: {attached_trend.get('topic')}\n"
+                f"• Opportunity Score: {attached_trend.get('opportunity_score', 'N/A')} | Lifecycle: {attached_trend.get('lifecycle', 'N/A')} | "
+                f"Reach Multiple: {attached_trend.get('reach_ratio', 'N/A')}x | Outlier Streak: {attached_trend.get('outlier_streak', 0)} days\n"
+                f"• Why Trending: {attached_trend.get('why_trending') or attached_trend.get('why_predicted') or 'Strong niche momentum'}\n"
+                f"• Recommended Angle / Hook Blueprint: {attached_trend.get('content_angle') or attached_trend.get('hook_blueprint') or 'Direct proof-led hook'}\n"
+                f"• Curated Title Angles: {', '.join(attached_trend.get('curated_titles') or []) or 'None'}\n"
+                f"• Breakout Proof Videos: {proof_lines or 'None listed'}\n\n"
+            )
+
         system_prompt = (
             "You are CreatorIQ Copilot—a sharp, deeply personal YouTube Executive Producer and creative partner "
             "with the conversational intelligence of Claude and ChatGPT.\n"
@@ -299,9 +326,9 @@ class CopilotAgent:
             f"• Core Niches: {niches}\n"
             f"• Audience Geography: {creator_context.get('country', 'India')} (Peak publish window: 6:00 PM – 9:00 PM IST)\n"
             f"• Creator Tone & Style: {creator_context.get('tone', 'Direct, analytical, high-conviction')}\n"
-            f"• Performance DNA: {reach_ratio:.2f}x median reach ratio | Primarily {dominant_traffic} traffic | "
-            f"~{speech_tempo} WPM speaking pace | ~{retention_30s:.0f}% 30s hook hold\n"
+            f"• Performance DNA: {reach_ratio:.2f}x median reach ratio | Primarily {dominant_traffic} traffic{retention_str}\n"
             f"• Proven Channel Outliers: {outliers_summary}\n\n"
+            f"{attached_trend_block}"
             "=== CREATOR'S LIVE DASHBOARD & SAVED OPPORTUNITIES ===\n"
             f"• Current Top Ranked Opportunities on Dashboard:\n{dash_trends_summary}\n"
             f"• Creator's Saved Trends: {saved_summary}\n\n"
@@ -388,9 +415,10 @@ class CopilotAgent:
                 "tool_calls": tool_calls,
             })
 
+            prepared_calls: list[dict[str, Any]] = []
             for tc in tool_calls:
                 fn = tc.get("function", {})
-                name = fn.get("name")
+                name = fn.get("name") or ""
                 call_id = tc.get("id")
                 try:
                     args = json.loads(fn.get("arguments", "{}"))
@@ -419,17 +447,47 @@ class CopilotAgent:
                     else f"Querying {step_label} for '{target_label}'"
                 )
 
+                prepared_calls.append({
+                    "name": name,
+                    "call_id": call_id,
+                    "args": args,
+                    "step_label": step_label,
+                    "summary": summary,
+                })
                 yield f"data: {json.dumps({'type': 'step', 'tool': name, 'label': step_label, 'summary': summary, 'status': 'running'})}\n\n"
 
-                t_exec_start = time.perf_counter()
-                tool_result = await self.tool_registry.execute(
-                    db,
-                    user_id=user_id,
-                    tool_name=name,
-                    arguments=args,
-                    creator_context=creator_context,
-                )
-                duration_ms = int((time.perf_counter() - t_exec_start) * 1000)
+            async def _run_single_tool(pc: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any], int]:
+                t_start = time.perf_counter()
+                # Use an isolated DB session when executing multiple tools in parallel
+                if len(prepared_calls) > 1:
+                    async with SessionLocal() as tool_db:
+                        res = await self.tool_registry.execute(
+                            tool_db,
+                            user_id=user_id,
+                            tool_name=pc["name"],
+                            arguments=pc["args"],
+                            creator_context=creator_context,
+                        )
+                        await tool_db.commit()
+                else:
+                    res = await self.tool_registry.execute(
+                        db,
+                        user_id=user_id,
+                        tool_name=pc["name"],
+                        arguments=pc["args"],
+                        creator_context=creator_context,
+                    )
+                dur = int((time.perf_counter() - t_start) * 1000)
+                return pc, res, dur
+
+            completed_calls = await asyncio.gather(*[_run_single_tool(pc) for pc in prepared_calls])
+
+            for pc, tool_result, duration_ms in completed_calls:
+                name = pc["name"]
+                call_id = pc["call_id"]
+                args = pc["args"]
+                step_label = pc["step_label"]
+                summary = pc["summary"]
 
                 db.add(
                     AgentToolCallLog(
@@ -480,7 +538,7 @@ class CopilotAgent:
                 gemini_resp = await llm_router.chat(messages, prefer_provider="gemini", temperature=0.55)
                 final_text = (gemini_resp.get("content") or "").strip()
                 last_provider = "gemini"
-                last_model = "gemini-3.8-flash"
+                last_model = "gemini-2.5-flash"
             except Exception as g_err:
                 logger.warning("Gemini synthesis fallback failed: %s", g_err)
 

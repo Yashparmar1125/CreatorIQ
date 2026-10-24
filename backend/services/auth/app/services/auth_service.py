@@ -958,12 +958,21 @@ class AuthService:
                                 else:
                                     dominant_traffic = "browse"
 
-                # 4. Fetch YouTube Analytics (Audience Geography & Retention)
+                # 4. Fetch YouTube Analytics (Audience Geography & Measured Retention)
                 analytics_client = YouTubeAnalyticsClient()
                 geo_weights = await analytics_client.fetch_audience_geography(access_token, client=client)
                 summary = await analytics_client.fetch_channel_summary(access_token, client=client)
-                if summary and summary.get("views", 0) > 0:
-                    median_retention_30s = round(min(75.0, max(42.0, 50.0 + (engagement_rate * 1.5))), 1)
+                if summary and summary.get("averageViewPercentage"):
+                    median_retention_30s = float(summary["averageViewPercentage"])
+                else:
+                    median_retention_30s = 55.0
+
+                channel_country = (snippet.get("country") or "IN").upper()
+                default_geos = (
+                    {"IN": 0.72, "US": 0.14, "GB": 0.06}
+                    if channel_country == "IN"
+                    else {channel_country: 0.65, "US": 0.20, "IN": 0.15}
+                )
 
                 mapped_niches = self._infer_niches_from_metadata(
                     topics,
@@ -996,7 +1005,7 @@ class AuthService:
                     "analyzed_video_count": len(analyzed_videos),
                     "engagement_rate": engagement_rate,
                     "niches": mapped_niches,
-                    "top_geos": geo_weights or {"US": 0.45, "IN": 0.30, "UK": 0.15},
+                    "top_geos": geo_weights or default_geos,
                     "outliers": outliers,
                     "detected_format": detected_format,
                     "detected_frequency": detected_frequency,

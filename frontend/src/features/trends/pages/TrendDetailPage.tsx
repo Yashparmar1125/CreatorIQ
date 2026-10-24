@@ -373,13 +373,32 @@ export const TrendDetailPage: React.FC = () => {
         ? trend.volume
         : null;
 
+  const trendContextPayload = {
+    id: trend.id,
+    topic: cleanTitle,
+    opportunity_score: oppScore,
+    lifecycle: trend.lifecycle || trend.status,
+    reach_ratio: trend.reach_ratio_median,
+    outlier_streak: trend.outlier_streak,
+    why_trending: trend.why_trending || trend.why_predicted,
+    content_angle: coreAngle,
+    curated_titles: titles.slice(0, 4),
+    proof_videos: proofVideos.slice(0, 3),
+  };
+
   const askCopilot = () =>
-    navigate('/app/strategy', { state: { topic: cleanTitle } });
+    navigate('/app/strategy', {
+      state: {
+        topic: cleanTitle,
+        trendContext: trendContextPayload,
+      },
+    });
 
   const createPlan = () =>
     navigate('/app/strategy', {
       state: {
         prompt: `Write a complete YouTube script and retention beat sheet for: "${cleanTitle}"`,
+        trendContext: trendContextPayload,
       },
     });
 

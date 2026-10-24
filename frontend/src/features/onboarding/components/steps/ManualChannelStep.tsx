@@ -1,6 +1,7 @@
-import { Youtube, Users, Check } from 'lucide-react';
+import { Youtube, Users, Check, Sparkles, Loader2 } from 'lucide-react';
 import { OnboardingStepShell } from '../OnboardingStepShell';
 import { cn } from '../../../../lib/utils';
+import { api } from '../../../../lib/api';
 import { useState } from 'react';
 
 interface ManualChannelStepProps {
@@ -33,20 +34,77 @@ export const ManualChannelStep: React.FC<ManualChannelStepProps> = ({
   onBack,
 }) => {
   const [useExactCount, setUseExactCount] = useState(false);
+  const [connectingOAuth, setConnectingOAuth] = useState(false);
 
   const selectedTier = SUBSCRIBER_TIERS.find((t) => t.value === subscriberCount);
   const isValid = channelName.trim().length > 0;
+
+  const handleConnectYouTube = async () => {
+    setConnectingOAuth(true);
+    try {
+      const { data } = await api.get('/auth/youtube/connect');
+      const url = data?.data?.authorization_url || data?.authorization_url;
+      if (url) {
+        window.location.href = url;
+        return;
+      }
+    } catch {
+      // Fallback to manual entry below
+    } finally {
+      setConnectingOAuth(false);
+    }
+  };
 
   return (
     <OnboardingStepShell
       badge="Step 1 of 4 • Channel"
       title="Tell us about your channel"
-      description="Enter your channel details to calibrate baseline audience reach and channel tier weighting."
+      description="Connect with YouTube OAuth to auto-sync your subscribers, outliers, and niche—or enter your channel details manually."
       onBack={onBack}
       onNext={onNext}
       nextDisabled={!isValid}
       cardClassName="space-y-6 text-left"
     >
+      {/* 1-Click YouTube OAuth Auto-Sync Banner */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border-[1.5px] border-[#181719] bg-[#F6F3FF] p-4 shadow-[4px_4px_0px_#181719]">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-600 text-white">
+            <Youtube className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs sm:text-sm font-bold text-[#14121a]">
+                1-Click YouTube Studio Auto-Sync
+              </span>
+              <span className="rounded-full bg-[#E8FAF3] border border-[#A7F3D0] px-2 py-0.5 text-[10px] font-bold text-[#059669]">
+                Recommended
+              </span>
+            </div>
+            <p className="text-[11px] sm:text-xs text-[#625D68] mt-0.5">
+              Automatically imports your channel name, subscriber count, top outlier videos, and audience geography.
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          disabled={connectingOAuth}
+          onClick={() => void handleConnectYouTube()}
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border-[1.5px] border-[#181719] bg-[#FF98C1] px-4 py-2 text-xs font-bold text-[#181719] shadow-[2px_2px_0px_#181719] transition-all hover:bg-[#FF8AB8] cursor-pointer disabled:opacity-60"
+        >
+          {connectingOAuth ? (
+            <>
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              <span>Connecting…</span>
+            </>
+          ) : (
+            <>
+              <Sparkles className="h-3.5 w-3.5" />
+              <span>Connect YouTube</span>
+            </>
+          )}
+        </button>
+      </div>
+
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
         {/* Channel Name */}
         <div className="space-y-2">

@@ -216,6 +216,7 @@ function SidebarNav({
 
 export const MainLayout: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
@@ -251,6 +252,17 @@ export const MainLayout: React.FC = () => {
   }, []);
 
   const user = useAuthStore((s) => s.user);
+  const [headerSearch, setHeaderSearch] = useState('');
+
+  const handleGlobalSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const q = headerSearch.trim();
+    if (q) {
+      navigate(`/app/trends?q=${encodeURIComponent(q)}`);
+    } else {
+      navigate('/app/trends');
+    }
+  };
 
   const userInitial = user?.full_name?.charAt(0) || user?.email?.charAt(0)?.toUpperCase() || 'U';
   const userName = user?.full_name || user?.email?.split('@')[0] || 'Creator';
@@ -419,16 +431,19 @@ export const MainLayout: React.FC = () => {
               )}
             </button>
 
-            <div className="hidden min-w-0 flex-1 sm:block sm:w-80">
+            <form onSubmit={handleGlobalSearch} className="hidden min-w-0 flex-1 sm:block sm:w-80">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#A79FB0]" />
                 <input
                   type="search"
+                  value={headerSearch}
+                  onChange={(e) => setHeaderSearch(e.target.value)}
                   placeholder="Search trends, topics, concepts..."
+                  aria-label="Search trends, topics, concepts"
                   className="h-9 w-full rounded-xl border border-[#E5E0E8] bg-white pl-9 pr-3 text-xs text-[#171717] placeholder-[#9B94A5] transition-colors focus:border-[#7C5CD6] focus:outline-none focus:ring-2 focus:ring-[#7C5CD6]/20"
                 />
               </div>
-            </div>
+            </form>
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">

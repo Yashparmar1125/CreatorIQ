@@ -1,7 +1,31 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Check, Globe, Plus, Save, X } from 'lucide-react';
+import {
+  Check,
+  Globe,
+  Plus,
+  RefreshCw,
+  Save,
+  Sparkles,
+  Trash2,
+  X,
+  Youtube,
+  Calendar,
+  FileText,
+  BookOpen,
+} from 'lucide-react';
 import { api } from '../../../lib/api';
 import { MaturityBadge, type ProfileMaturity } from '../../onboarding/components/MaturityBadge';
+import { useDashboardStore } from '../../../stores/useDashboardStore';
+import { useTrendsStore } from '../../../stores/useTrendsStore';
+
+interface CreatorMemoryItem {
+  id: string;
+  category: string;
+  key: string;
+  value: string;
+  confidence?: number;
+  updated_at?: string;
+}
 
 interface CreatorProfile {
   profile_maturity: ProfileMaturity;
@@ -115,6 +139,70 @@ export const SettingsPage: React.FC = () => {
   const [selectedFormat, setSelectedFormat] = useState('both');
   const [selectedTone, setSelectedTone] = useState('conversational');
 
+  const [memories, setMemories] = useState<CreatorMemoryItem[]>([]);
+  const [loadingMemories, setLoadingMemories] = useState(false);
+  const [deletingMemoryId, setDeletingMemoryId] = useState<string | null>(null);
+  const [syncingYouTube, setSyncingYouTube] = useState(false);
+
+  const {
+    primaryChannel,
+    isCalendarConnected,
+    isDriveConnected,
+    isNotionConnected,
+    fetchDashboard,
+  } = useDashboardStore();
+
+  const loadMemories = useCallback(async () => {
+    setLoadingMemories(true);
+    try {
+      const { data } = await api.get('/strategy/memory');
+      setMemories((data?.data as CreatorMemoryItem[]) || []);
+    } catch {
+      setMemories([]);
+    } finally {
+      setLoadingMemories(false);
+    }
+  }, []);
+
+  const handleDeleteMemory = async (id: string) => {
+    setDeletingMemoryId(id);
+    try {
+      await api.delete(`/strategy/memory/${id}`);
+      setMemories((prev) => prev.filter((m) => m.id !== id));
+    } catch {
+      // ignore
+    } finally {
+      setDeletingMemoryId(null);
+    }
+  };
+
+  const handleSyncYouTubeNow = async () => {
+    setSyncingYouTube(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      await api.post('/auth/youtube/sync');
+      await Promise.all([loadProfile(), fetchDashboard(), useTrendsStore.getState().refreshFeed()]);
+      setSuccess('YouTube channel telemetry, outliers, and personalized trend feed synced.');
+    } catch {
+      setError('Could not sync YouTube channel right now. Check your YouTube connection.');
+    } finally {
+      setSyncingYouTube(false);
+    }
+  };
+
+  const handleConnectOAuth = async (endpoint: string) => {
+    try {
+      const { data } = await api.get(endpoint);
+      const url = data?.data?.authorization_url || data?.authorization_url;
+      if (url) {
+        window.location.href = url;
+      }
+    } catch {
+      setError('Could not initiate OAuth connection. Try again in a moment.');
+    }
+  };
+
   const loadProfile = useCallback(async () => {
     setLoading(true);
     setLoadError(null);
@@ -142,7 +230,9 @@ export const SettingsPage: React.FC = () => {
 
   useEffect(() => {
     void loadProfile();
-  }, [loadProfile]);
+    void loadMemories();
+    void fetchDashboard();
+  }, [loadProfile, loadMemories, fetchDashboard]);
 
   const handleSaveManual = async () => {
     if (selectedNiches.length === 0) {
@@ -163,8 +253,8 @@ export const SettingsPage: React.FC = () => {
 
       setProfile(data.data as CreatorProfile);
       setLoadError(null);
-      void api.post('/trends/refresh').catch(() => null);
-      setSuccess('Preferences saved. Your personalized trend feed has been refreshed.');
+      await useTrendsStore.getState().refreshFeed().catch(() => null);
+      setSuccess('Preferences saved. Your personalized trend feed has been regenerated.');
     } catch (e: unknown) {
       const err = e as {
         response?: { data?: { error?: { message?: string }; detail?: { message?: string } } };
@@ -484,7 +574,7 @@ export const SettingsPage: React.FC = () => {
 
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-[#EFEBF2] pt-5">
           <p className="text-[11px] text-[#77717F]">
-            Saving requests a new trend feed, which uses one refresh credit.
+            Saving updates your profile and regenerates your personalized Top 5 trend feed immediately.
           </p>
           <button
             type="button"
@@ -495,6 +585,189 @@ export const SettingsPage: React.FC = () => {
             <Save size={15} aria-hidden="true" className={savingManual ? 'animate-spin' : ''} />
             {savingManual ? 'Saving…' : 'Save preferences'}
           </button>
+        </div>
+      </section>
+
+      {/* Connected Workspace Integrations & Live Sync */}
+      <section
+        aria-labelledby="integrations-title"
+        className="rounded-2xl border border-[#E5E0E8] bg-white p-6"
+      >
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 id="integrations-title" className="font-cal-sans text-base font-bold text-[#171717]">
+              Connected integrations & telemetry sync
+            </h2>
+            <p className="mt-1 text-xs leading-relaxed text-[#77717F]">
+              Connect your workspace tools so Copilot can ground strategies in your live YouTube analytics, schedule milestones on Google Calendar, and export scripts to Google Docs or Notion.
+            </p>
+          </div>
+          {primaryChannel?.is_oauth_connected && (
+            <button
+              type="button"
+              disabled={syncingYouTube}
+              onClick={() => void handleSyncYouTubeNow()}
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[#D8CBF0] bg-[#F6F3FF] px-3.5 py-1.5 text-xs font-bold text-[#4A2E8F] transition-colors hover:bg-[#EFE8FF] disabled:opacity-50"
+            >
+              <RefreshCw size={13} className={syncingYouTube ? 'animate-spin' : ''} />
+              {syncingYouTube ? 'Syncing telemetry…' : 'Sync YouTube telemetry now'}
+            </button>
+          )}
+        </div>
+
+        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {/* YouTube */}
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-[#E5E0E8] bg-[#FBFAF8] p-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#FEE2E2] text-[#DC2626]">
+                <Youtube size={18} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-[#171717] truncate">YouTube Studio & Analytics</p>
+                <p className="text-[11px] text-[#625D68] truncate">
+                  {primaryChannel?.is_oauth_connected
+                    ? `Connected: ${primaryChannel.name}`
+                    : 'Not connected via OAuth'}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => void handleConnectOAuth('/auth/youtube/connect')}
+              className="shrink-0 rounded-lg border border-[#E5E0E8] bg-white px-3 py-1.5 text-xs font-semibold text-[#171717] hover:bg-[#F6F3FF] cursor-pointer"
+            >
+              {primaryChannel?.is_oauth_connected ? 'Reconnect' : 'Connect'}
+            </button>
+          </div>
+
+          {/* Google Calendar */}
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-[#E5E0E8] bg-[#FBFAF8] p-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#E0E7FF] text-[#2563EB]">
+                <Calendar size={18} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-[#171717] truncate">Google Calendar</p>
+                <p className="text-[11px] text-[#625D68] truncate">
+                  {isCalendarConnected ? 'Connected for milestone scheduling' : 'Not connected'}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => void handleConnectOAuth('/auth/google/calendar/connect')}
+              className="shrink-0 rounded-lg border border-[#E5E0E8] bg-white px-3 py-1.5 text-xs font-semibold text-[#171717] hover:bg-[#F6F3FF] cursor-pointer"
+            >
+              {isCalendarConnected ? 'Reconnect' : 'Connect'}
+            </button>
+          </div>
+
+          {/* Google Drive & Docs */}
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-[#E5E0E8] bg-[#FBFAF8] p-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#E4FBF2] text-[#167A59]">
+                <FileText size={18} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-[#171717] truncate">Google Drive & Docs</p>
+                <p className="text-[11px] text-[#625D68] truncate">
+                  {isDriveConnected ? 'Connected for script export & search' : 'Not connected'}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => void handleConnectOAuth('/auth/google/drive/connect')}
+              className="shrink-0 rounded-lg border border-[#E5E0E8] bg-white px-3 py-1.5 text-xs font-semibold text-[#171717] hover:bg-[#F6F3FF] cursor-pointer"
+            >
+              {isDriveConnected ? 'Reconnect' : 'Connect'}
+            </button>
+          </div>
+
+          {/* Notion Workspace */}
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-[#E5E0E8] bg-[#FBFAF8] p-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#F1ECFF] text-[#4A2E8F]">
+                <BookOpen size={18} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-[#171717] truncate">Notion Workspace</p>
+                <p className="text-[11px] text-[#625D68] truncate">
+                  {isNotionConnected ? 'Connected for script vault & notes' : 'Not connected'}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => void handleConnectOAuth('/auth/notion/connect')}
+              className="shrink-0 rounded-lg border border-[#E5E0E8] bg-white px-3 py-1.5 text-xs font-semibold text-[#171717] hover:bg-[#F6F3FF] cursor-pointer"
+            >
+              {isNotionConnected ? 'Reconnect' : 'Connect'}
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Copilot Persistent Memory Bank */}
+      <section
+        aria-labelledby="memory-bank-title"
+        className="rounded-2xl border border-[#E5E0E8] bg-white p-6"
+      >
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <Sparkles size={16} className="text-[#4A2E8F]" />
+              <h2 id="memory-bank-title" className="font-cal-sans text-base font-bold text-[#171717]">
+                Copilot long-term memory
+              </h2>
+            </div>
+            <p className="mt-1 text-xs leading-relaxed text-[#77717F]">
+              Facts, style rules, filming constraints, and active projects Copilot has learned from your conversations. Remove any item you no longer want Copilot to use.
+            </p>
+          </div>
+          <span className="rounded-full border border-[#E5E0E8] bg-[#FBFAF8] px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-[#77717F]">
+            {memories.length} saved
+          </span>
+        </div>
+
+        <div className="mt-5 border-t border-[#EFEBF2] pt-4">
+          {loadingMemories ? (
+            <div className="space-y-2">
+              <div className="h-12 animate-pulse rounded-xl bg-[#F6F3FF]" />
+              <div className="h-12 animate-pulse rounded-xl bg-[#F6F3FF]" />
+            </div>
+          ) : memories.length === 0 ? (
+            <p className="text-xs text-[#77717F] py-3">
+              No persistent memories recorded yet. As you brainstorm scripts, preferences, or schedules in Copilot, key facts will appear here automatically.
+            </p>
+          ) : (
+            <div className="divide-y divide-[#EFEBF2]">
+              {memories.map((mem) => (
+                <div key={mem.id} className="flex items-start justify-between gap-4 py-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-md bg-[#F1ECFF] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#4A2E8F]">
+                        {mem.category}
+                      </span>
+                      <span className="text-xs font-bold text-[#171717]">
+                        {mem.key.replace(/_/g, ' ')}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-[#625D68] leading-relaxed">{mem.value}</p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={deletingMemoryId === mem.id}
+                    onClick={() => void handleDeleteMemory(mem.id)}
+                    aria-label={`Delete memory ${mem.key}`}
+                    className="shrink-0 rounded-lg p-1.5 text-[#9B94A5] transition-colors hover:bg-[#FDF1F2] hover:text-[#B42332] cursor-pointer disabled:opacity-50"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
     </div>

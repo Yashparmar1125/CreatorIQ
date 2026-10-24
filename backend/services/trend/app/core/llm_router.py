@@ -48,7 +48,7 @@ class LLMRouter:
         # 1. Try Groq (Primary for tool calling and reasoning)
         groq_all_keys = groq_pool.get_all_keys()
         if prefer_provider in ("groq", "any") and groq_all_keys:
-            groq_models = ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b"]
+            groq_models = ["openai/gpt-oss-120b", "llama-3.3-70b-versatile", "openai/gpt-oss-20b"]
             for model_name in groq_models:
                 for _ in range(len(groq_all_keys)):
                     key = await groq_pool.get_active_key()
@@ -68,7 +68,7 @@ class LLMRouter:
                             ttl = 86400 if ("daily" in err_str or "quota" in err_str) else 60
                             await groq_pool.mark_exhausted(key, cooldown_seconds=ttl, reason="rate_limit")
 
-        # 2. Try Gemini 3.8 Flash (if no tools or as fallback)
+        # 2. Try Gemini 2.5 Flash (if no tools or as fallback)
         gemini_all_keys = gemini_pool.get_all_keys()
         if gemini_all_keys:
             for _ in range(len(gemini_all_keys)):
@@ -79,7 +79,7 @@ class LLMRouter:
                     res = await self._call_gemini(key, messages, tools=tools, temperature=temperature)
                     await gemini_pool.record_usage(key)
                     res["provider"] = "gemini"
-                    res["model"] = "gemini-3.8-flash"
+                    res["model"] = "gemini-2.5-flash"
                     return res
                 except Exception as exc:
                     errors.append(f"Gemini error: {exc}")
@@ -157,7 +157,7 @@ class LLMRouter:
         tools: list[dict[str, Any]] | None = None,
         temperature: float = 0.6,
     ) -> dict[str, Any]:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key={api_key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
         headers = {
             "Content-Type": "application/json",
             "User-Agent": "CreatorIQ/1.0",
@@ -174,7 +174,8 @@ class LLMRouter:
             elif role == "user":
                 contents.append({"role": "user", "parts": [{"text": content}]})
             elif role == "assistant":
-                contents.append({"role": "model", "parts": [{"text": content}]})
+                if content:
+                    contents.append({"role": "model", "parts": [{"text": content}]})
             elif role == "tool":
                 contents.append({
                     "role": "user",
@@ -187,6 +188,18 @@ class LLMRouter:
         }
         if system_instruction:
             body["systemInstruction"] = system_instruction
+        if tools:
+            fn_decls = []
+            for t in tools:
+                fn = t.get("function", {})
+                if fn.get("name"):
+                    fn_decls.append({
+                        "name": fn["name"],
+                        "description": fn.get("description", ""),
+                        "parameters": fn.get("parameters", {"type": "object", "properties": {}}),
+                    })
+            if fn_decls:
+                body["tools"] = [{"functionDeclarations": fn_decls}]
 
         async with httpx.AsyncClient(timeout=45.0) as client:
             resp = await client.post(url, headers=headers, json=body)
@@ -197,11 +210,23 @@ class LLMRouter:
             if not candidates:
                 raise RuntimeError(f"No candidates in Gemini response: {data}")
             parts = candidates[0].get("content", {}).get("parts", [])
-            text_content = "".join(p.get("text", "") for p in parts)
+            text_content = "".join(p.get("text", "") for p in parts if "text" in p)
+            gemini_tool_calls = []
+            for p in parts:
+                if "functionCall" in p:
+                    fc = p["functionCall"]
+                    gemini_tool_calls.append({
+                        "id": f"call_{uuid.uuid4().hex[:12]}",
+                        "type": "function",
+                        "function": {
+                            "name": fc.get("name"),
+                            "arguments": json.dumps(fc.get("args") or {}),
+                        },
+                    })
             return {
                 "role": "assistant",
                 "content": text_content,
-                "tool_calls": None,
+                "tool_calls": gemini_tool_calls or None,
             }
 
     async def _call_openrouter(

@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.core.key_pool import tavily_pool
 from app.integrations.youtube_data_client import YouTubeDataClient
 from app.models.concept_models import TrendConcept, ConceptDailySignal
 from app.models.trend_models import SavedTrend, Trend
@@ -458,7 +459,8 @@ class ToolRegistry:
 
             elif tool_name == "get_my_saved_trends":
                 res = await db.execute(
-                    select(SavedTrend, Trend.topic)
+                    select(SavedTrend, TrendConcept, Trend)
+                    .outerjoin(TrendConcept, SavedTrend.trend_id == TrendConcept.id)
                     .outerjoin(Trend, SavedTrend.trend_id == Trend.id)
                     .where(SavedTrend.user_id == user_id)
                     .order_by(SavedTrend.created_at.desc())
@@ -470,10 +472,21 @@ class ToolRegistry:
                     "saved_trends": [
                         {
                             "trend_id": str(s.trend_id),
-                            "topic": topic or "Saved Concept",
+                            "topic": (
+                                c.canonical_title
+                                if c is not None
+                                else (t.topic if t is not None else "Saved Concept")
+                            ),
+                            "opportunity_score": float(c.raw_momentum or 65.0) if c is not None else None,
+                            "lifecycle": (
+                                str(c.lifecycle.value if hasattr(c.lifecycle, "value") else c.lifecycle)
+                                if c is not None and c.lifecycle
+                                else None
+                            ),
+                            "why_trending": c.why_trending if c is not None else None,
                             "saved_at": s.created_at.isoformat() if s.created_at else None,
                         }
-                        for s, topic in saved_rows
+                        for s, c, t in saved_rows
                     ],
                 }
 
@@ -559,26 +572,63 @@ class ToolRegistry:
                 }
 
             elif tool_name == "find_small_channel_outliers":
-                niche = arguments.get("niche", "").strip()
+                niche = (arguments.get("niche") or "").strip()
+                if not niche:
+                    creator_niches = creator_context.get("niches") or []
+                    niche = creator_niches[0] if creator_niches else ""
                 min_mult = float(arguments.get("min_multiplier", 2.5))
 
-                q = select(ConceptDailySignal).where(ConceptDailySignal.population_size > 0).order_by(ConceptDailySignal.video_date.desc()).limit(15)
+                # Resolve concept IDs matching the requested niche first
+                matching_concept_ids: list[str] = []
+                concept_title_map: dict[str, str] = {}
+                if niche:
+                    c_res = await db.execute(
+                        select(TrendConcept)
+                        .order_by(TrendConcept.raw_momentum.desc())
+                        .limit(80)
+                    )
+                    niche_lower = niche.lower()
+                    for c in c_res.scalars().all():
+                        tags_lower = [str(tag).lower() for tag in (c.niche_tags or [])]
+                        title_lower = (c.canonical_title or "").lower()
+                        if (
+                            any(niche_lower in tag or tag in niche_lower for tag in tags_lower)
+                            or niche_lower in title_lower
+                        ):
+                            cid_str = str(c.id)
+                            matching_concept_ids.append(cid_str)
+                            concept_title_map[cid_str] = c.canonical_title
+
+                q = select(ConceptDailySignal).where(ConceptDailySignal.population_size > 0)
+                if matching_concept_ids:
+                    q = q.where(ConceptDailySignal.concept_id.in_(matching_concept_ids))
+                q = q.order_by(ConceptDailySignal.video_date.desc()).limit(25)
                 res = await db.execute(q)
-                signals = res.scalars().all()
+                signals = list(res.scalars().all())
+
+                # Fallback if niche filter returned no daily signals yet
+                if not signals and matching_concept_ids:
+                    fallback_q = (
+                        select(ConceptDailySignal)
+                        .where(ConceptDailySignal.population_size > 0)
+                        .order_by(ConceptDailySignal.video_date.desc())
+                        .limit(15)
+                    )
+                    signals = list((await db.execute(fallback_q)).scalars().all())
 
                 outlier_videos = []
                 for s in signals:
                     for v in (s.population or []):
                         subs = int(v.get("subscriber_count") or 0)
                         rr = float(v.get("reach_ratio") or 0.0)
-                        if 100 <= subs <= 25_000 and rr >= min_mult:
+                        if 100 <= subs <= 50_000 and rr >= min_mult:
                             outlier_videos.append({
                                 "title": v.get("title"),
                                 "channel": v.get("channel_title"),
                                 "subscribers": subs,
                                 "views": v.get("view_count"),
                                 "reach_multiplier": f"{rr:.1f}x",
-                                "concept_name": s.concept_name,
+                                "concept_name": concept_title_map.get(str(s.concept_id)) or s.concept_name,
                             })
                         if len(outlier_videos) >= 6:
                             break
@@ -586,7 +636,8 @@ class ToolRegistry:
                         break
 
                 return {
-                    "niche": niche,
+                    "niche": niche or "All Niches",
+                    "matched_niche_concepts": len(matching_concept_ids),
                     "outlier_count": len(outlier_videos),
                     "outlier_videos": outlier_videos,
                 }
@@ -607,13 +658,15 @@ class ToolRegistry:
                 if not query:
                     return {"error": "Missing search query"}
 
-                raw_keys = settings.tavily_api_keys or settings.tavily_api_key or ""
-                keys = [k.strip() for k in raw_keys.split(",") if k.strip()]
-                if not keys:
+                all_keys = tavily_pool.get_all_keys()
+                if not all_keys:
                     return {"status": "skipped", "message": "No Tavily search API key configured."}
 
                 results = None
-                for key in keys:
+                for _ in range(len(all_keys)):
+                    key = await tavily_pool.get_active_key()
+                    if not key:
+                        break
                     try:
                         async with httpx.AsyncClient(timeout=15.0) as client:
                             resp = await client.post(
@@ -627,6 +680,7 @@ class ToolRegistry:
                                 },
                             )
                             if resp.status_code == 200:
+                                await tavily_pool.record_usage(key)
                                 data = resp.json()
                                 results = {
                                     "query": query,
@@ -641,8 +695,10 @@ class ToolRegistry:
                                     ],
                                 }
                                 break
+                            elif resp.status_code in (401, 429, 432, 433):
+                                await tavily_pool.mark_exhausted(key, cooldown_seconds=3600, reason=f"http_{resp.status_code}")
                     except Exception as err:
-                        logger.warning("Tavily search attempt failed with key: %s", err)
+                        logger.warning("Tavily search attempt failed with key ending in %s: %s", key[-6:], err)
 
                 if results:
                     return results

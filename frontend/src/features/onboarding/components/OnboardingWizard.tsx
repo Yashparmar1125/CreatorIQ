@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Check } from 'lucide-react';
 import { useOnboardingStore } from '../stores/onboardingStore';
 import { useAuthStore } from '../../../stores/useAuthStore';
+import { api } from '../../../lib/api';
 import { WelcomeStep } from './steps/WelcomeStep';
 import { ManualChannelStep } from './steps/ManualChannelStep';
 import { NicheStep } from './steps/NicheStep';
@@ -62,6 +63,34 @@ export const OnboardingWizard: React.FC = () => {
       setStep(1);
     }
   }, [step, user, setStep, TOTAL_STEPS]);
+
+  // Pre-fill existing channel & profile preferences when recalibrating onboarding
+  useEffect(() => {
+    if (channelName.trim().length > 0) return;
+    (async () => {
+      try {
+        const [meRes, profRes] = await Promise.all([
+          api.get('/channels/me').catch(() => null),
+          api.get('/channels/profile').catch(() => null),
+        ]);
+        const ch = meRes?.data?.data?.channel;
+        const prof = profRes?.data?.data;
+        if (ch?.name) setChannelName(ch.name);
+        if (ch?.handle) setChannelHandle(ch.handle);
+        if (typeof ch?.subscriber_count === 'number' && ch.subscriber_count > 0) {
+          setSubscriberCount(ch.subscriber_count);
+        }
+        const existingNiches = prof?.niches?.effective || ch?.niches;
+        if (Array.isArray(existingNiches) && existingNiches.length > 0 && niche.length === 0) {
+          setNiche(existingNiches.slice(0, 3));
+        }
+        if (prof?.geo?.target_country) setCountry(prof.geo.target_country);
+      } catch {
+        // Ignore if new user has no channel yet
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const renderCurrentStep = () => {
     switch (step) {
