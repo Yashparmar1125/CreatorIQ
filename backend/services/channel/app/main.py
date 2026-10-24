@@ -18,12 +18,10 @@ async def lifespan(app: FastAPI):
     try:
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
-            await conn.execute(text("""
-                ALTER TABLE channels ADD COLUMN IF NOT EXISTS median_reach_ratio NUMERIC(6, 3);
-                ALTER TABLE channels ADD COLUMN IF NOT EXISTS dominant_traffic_source VARCHAR(32) DEFAULT 'browse';
-                ALTER TABLE channels ADD COLUMN IF NOT EXISTS speech_tempo_wpm INT DEFAULT 155;
-                ALTER TABLE channels ADD COLUMN IF NOT EXISTS median_retention_30s_pct NUMERIC(5, 2);
-            """))
+            await conn.execute(text("ALTER TABLE channels ADD COLUMN IF NOT EXISTS median_reach_ratio NUMERIC(6, 3);"))
+            await conn.execute(text("ALTER TABLE channels ADD COLUMN IF NOT EXISTS dominant_traffic_source VARCHAR(32) DEFAULT 'browse';"))
+            await conn.execute(text("ALTER TABLE channels ADD COLUMN IF NOT EXISTS speech_tempo_wpm INT DEFAULT 155;"))
+            await conn.execute(text("ALTER TABLE channels ADD COLUMN IF NOT EXISTS median_retention_30s_pct NUMERIC(5, 2);"))
         logger.info("[Channel] Database schema initialized successfully.")
     except Exception as e:
         logger.warning(f"[Channel] Schema auto-sync warning: {e}")
