@@ -15,12 +15,12 @@ class Settings(BaseSettings):
     jwt_audience: str = "creatoriq-api"
     jwt_private_key_path: str = ""
     jwt_public_key_path: str = ""
-    access_token_ttl_minutes: int = 15
+    access_token_ttl_minutes: int = 10080  # 7 days (prevents frequent mid-session JWT expiration)
 
     aes_encryption_key: str = ""
 
 
-    refresh_token_ttl_days: int = 90
+    refresh_token_ttl_days: int = 180
     refresh_token_pepper: str = "change-me"
 
     # Service-to-service auth

@@ -223,22 +223,50 @@ export const useStrategyStore = create<StrategyState>((set, get) => ({
     }));
 
     try {
-      const token = localStorage.getItem('ciq_access_token');
+      let token = localStorage.getItem('ciq_access_token');
       const streamUrl = SSE_CHAT_URL;
+      const reqBody = JSON.stringify({
+        prompt: trimmed,
+        session_id: targetSessionId || undefined,
+        active_connectors: get().activeConnectors,
+      });
 
-      const response = await fetch(streamUrl, {
+      let response = await fetch(streamUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'text/event-stream',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({
-          prompt: trimmed,
-          session_id: targetSessionId || undefined,
-          active_connectors: get().activeConnectors,
-        }),
+        body: reqBody,
       });
+
+      if (response.status === 401) {
+        const refresh = localStorage.getItem('ciq_refresh_token');
+        if (refresh) {
+          try {
+            const refreshRes = await api.post('/auth/token/refresh', { refresh_token: refresh });
+            const newAccess = refreshRes.data?.data?.access_token;
+            const newRefresh = refreshRes.data?.data?.refresh_token;
+            if (newAccess && newRefresh) {
+              localStorage.setItem('ciq_access_token', newAccess);
+              localStorage.setItem('ciq_refresh_token', newRefresh);
+              token = newAccess;
+              response = await fetch(streamUrl, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Accept': 'text/event-stream',
+                  Authorization: `Bearer ${token}`,
+                },
+                body: reqBody,
+              });
+            }
+          } catch {
+            // Fall through to error handling below
+          }
+        }
+      }
 
       if (!response.ok) {
         const errJson = await response.json().catch(() => ({}));
