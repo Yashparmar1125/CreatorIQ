@@ -467,10 +467,11 @@ class TrendService:
         feed = await self.feed.get_feed_snapshot(db, user.user_id, feed_id)
         return {"data": feed, "meta": {"request_id": "trend-engine"}}
 
-    async def generate_first_feed(self, db: AsyncSession, user_id: uuid.UUID) -> dict:
-        existing = await self.feed.feed_repo.get_latest_snapshot(db, user_id)
-        if existing:
-            return {"data": {"skipped": True, "feed_id": str(existing.id)}, "meta": {"request_id": "trend-engine"}}
+    async def generate_first_feed(self, db: AsyncSession, user_id: uuid.UUID, *, force: bool = False) -> dict:
+        if not force:
+            existing = await self.feed.feed_repo.get_latest_snapshot(db, user_id)
+            if existing:
+                return {"data": {"skipped": True, "feed_id": str(existing.id)}, "meta": {"request_id": "trend-engine"}}
         try:
             feed = await self.feed.generate_feed(
                 db, user_id, is_first_feed=True, consume_credit=False

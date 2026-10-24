@@ -6,10 +6,16 @@ from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.channel_models import ChannelHistoricalSnapshot
-from app.models.creator_profile_models import GeoSource, SyncStatus
+from app.models.creator_profile_models import GeoSource, NicheSource, ProfileMode, SyncStatus
 from app.repositories.channel_repository import ChannelRepository
 from app.repositories.creator_profile_repository import CreatorProfileRepository
-from app.services.creator_context_pipeline import CreatorContextPipeline, classify_maturity
+from app.services.creator_context_pipeline import (
+    CreatorContextPipeline,
+    _content_format_enums,
+    classify_maturity,
+    map_content_format,
+    maturity_confidence,
+)
 
 
 class ChannelService:
@@ -121,6 +127,71 @@ class ChannelService:
             engagement_rate=engagement_rate,
             niches=niches,
         )
+
+        # Immediately synchronize CreatorProfile with real OAuth channel stats (overwriting manual onboarding values)
+        profile = await self.profile_repo.get_by_user_id(db, user_id)
+        maturity = classify_maturity(
+            video_count=int(channel.video_count),
+            subscriber_count=int(channel.subscriber_count),
+            view_count=int(channel.view_count),
+        )
+        confidence = maturity_confidence(maturity)
+        now = datetime.now(timezone.utc)
+        if profile:
+            profile.channel_id = channel.id
+            profile.profile_maturity = maturity
+            profile.analysis_confidence = confidence
+            profile.profile_mode = ProfileMode.analysis_assisted
+            profile.sync_status = SyncStatus.essential_complete
+            if niches:
+                profile.niches_inferred = niches
+                profile.niches_effective = niches[:3]
+                profile.niche_source = NicheSource.channel_primary
+            stats = dict(profile.channel_stats or {})
+            stats.update({
+                "subscriber_count": int(channel.subscriber_count),
+                "video_count": int(channel.video_count),
+                "view_count": int(channel.view_count),
+                "engagement_rate": float(channel.engagement_rate) if channel.engagement_rate is not None else stats.get("engagement_rate", 4.5),
+                "channel_name": channel.name,
+                "handle": channel.handle,
+                "thumbnail_url": channel.thumbnail_url,
+            })
+            profile.channel_stats = stats
+            await db.flush()
+        else:
+            effective_niches = niches[:3] if niches else ["Tech", "Education"]
+            await self.profile_repo.upsert(
+                db,
+                user_id=user_id,
+                channel_id=channel.id,
+                profile_maturity=maturity,
+                analysis_confidence=confidence,
+                profile_mode=ProfileMode.analysis_assisted,
+                niches_onboarding=effective_niches,
+                niches_inferred=niches,
+                niches_effective=effective_niches,
+                niche_source=NicheSource.channel_primary if niches else NicheSource.onboarding,
+                content_format="both",
+                posting_frequency="weekly",
+                tone="conversational",
+                geo_source=GeoSource.global_default,
+                geo_target_country="India",
+                audience_geo_weights={"IN": 0.45, "US": 0.40, "UK": 0.15},
+                channel_stats={
+                    "subscriber_count": int(channel.subscriber_count),
+                    "video_count": int(channel.video_count),
+                    "view_count": int(channel.view_count),
+                    "engagement_rate": float(channel.engagement_rate) if channel.engagement_rate is not None else 4.5,
+                    "channel_name": channel.name,
+                    "handle": channel.handle,
+                    "thumbnail_url": channel.thumbnail_url,
+                },
+                sync_status=SyncStatus.essential_complete,
+                last_analyzed_at=now,
+                onboarding_completed_at=now,
+            )
+
         await db.commit()
         return {
             "data": {
@@ -199,6 +270,14 @@ class ChannelService:
         niches: list[str],
         top_geos: dict[str, float],
         outliers: list[dict[str, Any]],
+        detected_format: str | None = None,
+        detected_frequency: str | None = None,
+        subscriber_count: int | None = None,
+        video_count: int | None = None,
+        view_count: int | None = None,
+        channel_name: str | None = None,
+        handle: str | None = None,
+        thumbnail_url: str | None = None,
     ) -> dict:
         """Store quota-efficient deep YouTube ingestion context (reach baseline, outliers, tempo)."""
         channel = await self.repo.get_primary_channel_by_user(db, user_id)
@@ -208,6 +287,19 @@ class ChannelService:
                 detail={"code": "NOT_FOUND", "message": "No channel found for user.", "details": {}},
             )
 
+        if subscriber_count is not None:
+            channel.subscriber_count = subscriber_count
+        if video_count is not None:
+            channel.video_count = video_count
+        if view_count is not None:
+            channel.view_count = view_count
+        if channel_name:
+            channel.name = channel_name
+        if handle is not None:
+            channel.handle = handle
+        if thumbnail_url:
+            channel.thumbnail_url = thumbnail_url
+
         channel.median_reach_ratio = median_reach_ratio
         channel.dominant_traffic_source = dominant_traffic_source
         channel.speech_tempo_wpm = speech_tempo_wpm
@@ -215,7 +307,10 @@ class ChannelService:
         if engagement_rate is not None:
             channel.engagement_rate = engagement_rate
         if niches:
-            channel.niches = list(dict.fromkeys((channel.niches or []) + niches))[:5]
+            # Real YouTube channel niches override manual onboarding placeholders
+            channel.niches = niches[:5]
+        if detected_format:
+            channel.content_formats = _content_format_enums(map_content_format(detected_format))
         if top_geos:
             channel.audience_geo_weights = top_geos
         await db.flush()
@@ -240,16 +335,42 @@ class ChannelService:
         if outliers:
             await self.repo.replace_channel_outliers(db, channel.id, outliers)
 
-        # Update profile stats & sync status
+        # Update profile stats, niches, format, maturity & sync status to match connected channel
         profile = await self.profile_repo.get_by_user_id(db, user_id)
+        maturity = classify_maturity(
+            video_count=int(channel.video_count),
+            subscriber_count=int(channel.subscriber_count),
+            view_count=int(channel.view_count),
+        )
+        confidence = maturity_confidence(maturity)
+        now = datetime.now(timezone.utc)
         if profile:
+            profile.channel_id = channel.id
+            profile.profile_maturity = maturity
+            profile.analysis_confidence = confidence
+            profile.profile_mode = ProfileMode.analysis_assisted
             profile.sync_status = SyncStatus.analysis_complete
-            profile.last_analyzed_at = datetime.now(timezone.utc)
+            profile.last_analyzed_at = now
+            if niches:
+                profile.niches_inferred = niches
+                profile.niches_effective = niches[:3]
+                profile.niche_source = NicheSource.channel_primary
+            if detected_format:
+                profile.content_format = map_content_format(detected_format)
+            if detected_frequency:
+                profile.posting_frequency = detected_frequency
             if top_geos:
                 profile.audience_geo_weights = top_geos
                 profile.geo_source = GeoSource.youtube_analytics
             stats = dict(profile.channel_stats or {})
             stats.update({
+                "subscriber_count": int(channel.subscriber_count),
+                "video_count": int(channel.video_count),
+                "view_count": int(channel.view_count),
+                "channel_name": channel.name,
+                "handle": channel.handle,
+                "thumbnail_url": channel.thumbnail_url,
+                "engagement_rate": float(channel.engagement_rate) if channel.engagement_rate is not None else 4.5,
                 "median_reach_ratio": median_reach_ratio,
                 "dominant_traffic_source": dominant_traffic_source,
                 "speech_tempo_wpm": speech_tempo_wpm,

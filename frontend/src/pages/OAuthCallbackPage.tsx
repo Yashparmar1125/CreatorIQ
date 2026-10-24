@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Loader2 } from 'lucide-react';
 import { useAuthStore } from '../stores/useAuthStore';
+import { useDashboardStore } from '../stores/useDashboardStore';
 
 export const OAuthCallbackPage: React.FC = () => {
   const navigate = useNavigate();
@@ -17,6 +18,10 @@ export const OAuthCallbackPage: React.FC = () => {
     void (async () => {
       try {
         await applyHashTokens(hash);
+        void useDashboardStore.getState().fetchDashboard();
+        setTimeout(() => {
+          void useDashboardStore.getState().fetchDashboard();
+        }, 3500);
         window.history.replaceState(null, '', window.location.pathname);
         const returnUrl = sessionStorage.getItem('oauth_return_url');
         sessionStorage.removeItem('oauth_return_url');

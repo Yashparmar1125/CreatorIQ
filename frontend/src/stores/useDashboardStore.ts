@@ -111,7 +111,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
         };
       });
 
-      if (primary && (Number(primary.view_count) > 0 || Number(primary.subscriber_count) > 0)) {
+      if (primaryChannel?.is_oauth_connected) {
         const stats: DashboardStat[] = [
           {
             label: 'Total Views',

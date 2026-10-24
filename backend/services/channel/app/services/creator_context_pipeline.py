@@ -198,18 +198,22 @@ class CreatorContextPipeline:
             db.add(channel)
             await db.flush()
         else:
-            if channel_name and channel_name.strip():
-                channel.name = channel_name.strip()
-            if handle is not None:
-                channel.handle = handle.strip() if handle.strip() else None
-            if subscriber_count is not None:
-                channel.subscriber_count = int(subscriber_count)
-                if int(subscriber_count) > 0 and channel.view_count == 0:
-                    channel.view_count = int(subscriber_count) * 10
+            is_oauth_channel = bool(
+                channel.youtube_channel_id and not channel.youtube_channel_id.startswith("manual-")
+            )
+            if not is_oauth_channel:
+                if channel_name and channel_name.strip():
+                    channel.name = channel_name.strip()
+                if handle is not None:
+                    channel.handle = handle.strip() if handle.strip() else None
+                if subscriber_count is not None:
+                    channel.subscriber_count = int(subscriber_count)
+                    if int(subscriber_count) > 0 and channel.view_count == 0:
+                        channel.view_count = int(subscriber_count) * 10
             channel.content_formats = _content_format_enums(content_format)
             channel.tone = _tone_enum(tone)
             merged_niches = list(dict.fromkeys((channel.niches or []) + niche))[:5]
-            if niche:
+            if niche and not is_oauth_channel:
                 channel.niches = merged_niches
             await db.flush()
 

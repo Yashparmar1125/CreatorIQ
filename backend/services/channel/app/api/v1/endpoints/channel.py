@@ -64,6 +64,14 @@ class DeepSyncRequest(BaseModel):
     niches: list[str] = []
     top_geos: dict[str, float] = {}
     outliers: list[dict[str, Any]] = []
+    detected_format: str | None = None
+    detected_frequency: str | None = None
+    subscriber_count: int | None = None
+    video_count: int | None = None
+    view_count: int | None = None
+    channel_name: str | None = None
+    handle: str | None = None
+    thumbnail_url: str | None = None
 
 
 @router.get("/health")
@@ -229,6 +237,14 @@ async def save_deep_sync(
         niches=payload.niches,
         top_geos=payload.top_geos,
         outliers=payload.outliers,
+        detected_format=payload.detected_format,
+        detected_frequency=payload.detected_frequency,
+        subscriber_count=payload.subscriber_count,
+        video_count=payload.video_count,
+        view_count=payload.view_count,
+        channel_name=payload.channel_name,
+        handle=payload.handle,
+        thumbnail_url=payload.thumbnail_url,
     )
 
 

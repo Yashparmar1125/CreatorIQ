@@ -55,13 +55,20 @@ async def refresh_token(payload: TokenRefresh, db: AsyncSession = Depends(get_db
 @router.get("/auth/google/oauth-url")
 @router.get("/auth/google/url")
 async def google_oauth_url(
+    request: Request,
     credentials: HTTPAuthorizationCredentials | None = Depends(HTTPBearer(auto_error=False)),
 ) -> dict:
+    import uuid
     user_id = None
-    if credentials:
+    header_uid = request.headers.get("x-user-id")
+    if header_uid:
+        try:
+            user_id = uuid.UUID(header_uid)
+        except Exception:
+            pass
+    if not user_id and credentials:
         try:
             from app.core.jwt_deps import decode_access_token
-            import uuid
             payload = decode_access_token(credentials.credentials)
             user_id = uuid.UUID(payload["sub"])
         except Exception:

@@ -12,6 +12,7 @@ from jose import jwt as jose_jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.core.db import SessionLocal
 from app.core.security import create_access_token, generate_refresh_token, hash_password, hash_refresh_token, verify_password, encrypt_token, decrypt_token
 from app.models.auth_models import OAuthProvider, PlanTier, User
 from app.repositories.auth_repository import AuthRepository
@@ -183,7 +184,9 @@ class AuthService:
         if linked_user_id:
             user = await self.repo.get_user_by_id(db, UUID(linked_user_id))
             if user:
-                user.google_sub = sub
+                existing_sub_owner = await self.repo.get_user_by_google_sub(db, sub)
+                if not existing_sub_owner or existing_sub_owner.id == user.id:
+                    user.google_sub = sub
                 if picture and not user.avatar_url:
                     user.avatar_url = picture
                 await db.flush()
@@ -225,12 +228,14 @@ class AuthService:
         user.onboarding_completed = True
         await db.flush()
 
-        # Fast Sync: Fetch minimal channel metadata (Core Info)
+        # Fast Sync: Fetch channel metadata & topics immediately so dashboard reflects connected channel
         channel_core = await self._sync_essential(user.id, access_google)
-        
-        # Deep Sync: Fetch historical data & analytics in background
+        if channel_core and channel_core.get("niches"):
+            user.niche = channel_core["niches"][:3]
+            await db.flush()
+
+        # Deep Sync: Fetch historical data, outliers, format & analytics in background (and force-refresh trend feed)
         background_tasks.add_task(self._sync_deep, user.id, access_google)
-        background_tasks.add_task(self._trigger_first_feed, user.id)
 
         tokens = await self._issue_tokens(db, user, ip_address=ip_address, user_agent=user_agent)
         await db.commit()
@@ -387,6 +392,39 @@ class AuthService:
                 pass
         return {"data": {"tokens": data}, "meta": {"request_id": "local-dev"}}
 
+    def _infer_niches_from_metadata(
+        self,
+        topics: list[str],
+        channel_title: str,
+        channel_desc: str,
+        video_titles: list[str],
+    ) -> list[str]:
+        """Infer creator niches from YouTube topicCategories + channel & video metadata."""
+        mapped = self._map_youtube_topics(topics)
+        corpus = " ".join([channel_title or "", channel_desc or ""] + (video_titles or [])).lower()
+        keyword_map = {
+            "Tech": ["tech", "coding", "programming", "software", "ai", "developer", "python", "react", "javascript", "gadget", "smartphone", "computer", "app", "saas", "linux", "cloud"],
+            "Gaming": ["gaming", "gameplay", "minecraft", "valorant", "gta", "roblox", "fortnite", "esports", "ps5", "xbox", "steam", "gamer"],
+            "Finance": ["finance", "investing", "stock", "crypto", "trading", "money", "wealth", "business", "startup", "entrepreneur", "economy"],
+            "Fitness": ["fitness", "workout", "gym", "muscle", "diet", "health", "weight loss", "calisthenics", "yoga", "training"],
+            "Cooking": ["cooking", "recipe", "food", "kitchen", "baking", "chef", "meal", "street food"],
+            "Education": ["tutorial", "explained", "course", "lecture", "study", "science", "math", "history", "learn", "education", "exam"],
+            "Beauty": ["makeup", "skincare", "beauty", "cosmetic", "haircare", "glow"],
+            "Fashion": ["fashion", "outfit", "style", "clothing", "streetwear", "wardrobe"],
+            "Music": ["music", "song", "guitar", "piano", "beats", "cover", "official audio", "rap", "singer"],
+            "Travel": ["travel", "trip", "tour", "country", "flight", "hotel", "adventure", "explore"],
+            "Vlog": ["vlog", "day in my life", "lifestyle", "daily", "storytime", "routine"],
+        }
+        scored: list[tuple[int, str]] = []
+        for niche_name, kw_list in keyword_map.items():
+            hits = sum(1 for kw in kw_list if kw in corpus)
+            if hits > 0:
+                scored.append((hits, niche_name))
+        scored.sort(key=lambda x: x[0], reverse=True)
+        inferred_from_text = [n for _, n in scored]
+        combined = list(dict.fromkeys(mapped + inferred_from_text))[:3]
+        return combined
+
     async def _sync_essential(self, user_id: UUID, access_token: str) -> dict | None:
         """Fast sync for core metadata needed for Dashboard presence."""
         logger.info(f"Starting essential sync for user {user_id}")
@@ -394,7 +432,7 @@ class AuthService:
             async with httpx.AsyncClient() as client:
                 yt_res = await client.get(
                     "https://www.googleapis.com/youtube/v3/channels",
-                    params={"part": "snippet,statistics,contentDetails", "mine": "true"},
+                    params={"part": "snippet,statistics,contentDetails,topicDetails", "mine": "true"},
                     headers={"Authorization": f"Bearer {access_token}"},
                 )
                 if yt_res.status_code != 200:
@@ -409,6 +447,13 @@ class AuthService:
                 channel_item = items[0]
                 snippet = channel_item.get("snippet", {})
                 stats = channel_item.get("statistics", {})
+                topics = channel_item.get("topicDetails", {}).get("topicCategories", [])
+                inferred_niches = self._infer_niches_from_metadata(
+                    topics,
+                    snippet.get("title", ""),
+                    snippet.get("description", ""),
+                    [],
+                )
 
                 channel_payload = {
                     "user_id": str(user_id),
@@ -419,7 +464,8 @@ class AuthService:
                     "subscriber_count": int(stats.get("subscriberCount", 0)),
                     "video_count": int(stats.get("videoCount", 0)),
                     "view_count": int(stats.get("viewCount", 0)),
-                    "sync_status": "essential_complete"
+                    "niches": inferred_niches,
+                    "sync_status": "essential_complete",
                 }
 
                 sync_res = await client.post(
@@ -429,7 +475,7 @@ class AuthService:
                 )
                 if sync_res.status_code >= 400:
                     logger.error(f"Essential Sync Push Failed: {sync_res.status_code} - {sync_res.text}")
-                
+
                 return channel_payload
         except Exception as e:
             logger.exception(f"Error during essential channel sync: {str(e)}")
@@ -451,7 +497,7 @@ class AuthService:
         return hours * 3600 + minutes * 60 + seconds
 
     async def _sync_deep(self, user_id: UUID, access_token: str) -> None:
-        """Comprehensive 3-unit YouTube API sync: reach baseline, outliers, traffic and cadence."""
+        """Comprehensive 3-unit YouTube API sync: reach baseline, outliers, traffic, format, cadence & feed refresh."""
         logger.info(f"Starting deep sync for user {user_id}")
         try:
             import statistics
@@ -472,10 +518,13 @@ class AuthService:
                     return
 
                 channel_item = items[0]
+                snippet = channel_item.get("snippet", {})
                 topics = channel_item.get("topicDetails", {}).get("topicCategories", [])
                 uploads_playlist_id = channel_item.get("contentDetails", {}).get("relatedPlaylists", {}).get("uploads")
                 stats = channel_item.get("statistics", {})
-                subscriber_count = max(1, int(stats.get("subscriberCount", 0)))
+                raw_subscriber_count = int(stats.get("subscriberCount", 0))
+                subscriber_denom = max(1, raw_subscriber_count)
+                video_count = int(stats.get("videoCount", 0))
                 view_count = int(stats.get("viewCount", 0))
 
                 analyzed_videos = []
@@ -485,6 +534,8 @@ class AuthService:
                 speech_tempo_wpm = 155
                 median_retention_30s = 55.0
                 outliers = []
+                detected_format: str | None = None
+                detected_frequency: str | None = None
 
                 if uploads_playlist_id:
                     # 2. playlistItems.list(playlistId=uploads, maxResults=50) (1 API unit)
@@ -515,6 +566,9 @@ class AuthService:
                                 total_eng = 0
                                 reach_ratios = []
                                 search_intent_count = 0
+                                shorts_count = 0
+                                long_count = 0
+                                pub_dates: list[datetime] = []
                                 search_keywords = {"how to", "tutorial", "guide", "fix", "step by step", "explained", "vs", "tips", "review", "learn"}
 
                                 for v in v_items:
@@ -525,6 +579,12 @@ class AuthService:
 
                                     title = v_snip.get("title", "")
                                     published_at = v_snip.get("publishedAt")
+                                    if published_at:
+                                        try:
+                                            pub_dates.append(datetime.fromisoformat(published_at.replace("Z", "+00:00")))
+                                        except Exception:
+                                            pass
+
                                     vc = int(v_st.get("viewCount", 0))
                                     lc = int(v_st.get("likeCount", 0))
                                     cc = int(v_st.get("commentCount", 0))
@@ -532,8 +592,12 @@ class AuthService:
                                     duration_iso = v_cd.get("duration", "")
                                     duration_secs = self._parse_iso8601_duration(duration_iso)
                                     fmt = "shorts" if duration_secs > 0 and duration_secs <= 60 else "long_form"
+                                    if fmt == "shorts":
+                                        shorts_count += 1
+                                    else:
+                                        long_count += 1
 
-                                    r_v = round(vc / subscriber_count, 3)
+                                    r_v = round(vc / subscriber_denom, 3)
                                     reach_ratios.append(r_v)
                                     total_views += vc
                                     total_eng += (lc + cc)
@@ -554,14 +618,40 @@ class AuthService:
                                 if total_views > 0:
                                     engagement_rate = round((total_eng / total_views) * 100, 2)
 
+                                total_fmt = shorts_count + long_count
+                                if total_fmt > 0:
+                                    if shorts_count / total_fmt >= 0.70:
+                                        detected_format = "shorts"
+                                    elif long_count / total_fmt >= 0.70:
+                                        detected_format = "long_form"
+                                    else:
+                                        detected_format = "both"
+
+                                if len(pub_dates) >= 2:
+                                    pub_dates.sort(reverse=True)
+                                    gaps = [
+                                        max(0.1, (pub_dates[i] - pub_dates[i + 1]).total_seconds() / 86400.0)
+                                        for i in range(len(pub_dates) - 1)
+                                    ]
+                                    med_gap = statistics.median(gaps)
+                                    if med_gap <= 2.5:
+                                        detected_frequency = "daily"
+                                    elif med_gap <= 9.0:
+                                        detected_frequency = "weekly"
+                                    elif med_gap <= 18.0:
+                                        detected_frequency = "biweekly"
+                                    else:
+                                        detected_frequency = "monthly"
+
                                 if reach_ratios:
                                     median_reach_ratio = round(float(statistics.median(reach_ratios)), 3)
                                     outlier_threshold = 1.5 * median_reach_ratio
                                     for v in analyzed_videos:
                                         v["is_outlier"] = (v["reach_ratio"] >= outlier_threshold)
+                                    # Always store top 5 performing videos by reach_ratio so Copilot knows the creator's real videos
                                     outliers = sorted(
-                                        [v for v in analyzed_videos if v.get("is_outlier")],
-                                        key=lambda x: x["reach_ratio"],
+                                        analyzed_videos,
+                                        key=lambda x: (x.get("is_outlier", False), x["reach_ratio"]),
                                         reverse=True,
                                     )[:5]
 
@@ -577,9 +667,29 @@ class AuthService:
                 if summary and summary.get("views", 0) > 0:
                     median_retention_30s = round(min(75.0, max(42.0, 50.0 + (engagement_rate * 1.5))), 1)
 
-                mapped_niches = self._map_youtube_topics(topics)
+                mapped_niches = self._infer_niches_from_metadata(
+                    topics,
+                    snippet.get("title", ""),
+                    snippet.get("description", ""),
+                    [v["title"] for v in analyzed_videos],
+                )
 
-                # 5. Push deep sync intelligence to channel service
+                # Update user table in Auth DB so /auth/me reflects connected YouTube channel's niche & format
+                try:
+                    async with SessionLocal() as bg_db:
+                        bg_user = await self.repo.get_user_by_id(bg_db, user_id)
+                        if bg_user:
+                            if mapped_niches:
+                                bg_user.niche = mapped_niches[:3]
+                            if detected_format:
+                                bg_user.primary_format = detected_format
+                            if detected_frequency:
+                                bg_user.posting_frequency = detected_frequency
+                            await bg_db.commit()
+                except Exception as db_err:
+                    logger.warning("Failed to update user onboarding fields after deep sync: %s", db_err)
+
+                # 5. Push deep sync intelligence to channel service (overwriting manual onboarding placeholders)
                 deep_sync_payload = {
                     "median_reach_ratio": median_reach_ratio,
                     "dominant_traffic_source": dominant_traffic,
@@ -590,6 +700,14 @@ class AuthService:
                     "niches": mapped_niches,
                     "top_geos": geo_weights or {"US": 0.45, "IN": 0.30, "UK": 0.15},
                     "outliers": outliers,
+                    "detected_format": detected_format,
+                    "detected_frequency": detected_frequency,
+                    "subscriber_count": raw_subscriber_count,
+                    "video_count": video_count,
+                    "view_count": view_count,
+                    "channel_name": snippet.get("title", "Unknown Channel"),
+                    "handle": snippet.get("customUrl"),
+                    "thumbnail_url": snippet.get("thumbnails", {}).get("high", {}).get("url"),
                 }
 
                 sync_res = await client.post(
@@ -601,6 +719,9 @@ class AuthService:
                     logger.warning("Deep sync push to channel service failed: %s %s", sync_res.status_code, sync_res.text)
                 else:
                     logger.info("Deep sync intelligence stored successfully for user %s", user_id)
+
+                # 6. Force-regenerate the personalized Top 5 trend feed so it matches the newly connected YouTube channel
+                await self._trigger_first_feed(user_id, force=True)
 
         except Exception as e:
             logger.exception(f"Error during deep channel sync: {str(e)}")
@@ -633,12 +754,12 @@ class AuthService:
                 detected.add(mapping[topic_slug])
         return list(detected)
 
-    async def _trigger_first_feed(self, user_id: UUID) -> None:
+    async def _trigger_first_feed(self, user_id: UUID, *, force: bool = False) -> None:
         try:
-            async with httpx.AsyncClient(timeout=15.0) as client:
+            async with httpx.AsyncClient(timeout=20.0) as client:
                 await client.post(
                     f"{settings.trend_service_url}/internal/trends/feeds/generate-first",
-                    json={"user_id": str(user_id)},
+                    json={"user_id": str(user_id), "force": force},
                     headers={"X-Internal-Service-Token": settings.internal_service_token},
                 )
         except Exception as e:

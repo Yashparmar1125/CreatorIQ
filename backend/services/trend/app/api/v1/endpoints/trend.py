@@ -34,6 +34,7 @@ class SaveTrendBody(BaseModel):
 
 class GenerateFirstFeedBody(BaseModel):
     user_id: str
+    force: bool = False
 
 
 @router.get("/health")
@@ -140,7 +141,7 @@ async def generate_first_feed(
     _: None = Depends(require_internal_token),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    return await service.generate_first_feed(db, uuid.UUID(body.user_id))
+    return await service.generate_first_feed(db, uuid.UUID(body.user_id), force=body.force)
 
 
 @router.post("/internal/trends/collect")

@@ -51,48 +51,73 @@ class ChannelRepository:
         engagement_rate: float | None,
         niches: list[str],
     ) -> Channel:
-        res = await db.execute(
+        # 1. If any OTHER user row currently holds this youtube_channel_id, detach it so unique constraint won't fail
+        other_res = await db.execute(
             select(Channel).where(
-                Channel.user_id == user_id, 
-                Channel.youtube_channel_id == youtube_channel_id
+                Channel.youtube_channel_id == youtube_channel_id,
+                Channel.user_id != user_id,
             )
         )
-        existing = res.scalar_one_or_none()
+        for other_row in other_res.scalars().all():
+            other_row.youtube_channel_id = f"manual-{other_row.user_id}-{str(other_row.id)[:8]}"
+        await db.flush()
 
-        if existing:
-            existing.name = name
-            existing.handle = handle
-            existing.thumbnail_url = thumbnail_url
-            existing.subscriber_count = subscriber_count
-            existing.video_count = video_count
-            existing.view_count = view_count
-            existing.engagement_rate = engagement_rate
-            existing.niches = list(set(existing.niches).union(niches))
-            existing.deleted_at = None
-            await db.flush()
-            return existing
-        else:
-            # Check if this is the first channel for the user
-            count_res = await db.execute(select(func.count()).select_from(Channel).where(Channel.user_id == user_id))
-            has_channels = count_res.scalar_one() > 0
+        # 2. Fetch all channels for this user (including manual onboarding placeholders)
+        user_channels_res = await db.execute(
+            select(Channel).where(Channel.user_id == user_id).order_by(Channel.is_primary.desc(), Channel.created_at.asc())
+        )
+        user_channels = list(user_channels_res.scalars().all())
 
-            channel = Channel(
-                user_id=user_id,
-                youtube_channel_id=youtube_channel_id,
-                name=name,
-                handle=handle,
-                thumbnail_url=thumbnail_url,
-                subscriber_count=subscriber_count,
-                video_count=video_count,
-                view_count=view_count,
-                engagement_rate=engagement_rate,
-                is_primary=not has_channels,
-                niches=niches,
-                content_formats=[],
-            )
-            db.add(channel)
+        # Prefer row already matching youtube_channel_id, otherwise upgrade the primary/manual row in-place
+        target: Channel | None = None
+        for ch in user_channels:
+            if ch.youtube_channel_id == youtube_channel_id:
+                target = ch
+                break
+        if target is None and user_channels:
+            target = user_channels[0]
+
+        if target:
+            # Remove any duplicate/leftover manual rows for this user
+            for ch in user_channels:
+                if ch.id != target.id and ch.youtube_channel_id.startswith("manual-"):
+                    await db.delete(ch)
+                elif ch.id != target.id:
+                    ch.is_primary = False
+
+            target.youtube_channel_id = youtube_channel_id
+            target.name = name
+            target.handle = handle
+            target.thumbnail_url = thumbnail_url
+            target.subscriber_count = subscriber_count
+            target.video_count = video_count
+            target.view_count = view_count
+            if engagement_rate is not None:
+                target.engagement_rate = engagement_rate
+            if niches:
+                target.niches = niches[:5]
+            target.is_primary = True
+            target.deleted_at = None
             await db.flush()
-            return channel
+            return target
+
+        channel = Channel(
+            user_id=user_id,
+            youtube_channel_id=youtube_channel_id,
+            name=name,
+            handle=handle,
+            thumbnail_url=thumbnail_url,
+            subscriber_count=subscriber_count,
+            video_count=video_count,
+            view_count=view_count,
+            engagement_rate=engagement_rate,
+            is_primary=True,
+            niches=niches[:5] if niches else [],
+            content_formats=[],
+        )
+        db.add(channel)
+        await db.flush()
+        return channel
 
     async def get_primary_channel_context(self, db: AsyncSession, user_id: uuid.UUID) -> Channel | None:
         res = await db.execute(
