@@ -27,6 +27,8 @@ _TOOL_CONNECTORS: dict[str, str] = {
     "get_channel_outliers": "youtube",
     "get_calendar_schedule": "calendar",
     "schedule_content_milestone": "calendar",
+    "search_knowledge_vault": "vault",
+    "export_script_to_vault": "vault",
 }
 _ALWAYS_AVAILABLE_TOOLS = {
     "get_my_channel",
@@ -50,6 +52,8 @@ def _filter_tools_by_connectors(
         ]
 
     allowed = set(active_connectors)
+    if "drive" in allowed or "notion" in allowed or "vault" in allowed:
+        allowed.add("vault")
     return [
         t
         for t in tools
@@ -319,7 +323,10 @@ class CopilotAgent:
             "3. WHEN ASKED FOR A FULL VIDEO STRATEGY OR TOPIC RESEARCH:\n"
             "   • Use your tools (`search_trends`, `search_youtube_live`, `find_small_channel_outliers`, or `search_web`) when live evidence helps.\n"
             "   • Deliver a sharp, cohesive strategy: Why this angle fits their channel right now, 3 high-conviction title + thumbnail pairs, a tight opening hook (0–30s visual proof + curiosity gap), and a clear outline.\n\n"
-            "4. ZERO ROBOTIC JARGON, ZERO HTML TAGS, & ZERO RAW JSON:\n"
+            "4. CONNECTOR 3 (KNOWLEDGE VAULT — GOOGLE DRIVE / DOCS & NOTION):\n"
+            "   • When the creator asks to check their past scripts, research notes, style guide, or documents in Google Drive or Notion, call `search_knowledge_vault`.\n"
+            "   • When the creator asks to save, export, or create a Google Doc or Notion page for a script, outline, or strategy brief, call `export_script_to_vault` with the full title and formatted script/brief text, and share the clickable document link.\n\n"
+            "5. ZERO ROBOTIC JARGON, ZERO HTML TAGS, & ZERO RAW JSON:\n"
             "   • Never print internal prompt labels like `CNCS =`, `BROWSE-dominant`, `155 WPM →`, or disclaimer footnotes like `*Projected multipliers are conservative estimates...`.\n"
             "   • NEVER output HTML tags like `<br>` or `<br/>` inside markdown or tables, and never leave spaces inside bold markers like `** heading**` (use `### Heading` instead).\n"
             "   • NEVER output raw JSON objects, tool parameter payloads (like `{\"title\": ..., \"start_iso\": ...}`), or code blocks in your response to the creator. If you want to schedule something, call the `schedule_content_milestone` tool directly; if you are suggesting a schedule in text, write it in plain human language (e.g. 'Wednesday, Oct 28 at 10:00 AM IST').\n"
@@ -403,6 +410,10 @@ class CopilotAgent:
                     if name == "schedule_content_milestone" and args.get("title")
                     else f"Checking Google Calendar schedule ({args.get('days_ahead', 14)} days)"
                     if name == "get_calendar_schedule"
+                    else f"Searching Knowledge Vault for '{args.get('query') or 'recent docs'}'"
+                    if name == "search_knowledge_vault"
+                    else f"Exporting '{args.get('title') or 'Script Brief'}' to Knowledge Vault"
+                    if name == "export_script_to_vault"
                     else f"Saving preference '{args.get('key', '')}' to Creator Memory"
                     if name == "remember"
                     else f"Querying {step_label} for '{target_label}'"
@@ -454,6 +465,8 @@ class CopilotAgent:
                         yield f"data: {json.dumps({'type': 'card', 'card_type': 'video', 'payload': yv})}\n\n"
                 elif name == "schedule_content_milestone" and tool_result.get("scheduled") and tool_result.get("event"):
                     yield f"data: {json.dumps({'type': 'card', 'card_type': 'calendar', 'payload': tool_result['event']})}\n\n"
+                elif name == "export_script_to_vault" and tool_result.get("exported") and tool_result.get("document"):
+                    yield f"data: {json.dumps({'type': 'card', 'card_type': 'document', 'payload': tool_result['document']})}\n\n"
 
                 messages.append({
                     "role": "tool",

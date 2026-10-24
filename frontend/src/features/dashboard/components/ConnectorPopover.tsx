@@ -26,8 +26,15 @@ export const ConnectorPopover: React.FC<ConnectorPopoverProps> = ({
   const popoverRef = useRef<HTMLDivElement>(null);
   const { connectedConnectors, connectConnector, disconnectConnector } = useStrategyStore();
   const isCalendarConnected = useDashboardStore((s) => s.isCalendarConnected);
+  const isDriveConnected = useDashboardStore((s) => s.isDriveConnected);
+  const isNotionConnected = useDashboardStore((s) => s.isNotionConnected);
+  const notionWorkspaceName = useDashboardStore((s) => s.notionWorkspaceName);
   const fetchDashboard = useDashboardStore((s) => s.fetchDashboard);
+
   const [busyConnector, setBusyConnector] = useState<string | null>(null);
+  const [showNotionInput, setShowNotionInput] = useState(false);
+  const [notionToken, setNotionToken] = useState('');
+  const [notionError, setNotionError] = useState<string | null>(null);
 
   const handleConnectCalendar = async () => {
     try {
@@ -58,8 +65,75 @@ export const ConnectorPopover: React.FC<ConnectorPopoverProps> = ({
     }
   };
 
+  const handleConnectDrive = async () => {
+    try {
+      setBusyConnector('drive');
+      sessionStorage.setItem('oauth_return_url', window.location.pathname);
+      const { data } = await api.get('/auth/drive/oauth-url');
+      const url = data?.data?.url;
+      if (url) {
+        window.location.href = url;
+      } else {
+        setBusyConnector(null);
+      }
+    } catch {
+      setBusyConnector(null);
+    }
+  };
+
+  const handleDisconnectDrive = async () => {
+    try {
+      setBusyConnector('drive');
+      await api.post('/auth/drive/disconnect');
+      disconnectConnector('drive');
+      await fetchDashboard();
+    } catch {
+      // ignore
+    } finally {
+      setBusyConnector(null);
+    }
+  };
+
+  const handleSaveNotionToken = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!notionToken.trim()) return;
+    try {
+      setBusyConnector('notion');
+      setNotionError(null);
+      await api.post('/auth/notion/connect', { token: notionToken.trim() });
+      connectConnector('notion');
+      setNotionToken('');
+      setShowNotionInput(false);
+      await fetchDashboard();
+    } catch (err: any) {
+      setNotionError(
+        err?.response?.data?.detail?.message ||
+          'Invalid Notion integration token. Check your token and try again.'
+      );
+    } finally {
+      setBusyConnector(null);
+    }
+  };
+
+  const handleDisconnectNotion = async () => {
+    try {
+      setBusyConnector('notion');
+      await api.post('/auth/notion/disconnect');
+      disconnectConnector('notion');
+      await fetchDashboard();
+    } catch {
+      // ignore
+    } finally {
+      setBusyConnector(null);
+    }
+  };
+
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      setShowNotionInput(false);
+      setNotionError(null);
+      return;
+    }
 
     const handleClickOutside = (e: MouseEvent) => {
       if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
@@ -85,7 +159,8 @@ export const ConnectorPopover: React.FC<ConnectorPopoverProps> = ({
   const connectedCount =
     (isYouTubeSynced ? 1 : 0) +
     (isCalendarConnected ? 1 : 0) +
-    connectedConnectors.filter((c) => c !== 'youtube' && c !== 'calendar' && c !== 'web').length;
+    (isDriveConnected ? 1 : 0) +
+    (isNotionConnected ? 1 : 0);
 
   return (
     <AnimatePresence>
@@ -131,81 +206,128 @@ export const ConnectorPopover: React.FC<ConnectorPopoverProps> = ({
               const Icon = c.icon;
               const isYouTube = c.id === 'youtube';
               const isCalendar = c.id === 'calendar';
+              const isDrive = c.id === 'drive';
+              const isNotion = c.id === 'notion';
               const isConnected = isYouTube
                 ? isYouTubeSynced
                 : isCalendar
                   ? isCalendarConnected
-                  : connectedConnectors.includes(c.id);
+                  : isDrive
+                    ? isDriveConnected
+                    : isNotion
+                      ? isNotionConnected
+                      : connectedConnectors.includes(c.id);
               const isBusy = busyConnector === c.id;
 
               return (
                 <div
                   key={c.id}
-                  className={`group relative flex items-center justify-between gap-3 rounded-xl border p-2.5 transition-all ${
+                  className={`group relative rounded-xl border p-2.5 transition-all ${
                     isConnected
                       ? 'border-[#E5E0E8] bg-[#FBFAF8]'
                       : 'border-[#EFEBF2] bg-white hover:border-[#E5E0E8] hover:bg-[#FBFAF8]'
                   }`}
                 >
-                  <div className="flex min-w-0 flex-1 items-center gap-2.5">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#E5E0E8] bg-white p-1.5 shadow-[0_1px_2px_rgba(23,23,23,0.04)]">
-                      <Icon className="h-5 w-5 object-contain" />
-                    </div>
-
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-bold text-[#171717]">
-                          {c.label}
-                        </span>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#E5E0E8] bg-white p-1.5 shadow-[0_1px_2px_rgba(23,23,23,0.04)]">
+                        <Icon className="h-5 w-5 object-contain" />
                       </div>
-                      <p className="mt-0.5 truncate text-[11px] text-[#77717F]">
-                        {isYouTube && isConnected && (primaryChannel?.handle || primaryChannel?.name)
-                          ? `${primaryChannel.name}${primaryChannel.handle ? ` (${primaryChannel.handle})` : ''}`
-                          : c.description}
-                      </p>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-bold text-[#171717]">
+                            {c.label}
+                          </span>
+                        </div>
+                        <p className="mt-0.5 truncate text-[11px] text-[#77717F]">
+                          {isYouTube && isConnected && (primaryChannel?.handle || primaryChannel?.name)
+                            ? `${primaryChannel.name}${primaryChannel.handle ? ` (${primaryChannel.handle})` : ''}`
+                            : isNotion && isConnected && notionWorkspaceName
+                              ? notionWorkspaceName
+                              : c.description}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Right Action: Connect vs Disconnect */}
+                    <div className="flex shrink-0 items-center gap-2">
+                      {isConnected ? (
+                        <button
+                          type="button"
+                          disabled={isBusy}
+                          onClick={() => {
+                            if (isYouTube && onDisconnectYouTube) {
+                              onDisconnectYouTube();
+                            } else if (isCalendar) {
+                              void handleDisconnectCalendar();
+                            } else if (isDrive) {
+                              void handleDisconnectDrive();
+                            } else if (isNotion) {
+                              void handleDisconnectNotion();
+                            } else {
+                              disconnectConnector(c.id);
+                            }
+                          }}
+                          className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[#E5E0E8] bg-white px-2.5 py-1 text-[11px] font-semibold text-[#625D68] transition-colors hover:border-[#B42332]/30 hover:bg-[#FFF0F3] hover:text-[#B42332] disabled:opacity-50"
+                        >
+                          {isBusy && <Loader2 className="h-3 w-3 animate-spin" />}
+                          Disconnect
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={isBusy}
+                          onClick={() => {
+                            if (isYouTube) {
+                              onConnectYouTube();
+                            } else if (isCalendar) {
+                              void handleConnectCalendar();
+                            } else if (isDrive) {
+                              void handleConnectDrive();
+                            } else if (isNotion) {
+                              setShowNotionInput((v) => !v);
+                              setNotionError(null);
+                            } else {
+                              connectConnector(c.id);
+                            }
+                          }}
+                          className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-[#FF98C1] px-3 py-1 text-xs font-semibold text-[#171717] transition-all hover:bg-[#FF80B0] disabled:opacity-50"
+                        >
+                          {isBusy && <Loader2 className="h-3 w-3 animate-spin" />}
+                          Connect
+                        </button>
+                      )}
                     </div>
                   </div>
 
-                  {/* Right Action: Connect vs Disconnect */}
-                  <div className="flex shrink-0 items-center gap-2">
-                    {isConnected ? (
-                      <button
-                        type="button"
-                        disabled={isBusy}
-                        onClick={() => {
-                          if (isYouTube && onDisconnectYouTube) {
-                            onDisconnectYouTube();
-                          } else if (isCalendar) {
-                            void handleDisconnectCalendar();
-                          } else {
-                            disconnectConnector(c.id);
-                          }
-                        }}
-                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[#E5E0E8] bg-white px-2.5 py-1 text-[11px] font-semibold text-[#625D68] transition-colors hover:border-[#B42332]/30 hover:bg-[#FFF0F3] hover:text-[#B42332] disabled:opacity-50"
-                      >
-                        {isBusy && <Loader2 className="h-3 w-3 animate-spin" />}
-                        Disconnect
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        disabled={isBusy}
-                        onClick={() => {
-                          if (isYouTube) {
-                            onConnectYouTube();
-                          } else if (isCalendar) {
-                            void handleConnectCalendar();
-                          } else {
-                            connectConnector(c.id);
-                          }
-                        }}
-                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-[#FF98C1] px-3 py-1 text-xs font-semibold text-[#171717] transition-all hover:bg-[#FF80B0] disabled:opacity-50"
-                      >
-                        {isBusy && <Loader2 className="h-3 w-3 animate-spin" />}
-                        Connect
-                      </button>
-                    )}
-                  </div>
+                  {/* Inline Notion Integration Token Input */}
+                  {isNotion && showNotionInput && !isConnected && (
+                    <form onSubmit={handleSaveNotionToken} className="mt-2.5 pt-2.5 border-t border-[#EFEBF2] space-y-2">
+                      <label className="block text-[11px] font-medium text-[#625D68]">
+                        Paste your Notion Internal Integration Secret (`ntn_...` or `secret_...`)
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="password"
+                          value={notionToken}
+                          onChange={(e) => setNotionToken(e.target.value)}
+                          placeholder="ntn_..."
+                          className="flex-1 rounded-lg border border-[#E5E0E8] bg-white px-2.5 py-1.5 text-xs text-[#171717] placeholder-[#9B94A5] focus:border-[#7C5CD6] focus:outline-none"
+                        />
+                        <button
+                          type="submit"
+                          disabled={isBusy || !notionToken.trim()}
+                          className="rounded-lg bg-[#171717] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#2C2834] disabled:opacity-45 cursor-pointer"
+                        >
+                          Save
+                        </button>
+                      </div>
+                      {notionError && (
+                        <p className="text-[11px] text-[#B42332]">{notionError}</p>
+                      )}
+                    </form>
+                  )}
                 </div>
               );
             })}

@@ -42,6 +42,9 @@ interface DashboardState {
   insights: DashboardInsight[];
   primaryChannel: ConnectedChannel | null;
   isCalendarConnected: boolean;
+  isDriveConnected: boolean;
+  isNotionConnected: boolean;
+  notionWorkspaceName: string | null;
   isLoading: boolean;
   error: string | null;
   fetchDashboard: () => Promise<void>;
@@ -52,16 +55,21 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   insights: [],
   primaryChannel: null,
   isCalendarConnected: false,
+  isDriveConnected: false,
+  isNotionConnected: false,
+  notionWorkspaceName: null,
   isLoading: false,
   error: null,
   fetchDashboard: async () => {
     set({ isLoading: true, error: null });
     try {
-      const [channelsRes, profileRes, trendsRes, calendarRes] = await Promise.all([
+      const [channelsRes, profileRes, trendsRes, calendarRes, driveRes, notionRes] = await Promise.all([
         api.get('/channels').catch(() => null),
         api.get('/channels/profile').catch(() => null),
         api.get('/trends').catch(() => null),
         api.get('/auth/calendar/status').catch(() => null),
+        api.get('/auth/drive/status').catch(() => null),
+        api.get('/auth/notion/status').catch(() => null),
       ]);
 
       const channels = channelsRes?.data?.data?.channels || [];
@@ -69,6 +77,9 @@ export const useDashboardStore = create<DashboardState>((set) => ({
       const profile = profileRes?.data?.data;
       const trends: any[] = trendsRes?.data?.data?.trends || [];
       const isCalendarConnected = Boolean(calendarRes?.data?.data?.connected);
+      const isDriveConnected = Boolean(driveRes?.data?.data?.connected);
+      const isNotionConnected = Boolean(notionRes?.data?.data?.connected);
+      const notionWorkspaceName = notionRes?.data?.data?.workspace_name || null;
 
       const primaryChannel: ConnectedChannel | null = primary
         ? {
@@ -104,6 +115,18 @@ export const useDashboardStore = create<DashboardState>((set) => ({
         useStrategyStore.getState().connectConnector('calendar');
       } else {
         useStrategyStore.getState().disconnectConnector('calendar');
+      }
+
+      if (isDriveConnected) {
+        useStrategyStore.getState().connectConnector('drive');
+      } else {
+        useStrategyStore.getState().disconnectConnector('drive');
+      }
+
+      if (isNotionConnected) {
+        useStrategyStore.getState().connectConnector('notion');
+      } else {
+        useStrategyStore.getState().disconnectConnector('notion');
       }
 
       // Build dynamic AI Priority Insights from top predicted trends
@@ -148,7 +171,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
             icon: 'trending',
           },
         ];
-        set({ stats, insights: dynamicInsights, primaryChannel, isCalendarConnected, isLoading: false });
+        set({ stats, insights: dynamicInsights, primaryChannel, isCalendarConnected, isDriveConnected, isNotionConnected, notionWorkspaceName, isLoading: false });
       } else {
         // Derive live intelligence stats from CreatorProfile + live Trends feed
         const effectiveNiches: string[] =
@@ -187,7 +210,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
             icon: 'users',
           },
         ];
-        set({ stats, insights: dynamicInsights, primaryChannel, isCalendarConnected, isLoading: false });
+        set({ stats, insights: dynamicInsights, primaryChannel, isCalendarConnected, isDriveConnected, isNotionConnected, notionWorkspaceName, isLoading: false });
       }
     } catch (err: any) {
       console.error('Dashboard fetch failed:', err);

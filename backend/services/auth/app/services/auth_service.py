@@ -19,6 +19,8 @@ from app.repositories.auth_repository import AuthRepository
 from app.schemas.auth_schemas import UserCreate, UserLogin, OnboardingUpdate
 
 from app.integrations.google_calendar_client import GoogleCalendarClient
+from app.integrations.google_drive_client import GoogleDriveClient
+from app.integrations.notion_client import NotionClient
 from app.integrations.youtube_analytics_client import MIN_VIEWS_FOR_ANALYTICS_GEO, YouTubeAnalyticsClient
 
 logger = logging.getLogger(__name__)
@@ -133,6 +135,14 @@ class AuthService:
                 "profile",
                 "https://www.googleapis.com/auth/calendar.events",
             ]
+        elif connector in ("drive", "vault"):
+            scope_list = [
+                "openid",
+                "email",
+                "profile",
+                "https://www.googleapis.com/auth/drive.readonly",
+                "https://www.googleapis.com/auth/drive.file",
+            ]
         else:
             scope_list = [
                 "openid",
@@ -230,6 +240,7 @@ class AuthService:
         google_expiry = datetime.now(timezone.utc) + timedelta(seconds=google_expires_in)
 
         has_calendar_scope = any("calendar" in s for s in google_scopes)
+        has_drive_scope = any("drive" in s for s in google_scopes)
         has_youtube_scope = any("youtube" in s for s in google_scopes)
 
         if connector_type == "calendar" or has_calendar_scope:
@@ -243,7 +254,18 @@ class AuthService:
                 scopes=google_scopes,
             )
 
-        if connector_type == "youtube" or (has_youtube_scope and connector_type != "calendar"):
+        if connector_type in ("drive", "vault") or has_drive_scope:
+            await self.repo.upsert_oauth_token(
+                db,
+                user_id=user.id,
+                provider=OAuthProvider.drive,
+                access_token_enc=encrypt_token(access_google),
+                refresh_token_enc=encrypt_token(token_json.get("refresh_token")),
+                expires_at=google_expiry,
+                scopes=google_scopes,
+            )
+
+        if connector_type == "youtube" or (has_youtube_scope and connector_type not in ("calendar", "drive", "vault")):
             await self.repo.upsert_oauth_token(
                 db,
                 user_id=user.id,
@@ -491,6 +513,151 @@ class AuthService:
                 detail={"code": "CALENDAR_API_ERROR", "message": err_detail},
             )
         return {"data": {"event": created}, "meta": {"request_id": "local-dev"}}
+
+    async def get_drive_status(self, db: AsyncSession, user_id: UUID) -> dict:
+        token = await self.repo.get_oauth_token(db, user_id, OAuthProvider.drive)
+        connected = bool(token and not token.revoked)
+        return {
+            "data": {
+                "connected": connected,
+                "scopes": token.scopes if token and connected else [],
+            },
+            "meta": {"request_id": "local-dev"},
+        }
+
+    async def disconnect_drive(self, db: AsyncSession, user_id: UUID) -> dict:
+        await self.repo.revoke_oauth_token(db, user_id, OAuthProvider.drive)
+        await db.commit()
+        return {"data": {"message": "Google Drive disconnected successfully"}, "meta": {"request_id": "local-dev"}}
+
+    async def get_notion_status(self, db: AsyncSession, user_id: UUID) -> dict:
+        token = await self.repo.get_oauth_token(db, user_id, OAuthProvider.notion)
+        connected = bool(token and not token.revoked)
+        return {
+            "data": {
+                "connected": connected,
+                "workspace_name": token.scopes[0] if (token and connected and token.scopes) else "Notion Workspace",
+            },
+            "meta": {"request_id": "local-dev"},
+        }
+
+    async def connect_notion_token(self, db: AsyncSession, user_id: UUID, *, token_str: str) -> dict:
+        clean_tok = token_str.strip()
+        if not clean_tok:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={"code": "INVALID_NOTION_TOKEN", "message": "Notion token cannot be empty."},
+            )
+        notion_client = NotionClient()
+        verify_res = await notion_client.verify_token(clean_tok)
+        if not verify_res.get("valid"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "code": "INVALID_NOTION_TOKEN",
+                    "message": verify_res.get("error") or "Invalid Notion integration token.",
+                },
+            )
+        workspace_name = verify_res.get("workspace_name") or "Notion Workspace"
+        far_future = datetime.now(timezone.utc) + timedelta(days=3650)
+        await self.repo.upsert_oauth_token(
+            db,
+            user_id=user_id,
+            provider=OAuthProvider.notion,
+            access_token_enc=encrypt_token(clean_tok),
+            refresh_token_enc=None,
+            expires_at=far_future,
+            scopes=[workspace_name],
+        )
+        await db.commit()
+        return {
+            "data": {"connected": True, "workspace_name": workspace_name},
+            "meta": {"request_id": "local-dev"},
+        }
+
+    async def disconnect_notion(self, db: AsyncSession, user_id: UUID) -> dict:
+        await self.repo.revoke_oauth_token(db, user_id, OAuthProvider.notion)
+        await db.commit()
+        return {"data": {"message": "Notion disconnected successfully"}, "meta": {"request_id": "local-dev"}}
+
+    async def search_knowledge_vault(
+        self,
+        db: AsyncSession,
+        user_id: UUID,
+        *,
+        query: str = "",
+        max_results: int = 6,
+    ) -> dict:
+        drive_token = await self._get_valid_access_token(db, user_id, OAuthProvider.drive)
+        notion_tok_row = await self.repo.get_oauth_token(db, user_id, OAuthProvider.notion)
+        notion_token = decrypt_token(notion_tok_row.access_token_enc) if (notion_tok_row and not notion_tok_row.revoked) else None
+
+        documents: list[dict] = []
+        if drive_token:
+            drive_client = GoogleDriveClient()
+            drive_docs = await drive_client.search_documents(drive_token, query=query, max_results=max_results)
+            for d in drive_docs:
+                d["source"] = "drive"
+                documents.append(d)
+
+        if notion_token:
+            notion_client = NotionClient()
+            notion_pages = await notion_client.search_pages(notion_token, query=query, max_results=max_results)
+            for p in notion_pages:
+                p["source"] = "notion"
+                documents.append(p)
+
+        return {
+            "data": {
+                "drive_connected": bool(drive_token),
+                "notion_connected": bool(notion_token),
+                "documents": documents,
+            },
+            "meta": {"request_id": "local-dev"},
+        }
+
+    async def export_to_knowledge_vault(
+        self,
+        db: AsyncSession,
+        user_id: UUID,
+        *,
+        title: str,
+        content: str,
+        destination: str = "auto",
+    ) -> dict:
+        drive_token = await self._get_valid_access_token(db, user_id, OAuthProvider.drive)
+        notion_tok_row = await self.repo.get_oauth_token(db, user_id, OAuthProvider.notion)
+        notion_token = decrypt_token(notion_tok_row.access_token_enc) if (notion_tok_row and not notion_tok_row.revoked) else None
+
+        target = destination.lower().strip()
+        if target == "notion" or (target == "auto" and notion_token and not drive_token):
+            if not notion_token:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail={"code": "NOTION_NOT_CONNECTED", "message": "Notion is not connected."},
+                )
+            notion_client = NotionClient()
+            created = await notion_client.create_page(notion_token, title=title, content=content)
+            if created.get("error"):
+                raise HTTPException(
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    detail={"code": "NOTION_API_ERROR", "message": created["error"]},
+                )
+            return {"data": {"document": created}, "meta": {"request_id": "local-dev"}}
+
+        if not drive_token:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={"code": "DRIVE_NOT_CONNECTED", "message": "Google Drive is not connected."},
+            )
+        drive_client = GoogleDriveClient()
+        created = await drive_client.create_google_doc(drive_token, title=title, content=content)
+        if created.get("error"):
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail={"code": "DRIVE_API_ERROR", "message": created["error"]},
+            )
+        return {"data": {"document": created}, "meta": {"request_id": "local-dev"}}
 
     async def disconnect_youtube(self, db: AsyncSession, user_id: UUID) -> dict:
         """Revoke YouTube OAuth integration and notify channel service."""

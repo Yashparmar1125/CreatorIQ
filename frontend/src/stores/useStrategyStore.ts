@@ -11,7 +11,7 @@ export interface AgentStep {
 }
 
 export interface AgentCard {
-  card_type: 'trend' | 'video' | 'connector' | 'calendar';
+  card_type: 'trend' | 'video' | 'connector' | 'calendar' | 'document';
   payload: any;
 }
 

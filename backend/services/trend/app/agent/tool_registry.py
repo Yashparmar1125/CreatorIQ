@@ -217,6 +217,54 @@ AGENT_TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "search_knowledge_vault",
+            "description": "Search the creator's connected Google Drive / Docs and Notion Workspace for past video scripts, research notes, outlines, or brand style guides.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "Search keywords (e.g. 'Suzlon script', 'hook template', 'sponsor guidelines'). Leave empty to list recent docs.",
+                        "default": "",
+                    },
+                    "max_results": {
+                        "type": "integer",
+                        "description": "Maximum number of documents to return (default: 5)",
+                        "default": 5,
+                    },
+                },
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "export_script_to_vault",
+            "description": "Create and save a new Google Doc or Notion page containing a video script, hook outline, or strategy brief directly in the creator's connected Google Drive or Notion Workspace.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "description": "Document title (e.g. 'Script: Will RIL Double in 2027?')",
+                    },
+                    "content": {
+                        "type": "string",
+                        "description": "Full formatted script, hook breakdown, or strategy brief text",
+                    },
+                    "destination": {
+                        "type": "string",
+                        "description": "'drive' for Google Docs, 'notion' for Notion page, or 'auto' (default: 'auto')",
+                        "default": "auto",
+                    },
+                },
+                "required": ["title", "content"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "search_youtube_live",
             "description": "Search YouTube directly in real-time for recent uploads (past 7 days) on any topic to inspect live competitor thumbnails, titles, and view counts.",
             "parameters": {
@@ -342,6 +390,58 @@ class ToolRegistry:
                         pass
                     return {
                         "scheduled": False,
+                        "error": err_msg,
+                    }
+
+            elif tool_name == "search_knowledge_vault":
+                query_str = str(arguments.get("query") or "")
+                max_results = int(arguments.get("max_results", 5))
+                async with httpx.AsyncClient(timeout=20.0) as client:
+                    r = await client.get(
+                        f"{settings.auth_service_url}/internal/auth/vault/{user_id}/search",
+                        params={"query": query_str, "max_results": max_results},
+                        headers={"X-Internal-Service-Token": settings.internal_service_token},
+                    )
+                    if r.status_code == 200:
+                        data = r.json().get("data", {})
+                        return {
+                            "drive_connected": data.get("drive_connected", False),
+                            "notion_connected": data.get("notion_connected", False),
+                            "documents": data.get("documents", []),
+                        }
+                return {
+                    "drive_connected": False,
+                    "notion_connected": False,
+                    "documents": [],
+                }
+
+            elif tool_name == "export_script_to_vault":
+                title = str(arguments.get("title") or "CreatorIQ Video Script & Strategy Brief")
+                content = str(arguments.get("content") or "")
+                destination = str(arguments.get("destination") or "auto")
+                async with httpx.AsyncClient(timeout=25.0) as client:
+                    r = await client.post(
+                        f"{settings.auth_service_url}/internal/auth/vault/{user_id}/export",
+                        json={
+                            "title": title,
+                            "content": content,
+                            "destination": destination,
+                        },
+                        headers={"X-Internal-Service-Token": settings.internal_service_token},
+                    )
+                    if r.status_code < 400:
+                        doc = r.json().get("data", {}).get("document", {})
+                        return {
+                            "exported": True,
+                            "document": doc,
+                        }
+                    err_msg = r.text[:250]
+                    try:
+                        err_msg = r.json().get("detail", {}).get("message") or err_msg
+                    except Exception:
+                        pass
+                    return {
+                        "exported": False,
                         "error": err_msg,
                     }
 

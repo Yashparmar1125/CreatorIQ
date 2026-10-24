@@ -1,5 +1,5 @@
 import React from 'react';
-import { YouTubeLogo, GoogleCalendarLogo, NotionLogo } from '../components/brand/ConnectorIcons';
+import { YouTubeLogo, GoogleCalendarLogo, GoogleDriveLogo, NotionLogo } from '../components/brand/ConnectorIcons';
 
 export interface ConnectorOption {
   id: string;
@@ -22,7 +22,6 @@ export const CONNECTOR_OPTIONS: ConnectorOption[] = [
     description: 'Audience retention, upload metrics & competitor signals',
     category: 'channel',
     icon: YouTubeLogo,
-    badge: 'OAuth',
   },
   {
     id: 'calendar',
@@ -31,16 +30,22 @@ export const CONNECTOR_OPTIONS: ConnectorOption[] = [
     description: 'Schedule video release slots, filming days & deadlines',
     category: 'planning',
     icon: GoogleCalendarLogo,
-    badge: 'OAuth',
   },
   {
-    id: 'vault',
-    label: 'Knowledge Vault (Notion / Drive)',
-    shortLabel: 'Vault',
-    description: 'Past scripts, outlines, voice guidelines & creator notes',
+    id: 'drive',
+    label: 'Google Drive & Docs',
+    shortLabel: 'Drive',
+    description: 'Read past video scripts & export new strategy docs',
+    category: 'knowledge',
+    icon: GoogleDriveLogo,
+  },
+  {
+    id: 'notion',
+    label: 'Notion Workspace',
+    shortLabel: 'Notion',
+    description: 'Sync creator notes, outlines & export strategy briefs',
     category: 'knowledge',
     icon: NotionLogo,
-    badge: 'Sync',
   },
 ];
 

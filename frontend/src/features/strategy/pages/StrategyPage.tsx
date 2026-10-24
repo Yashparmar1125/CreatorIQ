@@ -28,6 +28,7 @@ import {
   AlertCircle,
   RefreshCw,
   Calendar,
+  FileText,
   Loader2,
 } from 'lucide-react';
 
@@ -166,6 +167,46 @@ const InteractiveCardsList: React.FC<{ cards: AgentCard[] }> = ({ cards }) => {
                   className="inline-flex items-center gap-1.5 rounded-xl border border-[#E5E0E8] bg-white px-3.5 py-2 text-xs font-semibold text-[#171717] shadow-2xs transition-colors hover:border-[#C9BCF0] hover:bg-[#F6F3FF]"
                 >
                   <span>Open in Calendar</span>
+                  <ExternalLink className="h-3.5 w-3.5 text-[#4A2E8F]" />
+                </a>
+              )}
+            </motion.div>
+          );
+        }
+
+        if (c.card_type === 'document') {
+          const doc = c.payload || {};
+          const sourceLabel = doc.source === 'notion' ? 'Saved to Notion Workspace' : 'Created in Google Docs';
+          const btnLabel = doc.source === 'notion' ? 'Open in Notion' : 'Open in Google Docs';
+          return (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25 }}
+              className="col-span-1 sm:col-span-2 rounded-2xl border border-[#D9CEF5] bg-[#F6F3FF] p-4 flex flex-wrap items-center justify-between gap-4"
+            >
+              <div className="flex items-start gap-3 min-w-0">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white border border-[#D9CEF5] text-[#4A2E8F]">
+                  <FileText className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#4A2E8F]">
+                    {sourceLabel}
+                  </span>
+                  <h4 className="text-sm font-bold text-[#171717] truncate mt-0.5">
+                    {doc.title || 'Strategy Brief & Script'}
+                  </h4>
+                </div>
+              </div>
+              {doc.url && (
+                <a
+                  href={doc.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-[#E5E0E8] bg-white px-3.5 py-2 text-xs font-semibold text-[#171717] shadow-2xs transition-colors hover:border-[#C9BCF0] hover:bg-[#F1ECFF]"
+                >
+                  <span>{btnLabel}</span>
                   <ExternalLink className="h-3.5 w-3.5 text-[#4A2E8F]" />
                 </a>
               )}
@@ -430,8 +471,8 @@ function getFollowUpSuggestions(content: string): string[] {
   }
   return [
     'Write the 30-second opening hook for option 1',
+    'Save this strategy brief to Google Docs',
     'Schedule this publish slot on my Google Calendar',
-    'Give me 3 high-contrast thumbnail concepts',
   ];
 }
 
@@ -455,7 +496,6 @@ export const StrategyPage: React.FC = () => {
     isLoadingSessions,
     isLoadingMessages,
     activeConnectors,
-    connectedConnectors,
     setConnectors,
     sendMessage,
     selectSession,
@@ -473,7 +513,13 @@ export const StrategyPage: React.FC = () => {
   const [showConnectModal, setShowConnectModal] = useState(false);
   const [showScrollBottomBtn, setShowScrollBottomBtn] = useState(false);
 
-  const { primaryChannel, isCalendarConnected, fetchDashboard } = useDashboardStore();
+  const {
+    primaryChannel,
+    isCalendarConnected,
+    isDriveConnected,
+    isNotionConnected,
+    fetchDashboard,
+  } = useDashboardStore();
 
   useEffect(() => {
     void fetchDashboard();
@@ -502,7 +548,8 @@ export const StrategyPage: React.FC = () => {
   const connectedCount =
     (primaryChannel?.is_oauth_connected ? 1 : 0) +
     (isCalendarConnected ? 1 : 0) +
-    connectedConnectors.filter((c) => c !== 'youtube' && c !== 'calendar' && c !== 'web').length;
+    (isDriveConnected ? 1 : 0) +
+    (isNotionConnected ? 1 : 0);
 
   /** Detect user scroll position so we never hijack their reading position */
   const handleScroll = useCallback(() => {

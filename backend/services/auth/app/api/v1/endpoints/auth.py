@@ -242,3 +242,133 @@ async def internal_create_calendar_event(
         duration_minutes=body.duration_minutes,
         description=body.description,
     )
+
+
+class NotionConnectBody(BaseModel):
+    token: str
+
+
+class VaultExportBody(BaseModel):
+    title: str
+    content: str
+    destination: str = "auto"
+
+
+@router.get("/auth/drive/oauth-url")
+async def drive_oauth_url(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None = Depends(HTTPBearer(auto_error=False)),
+) -> dict:
+    import uuid
+    user_id = None
+    header_uid = request.headers.get("x-user-id")
+    if header_uid:
+        try:
+            user_id = uuid.UUID(header_uid)
+        except Exception:
+            pass
+    if not user_id and credentials:
+        try:
+            from app.core.jwt_deps import decode_access_token
+            payload = decode_access_token(credentials.credentials)
+            user_id = uuid.UUID(payload["sub"])
+        except Exception:
+            pass
+    return service.google_oauth_build_url(user_id=user_id, connector="drive")
+
+
+@router.get("/auth/drive/status")
+async def drive_status(
+    db: AsyncSession = Depends(get_db),
+    user_id=Depends(get_current_user_id),
+) -> dict:
+    return await service.get_drive_status(db, user_id)
+
+
+@router.post("/auth/drive/disconnect")
+@router.delete("/auth/drive/disconnect")
+async def disconnect_drive(
+    db: AsyncSession = Depends(get_db),
+    user_id=Depends(get_current_user_id),
+) -> dict:
+    return await service.disconnect_drive(db, user_id)
+
+
+@router.get("/auth/notion/status")
+async def notion_status(
+    db: AsyncSession = Depends(get_db),
+    user_id=Depends(get_current_user_id),
+) -> dict:
+    return await service.get_notion_status(db, user_id)
+
+
+@router.post("/auth/notion/connect")
+async def connect_notion(
+    body: NotionConnectBody,
+    db: AsyncSession = Depends(get_db),
+    user_id=Depends(get_current_user_id),
+) -> dict:
+    return await service.connect_notion_token(db, user_id, token_str=body.token)
+
+
+@router.post("/auth/notion/disconnect")
+@router.delete("/auth/notion/disconnect")
+async def disconnect_notion(
+    db: AsyncSession = Depends(get_db),
+    user_id=Depends(get_current_user_id),
+) -> dict:
+    return await service.disconnect_notion(db, user_id)
+
+
+@router.get("/auth/vault/search")
+async def search_vault(
+    query: str = "",
+    max_results: int = 6,
+    db: AsyncSession = Depends(get_db),
+    user_id=Depends(get_current_user_id),
+) -> dict:
+    return await service.search_knowledge_vault(db, user_id, query=query, max_results=max_results)
+
+
+@router.post("/auth/vault/export")
+async def export_vault(
+    body: VaultExportBody,
+    db: AsyncSession = Depends(get_db),
+    user_id=Depends(get_current_user_id),
+) -> dict:
+    return await service.export_to_knowledge_vault(
+        db,
+        user_id,
+        title=body.title,
+        content=body.content,
+        destination=body.destination,
+    )
+
+
+@router.get("/internal/auth/vault/{user_id}/search")
+async def internal_search_vault(
+    user_id: str,
+    query: str = "",
+    max_results: int = 6,
+    db: AsyncSession = Depends(get_db),
+    _: None = Depends(require_internal_token),
+) -> dict:
+    import uuid
+    return await service.search_knowledge_vault(db, uuid.UUID(user_id), query=query, max_results=max_results)
+
+
+@router.post("/internal/auth/vault/{user_id}/export")
+async def internal_export_vault(
+    user_id: str,
+    body: VaultExportBody,
+    db: AsyncSession = Depends(get_db),
+    _: None = Depends(require_internal_token),
+) -> dict:
+    import uuid
+    return await service.export_to_knowledge_vault(
+        db,
+        uuid.UUID(user_id),
+        title=body.title,
+        content=body.content,
+        destination=body.destination,
+    )

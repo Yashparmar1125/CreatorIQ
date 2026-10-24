@@ -19,6 +19,8 @@ async def lifespan(app: FastAPI):
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
             await conn.execute(text("ALTER TYPE oauth_provider ADD VALUE IF NOT EXISTS 'calendar'"))
+            await conn.execute(text("ALTER TYPE oauth_provider ADD VALUE IF NOT EXISTS 'drive'"))
+            await conn.execute(text("ALTER TYPE oauth_provider ADD VALUE IF NOT EXISTS 'notion'"))
         logger.info("[Auth] Database schema & oauth_provider enum initialized successfully.")
     except Exception as e:
         logger.warning(f"[Auth] Schema auto-sync warning: {e}")
