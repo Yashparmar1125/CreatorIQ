@@ -1,288 +1,104 @@
-# CreatorIQ Trends Engine — Finalized Specification
+# CreatorIQ Trends Engine — Production Technical Specification (v3.0)
 
-**Version:** 1.0  
-**Status:** Approved for implementation  
-**Last updated:** 2026-03-06  
-**Depends on:** Onboarding pipeline (`docs/ONBOARDING_PIPELINE_PLAN.md`)
-
----
-
-## 1. Product Definition
-
-CreatorIQ Trends Engine v1 is a **credit-gated, Top-5 Content Opportunity Feed** that helps YouTube creators discover actionable content opportunities personalized to their channel.
-
-### Core principles
-
-| Principle | Decision |
-|-----------|----------|
-| Output | Top **5** curated opportunities per feed |
-| Primary signal | **YouTube content momentum** (weighted higher than search) |
-| Personalization | Onboarding niche → channel analysis over time |
-| Geography | **YouTube audience geography** (weighted), not device location |
-| Niche scope | **Strictly within niche** — no generic viral crossover |
-| Ranking goal | **Maximum popularity within niche** |
-| UX | Lightweight cards + deep detail page |
-| Refresh | **Credit-based** with freshness guarantee |
-| Architecture | **Hybrid**: background ingestion + on-demand AI enrichment |
+**Version:** 3.0  
+**Status:** Active in Production (`ciq-trend :8003` & `ciq-ml :8007`)  
+**Depends on:** 7-Step Onboarding & 3-Unit YouTube OAuth Deep Sync (`ciq-auth :8001`), Qdrant Vector Service, and 85-Feature LightGBM Engine (`ciq-ml :8007`).
 
 ---
 
-## 2. Ranking Priority (locked)
+## 1. Product Definition & Core Principles
 
-1. Trending on YouTube (video velocity — highest weight)
-2. Fast-rising trends
-3. High search volume
-4. Fits creator's existing audience
-5. Recent news (context only)
-6. Relevant to creator's niche
-7. Geographic relevance (audience-weighted)
+CreatorIQ Trends Engine is a **personalized, evidence-backed Content Opportunity Radar** that helps YouTube creators identify high-velocity topics tailored to their exact niche, channel size, format, and target geography.
 
-**Goal:** Maximum popularity **after** niche relevance is confirmed.
-
----
-
-## 3. Data Source Strategy
-
-### Implementation priority
-
-| Priority | Source | Role |
-|----------|--------|------|
-| 1 | YouTube Search / Related Videos | Primary momentum signal |
-| 2 | Google Trends (`gprop=youtube`) | Corroboration + growth |
-| 3 | Google News | "Why now" context only |
-| 4 | Reddit | v1.1 |
-| 5 | X (Twitter) | v1.1 |
-
-### YouTube signal definition (F1)
-
-**Both**, with B weighted higher:
-
-- Rising YouTube search interest
-- Fast-growing videos in creator's niche
-
-**v1 approach (B-lite):** search velocity, competitor channels, high-performing niche videos. Full trending-tab replication deferred.
+| Principle | Production Implementation |
+| :--- | :--- |
+| **Primary Feed Output** | Curated **Top-5 Personalized Opportunities** + Full Niche Radar & $2\sigma$ Outlier Feed |
+| **Primary Signal** | **Subscriber-Normalized YouTube Velocity ($R_v, I_v$)** corroborated by **SerpApi Google Trends** |
+| **Concept Deduplication** | **384-Dim `all-MiniLM-L6-v2` + Qdrant HNSW** (`cosine >= 0.80` clusters videos into `TrendConcept`) |
+| **Breakout Detection** | **$2\sigma$ Channel Outlier Engine** ($Z_v = (V_v - \mu_{\text{ch}}) / \sigma_{\text{ch}} \ge 2.0$) |
+| **Predictive Trajectory** | **85-Feature LightGBM Virality Classifier (`P(viral)`) + 90-Day Trajectory Curve** (`:8007`) |
+| **Quota Resiliency** | **Atomic Redis Multi-Key Pool (`RedisKeyPool`)** across YouTube Data v3, SerpApi, Tavily, Groq, Gemini & OpenRouter |
+| **UI Architecture** | **Strict Light-Theme SaaS Design System** (`#FBFAF8` canvas, `#FFFFFF` cards, `#FF98C1` primary actions) |
 
 ---
 
-## 4. Personalization Model
+## 2. Multi-Source Data Ingestion & 4-Gate Filtering
 
-### Niche source of truth (F3)
-
-**Onboarding + auto-refined over time**
-
-| Stage | Source |
-|-------|--------|
-| Initial | Onboarding niche selections |
-| After YouTube connect | Channel video/topic analysis becomes primary |
-| Ongoing | Re-refine weekly or on new uploads |
-
-### Niche fit rules (F4)
-
-- No gaming/entertainment crossover unless **strong direct relationship** to creator niche
-- Hard gate: `niche_fit_score < 0.65` → reject
-
-### Refinement thresholds
-
-| Videos on channel | Behavior |
-|-------------------|----------|
-| 0 (new) | **Manual profile only** — onboarding wizard, no channel analysis |
-| 1–4 | Manual primary; analysis available via **Profile → Reconfigure** |
-| 5–19 | User confirms Reconfigure → 50/50 blend manual + inferred |
-| 20+ | User confirms Reconfigure → channel analysis primary |
-
-**Onboarding runs once.** Profile updates after that go through **Reconfigure** (shared Creator Context Pipeline). Auto-apply is never silent — user always confirms the diff.
-
----
-
-## 5. Geography Model (F5, F6)
-
-### Scoring
-
-```
-geo_weighted_relevance = Σ (audience_geo_weight[country] × concept.geo_strength[country])
+```mermaid
+flowchart LR
+    YT["YouTube Data API v3\n(Redis Key Pool)"] --> Gate["4-Gate Quality Filter\n1. Duration >= 90s\n2. Age <= 14 Days\n3. Views >= 1,000\n4. >= 70% Latin Script"]
+    Serp["SerpApi Google Trends\n(Redis Key Pool)"] --> Enrich["Search Interest Velocity"]
+    Gate --> Norm["Subscriber-Normalized Scoring\nReach Ratio (R_v) &\nInteraction Density (I_v)"]
+    Norm --> Embed["all-MiniLM-L6-v2\n384-D Unit Vector"]
+    Embed --> Qdrant[("Qdrant HNSW\ncosine >= 0.80")]
+    Enrich --> Concept[("PostgreSQL\nTrendConcept &\nConceptDailySignal")]
+    Qdrant --> Concept
 ```
 
-Example: US 60%, IN 30%, UK 10% → trends scored proportionally.
-
-### Fallback chain
-
-1. YouTube Analytics audience geography (when available)
-2. Onboarding target country (weight 1.0)
-3. Global default: US 55%, IN 35%, UK 10%
-
-Show UI badge when using fallback: *"Using estimated geography — analytics will improve recommendations."*
+### 2.1 The 4 Quality Gates
+Every harvested video $v$ is evaluated against four hard gates before clustering:
+1. **Duration Gate:** $\text{duration}(v) \ge 90\text{ seconds}$ (separates substantial long-form concepts from micro-clips).
+2. **Freshness Gate:** $0 < (t_{\text{now}} - t_{\text{published}}(v)) \le 14\text{ days}$.
+3. **Traction Gate:** $V_v \ge 1,000\text{ views}$ and channel subscribers $S_c \ge 100$.
+4. **Linguistic & Safety Gate:** $\ge 70\%$ Latin script characters and zero matches against the tabloid/scandal exclusion regex.
 
 ---
 
-## 6. Scoring Formula
+## 3. Mathematical Scoring Model
 
-### Global momentum (background)
+### 3.1 Per-Video Subscriber-Normalized Momentum ($M_v$)
+To ensure a $5,000$-subscriber channel pulling $50,000$ views ($10\times$ breakout) ranks higher than a $5\text{M}$-subscriber channel pulling $100,000$ views ($0.02\times$ underperformance):
 
-```
-RAW_MOMENTUM =
-  0.40 × youtube_video_velocity
-+ 0.15 × youtube_search_velocity
-+ 0.15 × competitor_coverage
-+ 0.15 × google_trends_youtube_growth
-+ 0.10 × search_volume_normalized
-+ 0.05 × news_recency_boost (capped)
-```
+$$R_v = \text{clamp}\left(\frac{V_v / \max(S_c, 100)}{5.0},\ 0.0,\ 1.0\right) \times 100$$
 
-### Personalized opportunity score (on refresh)
+$$I_v = \text{clamp}\left(\frac{(L_v + 2 \cdot C_v) / \max(V_v, 1)}{0.08},\ 0.0,\ 1.0\right) \times 100$$
 
-```
-OPPORTUNITY_SCORE =
-  0.50 × RAW_MOMENTUM
-+ 0.25 × niche_fit_score
-+ 0.20 × geo_weighted_relevance
-+ 0.05 × channel_format_fit
-```
+$$M_v = 0.65 \cdot R_v + 0.35 \cdot I_v$$
 
-### Hard filters
+### 3.2 Concept-Level Trend Velocity Score ($\text{TVS}_c \in [0, 100]$)
+For a `TrendConcept` $c$ aggregating cluster videos $\mathcal{V}_c$:
 
-- `niche_fit < 0.65` → drop
-- Generic news/politics classifier → drop
-- `lifecycle = expired` → drop
-- `geo_weighted_relevance < 0.20` → drop (except global fallback mode)
+$$\bar{M}_c = \frac{1}{|\mathcal{V}_c|} \sum_{v \in \mathcal{V}_c} M_v, \qquad E_{\text{raw}}(c) = \frac{1}{|\mathcal{V}_c|} \sum_{v \in \mathcal{V}_c} I_v$$
+
+$$\Delta_{\text{accel}}(c) = \text{clamp}\left(\frac{\bar{M}_{c,t} - \bar{M}_{c,t-1}}{\max(\bar{M}_{c,t-1}, 1.0)} \times 25.0,\ -15.0,\ +20.0\right)$$
+
+$$\text{TVS}_c = \text{round}\Big(\text{clamp}\big(0.60 \cdot \bar{M}_c + 0.40 \cdot E_{\text{raw}}(c) + \Delta_{\text{accel}}(c),\ 0.0,\ 100.0\big),\ 1\Big)$$
+
+### 3.3 Personalized Creator Opportunity Score
+When ranking concepts for a specific creator profile (`primary_niche`, `target_region`, `content_format`):
+
+$$\text{OpportunityScore}(u, c) = \text{clamp}\Big(0.50 \cdot \text{TVS}_c + 25.0 \cdot \text{NicheFit}(u, c) + 20.0 \cdot \text{GeoFit}(u, c) + 5.0 \cdot \text{FormatFit}(u, c) + B_{\text{vec}} + B_{\text{outlier}},\ 0,\ 100\Big)$$
+
+- **Vector Boost ($B_{\text{vec}}$):** $+15.0 \times \cos(\hat{e}_u, \hat{e}_c)$ when Qdrant cosine similarity $\ge 0.50$.
+- **Outlier Boost ($B_{\text{outlier}}$):** $+8.0$ points when the concept includes a $2\sigma$ channel outlier ($Z_v \ge 2.0$).
 
 ---
 
-## 7. Trend Concept Model
+## 4. 19 Canonical Creator Niches
 
-```
-TrendConcept {
-  id, canonical_title, aliases[], niche_tags[]
-  geo_strength: { US: 0.9, IN: 0.5 }
-  lifecycle: emerging | growing | peaking | declining | expired
-  sources: [youtube_video, youtube_search, google_trends, news]
-  first_seen_at, last_signal_at
-}
-```
-
-**Duplicate handling:** Merge into one concept (embedding similarity > 0.85, shared query clusters, shared news events).
-
----
-
-## 8. Feed & Credits
-
-### Monthly credits (F7)
-
-| Plan | Refreshes/month |
-|------|-----------------|
-| Free | 2 |
-| Pro | 20 |
-| Agency | 100 |
-
-### Actions
-
-| Action | Credits |
-|--------|---------|
-| View latest feed | 0 |
-| Refresh feed | 1 |
-| View trend detail | 0 |
-| Add to planner | 0 |
-| "I made this" | 0 |
-
-### Freshness guarantee (F8)
-
-On refresh: **≥3 of Top 5 must be new** vs previous snapshot (when eligible pool allows). Max 2 repeats.
-
-### Feed history
-
-Persist `trend_feed_snapshots` — users can browse past feeds for free.
-
-### First feed
-
-**1 free feed** generated on onboarding complete (no credit consumed).
+CreatorIQ normalizes all channel profiles, onboarding selections, and concept clusters across 19 canonical niches:
+1. `Tech & AI`
+2. `Gaming`
+3. `Personal Finance & Investing`
+4. `Business & Entrepreneurship`
+5. `Health & Fitness`
+6. `Education & Science`
+7. `Coding & Software Engineering`
+8. `Entertainment & Pop Culture`
+9. `Lifestyle & Vlogs`
+10. `Food & Cooking`
+11. `Travel & Adventure`
+12. `Beauty & Fashion`
+13. `Music & Audio Production`
+14. `Sports & Athletics`
+15. `Self-Improvement & Productivity`
+16. `Cars & Automotive`
+17. `Art, Design & Animation`
+18. `Photography & Filmmaking`
+19. `History, Geopolitics & Documentary`
 
 ---
 
-## 9. AI Enrichment (F9, F10)
+## 5. Seamless Handoff to Strategy Copilot (`/app/strategy`)
 
-### Card (feed)
-
-- Trend title
-- Short explanation
-- Why it's trending
-- Trend score (0–100)
-- One key indicator
-
-Title ideas → **detail page only**.
-
-### Segment caching
-
-Shared by: `{niche_cluster, geo_primary, channel_size_tier, tone}`
-
-Per-user light personalization: channel name, subs, format preference.
-
----
-
-## 10. Architecture
-
-```
-BACKGROUND (4–6h cron, no credits)
-  → Collectors (YouTube, Google Trends, News)
-  → Normalize → Merge concepts → Store signals → Pre-score
-
-USER PROFILE (continuous)
-  → CreatorNicheProfile + audience_geo + channel_baseline
-
-ON REFRESH (1 credit)
-  → Filter → Score → Freshness check → Top 5 → AI enrich → Save snapshot
-
-SUCCESS TRACKING (v1)
-  → Planner integration + manual "I made this"
-```
-
----
-
-## 11. Success Metrics
-
-| Metric | Target (initial) |
-|--------|------------------|
-| On-niche precision (manual sample) | >90% |
-| Post-refresh trust score | >4/5 |
-| Trends → Planner conversion | >15% |
-| "I made this" rate | >10% |
-| Video performance lift vs baseline | >1.3× |
-
----
-
-## 12. Deprecations (current code)
-
-- `google_trends_trending_now` as primary source
-- Hardcoded `geo=IN`
-- Per-request SerpApi fan-out in `list_trends`
-- Template archetype growth tips
-- Hash-based saturation/stability
-- 20-item unpaginated feed
-
----
-
-## 13. Implementation Phases
-
-| Phase | Focus | Depends on |
-|-------|-------|------------|
-| **0** | Onboarding pipeline + CreatorProfile | — |
-| **1** | YouTube collectors + concept store + Top 5 (free) | Phase 0 |
-| **2** | AI enrichment + feed history + detail page | Phase 1 |
-| **3** | Credits + planner + success tracking | Phase 2 |
-| **4** | Reddit/X + advanced ML | Phase 3 |
-
----
-
-## 14. Locked defaults (G1–G4)
-
-| Decision | Default |
-|----------|---------|
-| G1 Scale | Per-niche-cluster collectors (not per-user) |
-| G2 Taxonomy | Fixed onboarding taxonomy v1 |
-| G3 Video thresholds | 5 = blend, 20 = channel-primary |
-| G4 First feed | Free on onboarding complete |
-
----
-
-## Related documents
-
-- `docs/ONBOARDING_PIPELINE_PLAN.md` — Phase 0 implementation (start here)
-- `docs/CODEBASE_ANALYSIS.md` — Full codebase audit
+Clicking **"Generate Strategy"** on any Trend Card or on `TrendDetailPage.tsx` packages the complete `TrendContextPayload` (`concept_id`, `canonical_title`, `tvs_score`, `lifecycle_stage`, `virality_prob`, `why_trending`, `suggested_angle`, `evidence_videos`) into `useStrategyStore` and opens `/app/strategy`. The `CopilotAgent` receives this payload directly in `attached_trend_context` and immediately synthesizes a grounded video script, title variants, and retention outline tailored to the creator's voice.
